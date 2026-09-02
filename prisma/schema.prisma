@@ -1,0 +1,149 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  STUDENT
+  TEACHER
+  ADMIN
+}
+
+enum Difficulty {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+}
+
+enum SubmissionStatus {
+  PENDING
+  PASSED
+  FAILED
+  ERROR
+}
+
+model User {
+  id             String          @id @default(cuid())
+  email          String          @unique
+  name           String?
+  avatarUrl      String?
+  role           Role            @default(STUDENT)
+  bio            String?
+  xp             Int             @default(0)
+  streak         Int             @default(0)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  progress       UserProgress[]
+  submissions    Submission[]
+  companionChats CompanionChat[]
+
+  @@map("users")
+}
+
+model Track {
+  id          String   @id @default(cuid())
+  title       String
+  slug        String   @unique
+  description String
+  icon        String?
+  language    String   // e.g. "typescript", "python", "javascript", "rust"
+  published   Boolean  @default(false)
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  lessons     Lesson[]
+
+  @@map("tracks")
+}
+
+model Lesson {
+  id             String          @id @default(cuid())
+  trackId        String
+  track          Track           @relation(fields: [trackId], references: [id], onDelete: Cascade)
+  title          String
+  slug           String
+  description    String?
+  content        String          @db.Text
+  order          Int             @default(0)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  exercises      Exercise[]
+  progress       UserProgress[]
+  companionChats CompanionChat[]
+
+  @@unique([trackId, slug])
+  @@map("lessons")
+}
+
+model Exercise {
+  id           String       @id @default(cuid())
+  lessonId     String
+  lesson       Lesson       @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  title        String
+  instructions String       @db.Text
+  starterCode  String       @db.Text
+  solutionCode String?      @db.Text
+  testCases    Json         // Array of { input: string, expectedOutput: string, isHidden?: boolean }
+  hints        String[]
+  difficulty   Difficulty   @default(BEGINNER)
+  order        Int          @default(0)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  submissions  Submission[]
+
+  @@map("exercises")
+}
+
+model Submission {
+  id              String           @id @default(cuid())
+  userId          String
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  exerciseId      String
+  exercise        Exercise         @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
+  code            String           @db.Text
+  status          SubmissionStatus @default(PENDING)
+  output          String?          @db.Text
+  executionTimeMs Int?
+  createdAt       DateTime         @default(now())
+
+  @@map("submissions")
+}
+
+model UserProgress {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lessonId    String
+  lesson      Lesson    @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  completed   Boolean   @default(false)
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([userId, lessonId])
+  @@map("user_progress")
+}
+
+model CompanionChat {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lessonId  String?
+  lesson    Lesson?  @relation(fields: [lessonId], references: [id], onDelete: SetNull)
+  messages  Json     // Chat conversation history: [{ role: "user" | "assistant", content: string, timestamp: string }]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("companion_chats")
+}
