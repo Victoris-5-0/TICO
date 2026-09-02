@@ -1,3 +1,6 @@
+packages:
+  - "client"
+
 ignoredBuiltDependencies:
   - sharp
   - unrs-resolver
