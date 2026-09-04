@@ -18,6 +18,8 @@ TICO is an intelligent programming companion platform. The repository is a monor
 
 All contributors and AI agents must keep these boundaries clear. Do not place Next.js application code at the repository root, and do not mix Python AI service code into `client/`.
 
+> **Mandatory AI-backend rule:** Before inspecting, editing, generating, or reviewing any code or configuration under `ai-backend/`, an agent must read `ai-backend/AGENTS.md` completely. The same requirement applies before changing a shared API, database contract, authentication flow, or other cross-service behavior consumed by the AI backend. The nested instructions apply in addition to this root file and take precedence for files inside `ai-backend/`.
+
 ## Required Reading Before Work
 
 Every agent must read [the documentation map](docs/README.md) and then the documents for its work lane before editing code. At minimum:
@@ -26,7 +28,7 @@ Every agent must read [the documentation map](docs/README.md) and then the docum
 - Client/UI: `docs/04-ux-design-and-localization.md`, `docs/05-system-architecture.md`, and `docs/10-safety-privacy-and-security.md`.
 - Database or cross-service contracts: `docs/05-system-architecture.md` and `docs/06-data-model-and-contracts.md`.
 - Browser execution: `docs/07-browser-python-runner.md`.
-- AI backend: first read `ai-backend/AGENTS.md`, then the AI reading list defined there.
+- AI backend or any shared contract that affects it: first read `ai-backend/AGENTS.md` completely, then the AI reading list defined there. Do not begin backend work before doing so.
 - Assets: `docs/09-asset-bible-and-image-prompts.md`.
 - Testing, operations, or delivery planning: `docs/11-testing-and-operations.md` and `docs/12-roadmap-and-agent-playbook.md`.
 
