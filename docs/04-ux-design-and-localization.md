@@ -1,5 +1,7 @@
 # UX design and localization
 
+This document defines information architecture and localization behavior. [The TICO UI design system](design.md) is the authoritative implementation guide for visual tokens, component states, responsive layouts, and kinetic motion.
+
 ## Information architecture
 
 Public routes:

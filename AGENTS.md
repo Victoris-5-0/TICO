@@ -25,7 +25,7 @@ All contributors and AI agents must keep these boundaries clear. Do not place Ne
 Every agent must read [the documentation map](docs/README.md) and then the documents for its work lane before editing code. At minimum:
 
 - Product, curriculum, or content: `docs/01-product-and-game-design.md`, `docs/02-python-curriculum.md`, and `docs/03-egypt-world-bibles.md`.
-- Client/UI: `docs/04-ux-design-and-localization.md`, `docs/05-system-architecture.md`, and `docs/10-safety-privacy-and-security.md`.
+- Client/UI: `docs/04-ux-design-and-localization.md`, `docs/design.md`, `docs/05-system-architecture.md`, and `docs/10-safety-privacy-and-security.md`. UI work must follow `docs/design.md`, including its Motion for React and reduced-motion requirements.
 - Database or cross-service contracts: `docs/05-system-architecture.md` and `docs/06-data-model-and-contracts.md`.
 - Browser execution: `docs/07-browser-python-runner.md`.
 - AI backend or any shared contract that affects it: first read `ai-backend/AGENTS.md` completely, then the AI reading list defined there. Do not begin backend work before doing so.

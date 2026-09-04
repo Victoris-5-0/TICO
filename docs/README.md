@@ -8,6 +8,7 @@ These documents are the implementation contract. Product changes must update the
 | [02 — Python curriculum](02-python-curriculum.md) | Learning model, concept sequence, assessment rules, 18-mission matrix |
 | [03 — Egypt world bibles](03-egypt-world-bibles.md) | Canon, characters, scenes, props, cultural constraints |
 | [04 — UX and localization](04-ux-design-and-localization.md) | Information architecture, responsive behavior, Arabic/English rules, accessibility |
+| [UI design system](design.md) | Authoritative visual tokens, screen patterns, components, responsive behavior, and Motion for React rules |
 | [05 — System architecture](05-system-architecture.md) | Service ownership, request flows, deployment, trust boundaries |
 | [06 — Data model and contracts](06-data-model-and-contracts.md) | Shared entities, lifecycle enums, HTTP and event payloads |
 | [07 — Browser Python runner](07-browser-python-runner.md) | Pyodide worker protocol, tests, limits, security |
@@ -20,8 +21,8 @@ These documents are the implementation contract. Product changes must update the
 
 ## Reading routes
 
-- Product/design work: 01 → 02 → 03 → 04 → 09.
-- Client work: 04 → 05 → 06 → 07 → 10 → 11.
+- Product/design work: 01 → 02 → 03 → 04 → design → 09.
+- Client work: 04 → design → 05 → 06 → 07 → 10 → 11.
 - AI work: read `ai-backend/AGENTS.md`, then 02 → 03 → 06 → 08 → 10 → 11.
 - Release planning: 12, then the documents for the selected vertical slice.
 
