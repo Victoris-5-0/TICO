@@ -24,11 +24,20 @@ class Settings(BaseSettings):
     database_url: str
 
     # --- auth ---------------------------------------------------------------
-    # We verify tokens, we never issue them. UNCONFIRMED: assumes Supabase Auth.
-    # If the client issues its own sessions over Prisma, this changes shape.
+    # We verify tokens, we never issue them. Supabase Auth owns login.
+    #
+    # Two signing modes, both supported:
+    #   A. JWT Signing Keys (asymmetric ES256) — the current Supabase default.
+    #      Set supabase_url; the public keys are fetched from its JWKS endpoint.
+    #   B. Legacy shared secret (HS256) — older projects. Set jwt_secret.
+    #
+    # Verification tries JWKS first, then the shared secret. With neither set
+    # and outside production, the service runs in dev mode.
+    supabase_url: str = ""
     jwt_secret: str = ""
     jwt_audience: str = "authenticated"
     jwt_algorithms: str = "HS256"
+    supabase_service_role_key: str = ""
 
     # --- Google Gemini ------------------------------------------------------
     google_api_key: str = ""
@@ -48,6 +57,17 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
     daily_model_call_cap: int = 200
     cors_origins: str = "http://localhost:3000"
+
+    @property
+    def jwks_url(self) -> str:
+        """Supabase publishes the public keys here. Empty when not configured."""
+        if not self.supabase_url:
+            return ""
+        return self.supabase_url.rstrip("/") + "/auth/v1/jwks"
+
+    @property
+    def auth_configured(self) -> bool:
+        return bool(self.supabase_url or self.jwt_secret)
 
     @property
     def is_production(self) -> bool:
