@@ -1,0 +1,416 @@
+<title>TICO AI Use Cases</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+:root{
+  --paper:#F5F3EE; --surface:#FFFFFF; --surface-2:#EDEAE3;
+  --ink:#17211F; --ink-2:#43514D; --muted:#77837E;
+  --line:#DCD7CD; --line-strong:#BEB6A8;
+  --accent:#C9502A; --accent-soft:#F7E7E0;
+  --teal:#1D5B57; --teal-soft:#DEEAE7;
+  --warn:#8A5D0F;
+  --sans:"IBM Plex Sans",ui-sans-serif,system-ui,sans-serif;
+  --display:"Archivo","IBM Plex Sans",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --paper:#0F1917; --surface:#16211E; --surface-2:#1D2926;
+    --ink:#E9E5DC; --ink-2:#B4BDB8; --muted:#8B978F;
+    --line:#2A3733; --line-strong:#3F4D48;
+    --accent:#E8815A; --accent-soft:#3A241C;
+    --teal:#71C1B4; --teal-soft:#16302C;
+    --warn:#D9A441;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#0F1917; --surface:#16211E; --surface-2:#1D2926;
+  --ink:#E9E5DC; --ink-2:#B4BDB8; --muted:#8B978F;
+  --line:#2A3733; --line-strong:#3F4D48;
+  --accent:#E8815A; --accent-soft:#3A241C;
+  --teal:#71C1B4; --teal-soft:#16302C;
+  --warn:#D9A441;
+}
+*{box-sizing:border-box}
+body{background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1080px;margin:0 auto;padding:0 28px 96px}
+.mast{border-bottom:1px solid var(--line);padding:52px 0 30px}
+.kicker{font-family:var(--mono);font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);margin:0 0 20px}
+h1{font-family:var(--display);font-weight:700;font-size:clamp(34px,5.2vw,54px);line-height:1.04;letter-spacing:-.02em;margin:0;text-wrap:balance;max-width:17ch}
+.dek{font-size:18px;color:var(--ink-2);max-width:62ch;margin:20px 0 0}
+.snum{font-family:var(--mono);font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin:52px 0 10px}
+h2{font-family:var(--display);font-weight:700;font-size:clamp(25px,3.1vw,34px);line-height:1.14;letter-spacing:-.015em;margin:0 0 18px;text-wrap:balance}
+h3{font-family:var(--display);font-weight:600;font-size:19px;margin:36px 0 12px}
+p{max-width:66ch;margin:0 0 16px}
+code{font-family:var(--mono);font-size:.875em;background:var(--surface-2);padding:1.5px 5px;border-radius:3px}
+strong{font-weight:600}
+a{color:var(--accent)}
+a:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+.note{border-left:3px solid var(--accent);background:var(--surface);padding:16px 20px;margin:24px 0;max-width:70ch}
+.note.teal{border-left-color:var(--teal)}
+.note p:last-child{margin-bottom:0}
+.note .lbl{font-family:var(--mono);font-size:10.5px;letter-spacing:.11em;text-transform:uppercase;color:var(--accent);margin:0 0 7px}
+.note.teal .lbl{color:var(--teal)}
+.scroll{overflow-x:auto;margin:22px 0;border:1px solid var(--line);background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-size:13.5px;min-width:560px}
+th{font-family:var(--mono);font-weight:500;font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);text-align:left;padding:11px 14px;border-bottom:1px solid var(--line-strong);white-space:nowrap;vertical-align:bottom}
+td{padding:11px 14px;border-bottom:1px solid var(--line);vertical-align:top;line-height:1.5}
+tr:last-child td{border-bottom:none}
+td.m{font-family:var(--mono);font-size:12.5px;white-space:nowrap}
+figure{margin:30px 0;border:1px solid var(--line);background:var(--surface);padding:26px 22px 0}
+figure svg{display:block;width:100%;max-width:100%;height:auto;color:var(--ink)}
+figcaption{font-size:13px;color:var(--ink-2);border-top:1px solid var(--line);margin:22px -22px 0;padding:13px 22px;line-height:1.55}
+figcaption b{font-weight:600;color:var(--ink)}
+.dtxt{font-family:var(--mono);font-size:12px;fill:currentColor}
+.dtxt-s{font-family:var(--mono);font-size:10px;fill:currentColor;opacity:.72}
+.dtxt-b{font-family:var(--mono);font-size:12.5px;font-weight:500;fill:currentColor}
+.bx{fill:var(--surface-2);stroke:var(--line-strong);stroke-width:1.2}
+.bx-a{fill:var(--accent-soft);stroke:var(--accent);stroke-width:1.4}
+.bx-t{fill:var(--teal-soft);stroke:var(--teal);stroke-width:1.4}
+.ln{fill:none;stroke:currentColor;stroke-width:1.4;opacity:.5}
+.uc{border:1px solid var(--line);background:var(--surface);margin:26px 0}
+.uc-head{border-bottom:1px solid var(--line);padding:15px 22px;display:flex;flex-wrap:wrap;align-items:baseline;gap:12px}
+.uc-id{font-family:var(--mono);font-size:13px;font-weight:500;color:var(--accent)}
+.uc-name{font-family:var(--display);font-size:18px;font-weight:600;flex:1;min-width:180px}
+.uc-mod{font-family:var(--mono);font-size:11.5px;color:var(--teal);word-break:break-all}
+.uc-meta{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:1px;background:var(--line);border-bottom:1px solid var(--line)}
+.uc-meta div{background:var(--surface);padding:11px 16px}
+.uc-meta dt{font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:0 0 4px}
+.uc-meta dd{margin:0;font-size:13.5px;line-height:1.45}
+.uc-body{padding:18px 22px 20px}
+.uc-body h5{font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:18px 0 8px;font-weight:500}
+.uc-body h5:first-child{margin-top:0}
+.uc-body ol{margin:0;padding-left:22px;font-size:14.5px}
+.uc-body ol li{margin-bottom:6px;line-height:1.55}
+.uc-body ul{margin:0;padding-left:20px;font-size:14px}
+.uc-body ul li{margin-bottom:6px;line-height:1.5;color:var(--ink-2)}
+.uc-body ul li b{color:var(--ink);font-weight:600}
+.uc-body p.tail{font-size:13.5px;margin:12px 0 0;color:var(--ink-2)}
+.writes{font-family:var(--mono);font-size:12.5px;background:var(--surface-2);padding:10px 14px;line-height:1.7}
+.nomodel{display:inline-block;font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--teal);border:1px solid var(--teal);padding:2px 7px;border-radius:2px}
+.model{display:inline-block;font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);border:1px solid var(--accent);padding:2px 7px;border-radius:2px}
+footer{border-top:1px solid var(--line);padding-top:22px;margin-top:60px;font-family:var(--mono);font-size:11.5px;color:var(--muted);line-height:1.9}
+@media (max-width:640px){.wrap{padding:0 18px 64px}figure{padding:18px 14px 0}figcaption{margin:18px -14px 0;padding:12px 14px}.uc-head,.uc-body{padding-left:16px;padding-right:16px}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+
+<div class="wrap">
+<header class="mast">
+  <p class="kicker">TICO &middot; Code Egypt &middot; AI backend</p>
+  <h1>Six services, seven use cases</h1>
+  <p class="dek">One specification per thing a student actually does: who triggers it, what must already be true, what happens step by step, what goes wrong, and what it leaves behind in the database. Written so each can be built and tested without reading the others.</p>
+</header>
+
+<p class="snum">Section 01</p>
+<h2>Services and actors</h2>
+<p>Nine proposed services collapsed into six. TICO is the mascot, the hint-giver and every in-world voice, so hinting, coaching and NPC dialogue are one service.</p>
+<div class="scroll"><table>
+  <thead><tr><th>Service</th><th>Module</th><th>Model calls</th><th>Used by</th></tr></thead>
+  <tbody>
+    <tr><td><strong>TICO</strong></td><td class="m">ai/chains/tico_hint.py &middot; ai/graphs/tico_chat.py</td><td>Yes, cached</td><td class="m">UC-03, UC-04</td></tr>
+    <tr><td><strong>Code analysis</strong></td><td class="m">ai/chains/classify_error.py</td><td>Yes, small</td><td class="m">UC-05</td></tr>
+    <tr><td><strong>Student model</strong></td><td class="m">services/student_model.py &middot; domain/mastery.py</td><td>Summary only</td><td class="m">UC-06</td></tr>
+    <tr><td><strong>Path planner</strong></td><td class="m">services/planner.py &middot; domain/plan.py</td><td>Reviews every skip</td><td class="m">UC-01, UC-06</td></tr>
+    <tr><td><strong>Adaptive composer</strong></td><td class="m">domain/composer.py</td><td>Reviews conflicts only</td><td class="m">UC-02, UC-06, UC-07</td></tr>
+    <tr><td><strong>Mission generation</strong></td><td class="m">ai/graphs/mission_gen.py</td><td>Yes, validated</td><td class="m">UC-02, UC-07</td></tr>
+  </tbody>
+</table></div>
+
+<div class="note">
+  <p class="lbl">Rules propose, the model reviews</p>
+  <p>The planner and the composer decide things <em>about</em> a student rather than writing text <em>for</em> one. Both follow the same pattern: <strong>a pure-Python rule produces a decision and a confidence; when the evidence conflicts, a model reviews the full profile and confirms or overrides it with a written reason.</strong> Clear-cut cases never reach a model, so the system stays cheap and reproducible &mdash; and because <code>decided_by</code> and <code>reason</code> are logged, every decision is auditable. Mastery <em>numbers</em> are the exception: always Python, never a model.</p>
+</div>
+
+<p>Only one actor is a person. That distinction matters: most calls come from the game engine or a background job, and a use case that assumes a human is waiting gets designed with the wrong latency budget.</p>
+<div class="scroll"><table>
+  <thead><tr><th>Actor</th><th>Kind</th><th>Role</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Student</strong></td><td>Person, 10&ndash;17</td><td>The only human actor. Asks TICO for help, submits code, finishes missions.</td></tr>
+    <tr><td><strong>Game engine</strong></td><td>System &mdash; Next.js</td><td>Calls the AI service on the student's behalf. Owns rendering and code execution.</td></tr>
+    <tr><td><strong>Session worker</strong></td><td>System &mdash; background</td><td>Fires after a session closes. Nobody is waiting, so it may be slow.</td></tr>
+    <tr><td><strong>Content author</strong></td><td>Person, your team</td><td>Writes the world manifests. Never appears at runtime, but bounds everything generation may invent.</td></tr>
+  </tbody>
+</table></div>
+
+<p class="snum">Section 02</p>
+<h2>When each service fires</h2>
+<p>The seven-phase mission loop is the spine of the product. Mapping the services onto it shows where the work concentrates.</p>
+
+<figure>
+  <svg viewBox="0 0 900 570" role="img" aria-label="The seven-phase mission loop with the services that fire in each phase. Encounter uses generation and TICO. Explore and Understand use TICO. Discover uses TICO hints. Guided coding uses code analysis and TICO hints. Adapt and remix uses the composer and generation. Independent uses analysis and the student model.">
+    <line class="ln" x1="42" y1="46" x2="42" y2="524"/>
+
+    <circle class="bx" cx="42" cy="46" r="12"/><text class="dtxt-s" x="42" y="50" text-anchor="middle">1</text>
+    <text class="dtxt-b" x="68" y="50">Encounter</text>
+    <rect class="bx-a" x="300" y="32" width="150" height="28" rx="3"/><text class="dtxt-s" x="375" y="50" text-anchor="middle">Generation</text>
+    <rect class="bx-a" x="462" y="32" width="128" height="28" rx="3"/><text class="dtxt-s" x="526" y="50" text-anchor="middle">TICO react</text>
+
+    <circle class="bx" cx="42" cy="126" r="12"/><text class="dtxt-s" x="42" y="130" text-anchor="middle">2</text>
+    <text class="dtxt-b" x="68" y="130">Explore</text>
+    <rect class="bx-a" x="300" y="112" width="128" height="28" rx="3"/><text class="dtxt-s" x="364" y="130" text-anchor="middle">TICO react</text>
+
+    <circle class="bx" cx="42" cy="206" r="12"/><text class="dtxt-s" x="42" y="210" text-anchor="middle">3</text>
+    <text class="dtxt-b" x="68" y="210">Discover</text>
+    <rect class="bx-a" x="300" y="192" width="128" height="28" rx="3"/><text class="dtxt-s" x="364" y="210" text-anchor="middle">TICO hint</text>
+
+    <circle class="bx" cx="42" cy="286" r="12"/><text class="dtxt-s" x="42" y="290" text-anchor="middle">4</text>
+    <text class="dtxt-b" x="68" y="290">Understand</text>
+    <rect class="bx-a" x="300" y="272" width="128" height="28" rx="3"/><text class="dtxt-s" x="364" y="290" text-anchor="middle">TICO chat</text>
+
+    <circle class="bx-a" cx="42" cy="366" r="14"/><text class="dtxt-s" x="42" y="370" text-anchor="middle">5</text>
+    <text class="dtxt-b" x="68" y="370">Guided coding</text>
+    <rect class="bx-a" x="300" y="352" width="128" height="28" rx="3"/><text class="dtxt-s" x="364" y="370" text-anchor="middle">Analysis</text>
+    <rect class="bx-a" x="440" y="352" width="128" height="28" rx="3"/><text class="dtxt-s" x="504" y="370" text-anchor="middle">TICO hint</text>
+    <rect class="bx-t" x="580" y="352" width="140" height="28" rx="3"/><text class="dtxt-s" x="650" y="370" text-anchor="middle">Composer</text>
+
+    <circle class="bx" cx="42" cy="446" r="12"/><text class="dtxt-s" x="42" y="450" text-anchor="middle">6</text>
+    <text class="dtxt-b" x="68" y="450">Adapt / remix</text>
+    <rect class="bx-t" x="300" y="432" width="140" height="28" rx="3"/><text class="dtxt-s" x="370" y="450" text-anchor="middle">Composer</text>
+    <rect class="bx-a" x="452" y="432" width="150" height="28" rx="3"/><text class="dtxt-s" x="527" y="450" text-anchor="middle">Generation</text>
+
+    <circle class="bx" cx="42" cy="526" r="12"/><text class="dtxt-s" x="42" y="530" text-anchor="middle">7</text>
+    <text class="dtxt-b" x="68" y="530">Independent</text>
+    <rect class="bx-a" x="300" y="512" width="128" height="28" rx="3"/><text class="dtxt-s" x="364" y="530" text-anchor="middle">Analysis</text>
+    <rect class="bx-t" x="440" y="512" width="150" height="28" rx="3"/><text class="dtxt-s" x="515" y="530" text-anchor="middle">Student model</text>
+  </svg>
+  <figcaption><b>Phase 5 is where the platform lives or dies.</b> Guided coding fires three services at once and is where a student is most likely to give up &mdash; so it gets the tightest latency budget. Teal chips involve <b>no model call at all</b>: pure Python over rows already in the database.</figcaption>
+</figure>
+
+<p class="snum">Section 03</p>
+<h2>The seven use cases</h2>
+
+<div class="uc">
+  <div class="uc-head"><span class="uc-id">UC-01</span><span class="uc-name">Place a new student and build their path</span><span class="uc-mod">services/planner.py + domain/plan.py</span></div>
+  <dl class="uc-meta">
+    <div><dt>Primary actor</dt><dd>Student</dd></div>
+    <div><dt>Trigger</dt><dd>Finishes onboarding questions</dd></div>
+    <div><dt>Endpoint</dt><dd><code>POST /v1/students/{id}/plan</code></dd></div>
+    <div><dt>Model call</dt><dd><span class="model">Reviews every skip</span></dd></div>
+  </dl>
+  <div class="uc-body">
+    <h5>Preconditions</h5>
+    <ul><li>The student has an account and a verified JWT.</li><li>They answered onboarding, including whether they already know programming.</li><li>Every lesson carries <code>is_skippable</code> &mdash; some must never be optional.</li></ul>
+    <h5>Main flow &mdash; beginner</h5>
+    <ol>
+      <li>Student says they are new to programming.</li>
+      <li>Mark <b>every</b> lesson <code>required</code>. No diagnostic, no model call.</li>
+      <li>Seed <code>student_profile</code> with a low confidence.</li>
+    </ol>
+    <h5>Main flow &mdash; claims experience</h5>
+    <ol>
+      <li>Serve one <b>diagnostic mission</b> touching all four MVP concepts lightly.</li>
+      <li>Observe: solved or not, attempts, hints used, error categories, time.</li>
+      <li><code>domain/plan.py</code> proposes <code>required</code> or <code>optional</code> for each lesson &mdash; a threshold on the demonstrated mastery of that lesson's target concept. Pure Python, with a confidence.</li>
+      <li><b>For every lesson the rule wants to mark optional</b>, a model reviews the full diagnostic and confirms or overrides. Skipping on one short diagnostic is inherently low-confidence, so every skip gets reviewed &mdash; not just the ambiguous ones.</li>
+      <li>Write one <code>student_lesson_plan</code> row per lesson, with <code>reason</code> and <code>decided_by</code>.</li>
+      <li>One model call writes the friendly summary: what they are skipping and why.</li>
+    </ol>
+    <h5>Exceptions</h5>
+    <ul><li><b>Skipped onboarding.</b> Everything required. Nothing is lost; UC-06 will re-plan as evidence accumulates.</li><li><b>Abandoned the diagnostic.</b> Treat as a beginner signal &mdash; everything required.</li><li><b>Rule wants to skip an <code>is_skippable = false</code> lesson.</b> Refuse before the model is even called.</li><li><b>Model disagrees with the rule.</b> The model wins, and the disagreement is logged &mdash; a run of these means the threshold is wrong.</li></ul>
+    <h5>Postconditions</h5>
+    <div class="writes">writes &rarr; student_lesson_plan (one row per lesson) &middot; student_profile &middot; ai_interaction</div>
+    <p class="tail">The order never changes &mdash; only which lessons are in the path. A skipped lesson stays replayable: <b>skipping is a suggestion, never a lock-out.</b> Self-reported level is a weak prior; set confidence low so two real sessions can override it.</p>
+  </div>
+</div>
+
+<div class="uc">
+  <div class="uc-head"><span class="uc-id">UC-02</span><span class="uc-name">Start the next mission</span><span class="uc-mod">domain/composer.py + ai/graphs/mission_gen.py</span></div>
+  <dl class="uc-meta">
+    <div><dt>Primary actor</dt><dd>Student</dd></div>
+    <div><dt>Trigger</dt><dd>Opens the map, or finishes a mission</dd></div>
+    <div><dt>Endpoint</dt><dd><code>POST /v1/missions/next</code></dd></div>
+    <div><dt>Model call</dt><dd><span class="model">1&ndash;3 &middot; validated</span></dd></div>
+  </dl>
+  <div class="uc-body">
+    <h5>Preconditions</h5>
+    <ul><li>A <code>student_lesson_plan</code> exists for this student (UC-01).</li><li>A world manifest exists for the world that lesson lives in.</li><li><code>level_concept</code> records the target and carried concepts for that lesson.</li></ul>
+    <h5>Main flow</h5>
+    <ol>
+      <li><b>Lesson plan</b> returns the next lesson still marked <code>required</code>, skipping any marked <code>optional</code>. Fixed order, a SQL read, no decision.</li>
+      <li><b>Student model</b> supplies mastery on the target concept and on each carried concept.</li>
+      <li><b>Composer</b> computes, in pure Python: the scaffold plan per carried concept, difficulty parameters, whether this is a first attempt or an extra rep.</li>
+      <li><b>Generation</b> reads the world manifest and composes a scenario against those parameters &mdash; scene, characters, brief, starter code, solution, tests.</li>
+      <li><b>Validator</b> re-reads the manifest and rejects anything referencing a scene, prop or verb that does not exist; runs the solution against the tests.</li>
+      <li>Invalid &rarr; feed errors back and regenerate. At most two repairs.</li>
+      <li>Persist <code>generated_mission</code> with <code>validated = true</code>, and return it.</li>
+    </ol>
+    <h5>Exceptions</h5>
+    <ul><li><b>Still invalid after two repairs.</b> Fall back to the template's default parameters. The student gets a working mission, never an error.</li><li><b>An equivalent mission was already generated</b> for this template, params and scaffold plan. Reuse the row &mdash; a direct cost saving.</li><li><b>Roadmap complete.</b> Route to the challenge arena (UC-07).</li></ul>
+    <h5>Postconditions</h5>
+    <div class="writes">writes &rarr; generated_mission &middot; mission_session (opened) &middot; ai_interaction</div>
+    <p class="tail">This one call is the whole create-and-adapt pipeline. The world and the target concept were fixed before it started; what the model contributed was the <b>situation</b>, chosen from the manifest.</p>
+  </div>
+</div>
+
+<div class="uc">
+  <div class="uc-head"><span class="uc-id">UC-03</span><span class="uc-name">Ask TICO for a hint</span><span class="uc-mod">ai/chains/tico_hint.py</span></div>
+  <dl class="uc-meta">
+    <div><dt>Primary actor</dt><dd>Student</dd></div>
+    <div><dt>Trigger</dt><dd>Asks for help, or stalls past a threshold</dd></div>
+    <div><dt>Endpoint</dt><dd><code>POST /v1/hints</code></dd></div>
+    <div><dt>Model call</dt><dd><span class="model">Yes &middot; cached</span></dd></div>
+  </dl>
+  <div class="uc-body">
+    <h5>Preconditions</h5>
+    <ul><li>An open <code>mission_session</code> exists and the JWT owner owns it.</li><li>Prior <code>hint_event</code> rows determine which rung comes next.</li></ul>
+    <h5>Main flow</h5>
+    <ol>
+      <li>Count prior hint events for this session and concept.</li>
+      <li><code>domain/hint_ladder.py</code> decides rung <b>N</b> &mdash; pure Python, before any model is involved.</li>
+      <li>Look up the cache on <code>(level_id, rung, error_category, scaffold_state)</code>.</li>
+      <li>On a miss, the model writes the prose <b>for rung N only</b>, in TICO's voice. It is never shown the solution.</li>
+      <li>Guard validates the shape and asserts no solution identifier appears in early rungs.</li>
+      <li>Write <code>hint_event</code>; return the hint with an <code>is_final</code> flag.</li>
+    </ol>
+    <h5>Exceptions</h5>
+    <ul><li><b>Ladder exhausted.</b> Return the final authored explanation and mark the session fully hinted &mdash; strong evidence for UC-06.</li><li><b>Leak assertion fails.</b> Discard the output, serve the authored hint for that rung, log a prompt regression.</li><li><b>Daily call cap hit.</b> Serve cached or authored hints only.</li></ul>
+    <h5>Postconditions</h5>
+    <div class="writes">writes &rarr; hint_event &middot; hint cache &middot; ai_interaction</div>
+    <p class="tail">If the composer scaffolded a carried concept away, TICO must not hint about it &mdash; the scaffold state is part of the prompt <em>and</em> the cache key.</p>
+  </div>
+</div>
+
+<div class="uc">
+  <div class="uc-head"><span class="uc-id">UC-04</span><span class="uc-name">Ask TICO a question</span><span class="uc-mod">ai/graphs/tico_chat.py</span></div>
+  <dl class="uc-meta">
+    <div><dt>Primary actor</dt><dd>Student</dd></div>
+    <div><dt>Trigger</dt><dd>Types a message to TICO</dd></div>
+    <div><dt>Endpoint</dt><dd><code>POST /v1/tico/messages</code> &middot; SSE</dd></div>
+    <div><dt>Model call</dt><dd><span class="model">Yes &middot; streaming</span></dd></div>
+  </dl>
+  <div class="uc-body">
+    <h5>Preconditions</h5>
+    <ul><li>An open <code>mission_session</code> &mdash; it supplies the LangGraph <code>thread_id</code>.</li><li>TICO's persona and the mixed-language rule are in the system prompt.</li></ul>
+    <h5>Main flow</h5>
+    <ol>
+      <li>Moderate the student's text <b>before</b> it enters any prompt.</li>
+      <li>Load conversation state from the Postgres checkpointer, keyed on the session id.</li>
+      <li>Build the prompt stable-first: persona, then mission, then profile, then &mdash; last &mdash; the message.</li>
+      <li>Stream the reply over SSE.</li>
+      <li>Checkpoint the new state; log the call.</li>
+    </ol>
+    <h5>Exceptions</h5>
+    <ul><li><b>Moderation flags the input.</b> A gentle in-character redirect. Record the verdict. Never send the text to a model.</li><li><b>Student asks outright for the answer.</b> TICO refuses in character and offers the next hint rung instead.</li><li><b>Session closed.</b> Reject &mdash; TICO has no context to stand on.</li></ul>
+    <h5>Postconditions</h5>
+    <div class="writes">writes &rarr; langgraph checkpoints &middot; ai_interaction (with moderation_flag)</div>
+    <p class="tail">Same character and same persona as UC-03. What differs is only state and streaming &mdash; which is why these are one service, not two.</p>
+  </div>
+</div>
+
+<div class="uc">
+  <div class="uc-head"><span class="uc-id">UC-05</span><span class="uc-name">Submit code that fails</span><span class="uc-mod">ai/chains/classify_error.py</span></div>
+  <dl class="uc-meta">
+    <div><dt>Primary actor</dt><dd>Student</dd></div>
+    <div><dt>Trigger</dt><dd>Runs code that does not pass its tests</dd></div>
+    <div><dt>Endpoint</dt><dd><code>POST /v1/submissions/analyze</code></dd></div>
+    <div><dt>Model call</dt><dd><span class="model">Yes &middot; structured</span></dd></div>
+  </dl>
+  <div class="uc-body">
+    <h5>Preconditions</h5>
+    <ul><li>The game engine has <b>already executed</b> the code and holds the real failure output.</li><li>A fixed error-category enum is agreed with the game team.</li></ul>
+    <h5>Main flow</h5>
+    <ol>
+      <li>Receive the code, the runtime error and the failing expectation.</li>
+      <li>Model classifies it into <b>one category from the fixed enum</b> and names the misconception in a sentence.</li>
+      <li>Guard rejects any category outside the enum.</li>
+      <li>Write <code>error_category</code> onto <code>code_submission</code>.</li>
+      <li>Return it &mdash; it becomes part of the hint cache key in UC-03 and evidence in UC-06.</li>
+    </ol>
+    <h5>Exceptions</h5>
+    <ul><li><b>Low confidence.</b> Escalate once to a stronger model; if still unclear, label <code>unknown</code> and continue.</li><li><b>Code empty or unchanged</b> from the starter. Skip the model &mdash; that is a stalling signal, not an error.</li><li><b>The error is in a scaffolded region.</b> Flag it: the composer scaffolded something the student still broke, which is useful signal about the scaffold itself.</li></ul>
+    <h5>Postconditions</h5>
+    <div class="writes">writes &rarr; code_submission.error_category &middot; ai_interaction</div>
+    <p class="tail">The AI service <b>never runs the student's code.</b> It receives execution results and reasons about them. That boundary is what keeps the platform deterministic.</p>
+  </div>
+</div>
+
+<div class="uc">
+  <div class="uc-head"><span class="uc-id">UC-06</span><span class="uc-name">Finish a mission</span><span class="uc-mod">services/student_model.py</span></div>
+  <dl class="uc-meta">
+    <div><dt>Primary actor</dt><dd>Session worker</dd></div>
+    <div><dt>Trigger</dt><dd>A <code>mission_session</code> closes</dd></div>
+    <div><dt>Endpoint</dt><dd><code>POST /v1/students/{id}/refresh</code></dd></div>
+    <div><dt>Model call</dt><dd><span class="nomodel">None for the numbers</span></dd></div>
+  </dl>
+  <div class="uc-body">
+    <h5>Preconditions</h5>
+    <ul><li>The session is closed, with submissions and hint events attached.</li><li><code>level_concept</code> gives the weight of each concept in that mission.</li></ul>
+    <h5>Main flow</h5>
+    <ol>
+      <li>Gather every piece of evidence: attempts, hints, error categories, timings.</li>
+      <li><code>domain/mastery.py</code> updates mastery <b>for the target concept at full weight and each carried concept at its own weight</b> &mdash; pure Python.</li>
+      <li>Upsert <code>concept_mastery</code>.</li>
+      <li>Recompute <code>hint_dependency</code>, <code>syntax_vs_logic</code>, <code>pace</code>, <code>skill_band</code>.</li>
+      <li><b>Composer decides advance or hold.</b> The rule compares mastery to the gate threshold. If the evidence conflicts &mdash; solved it but leaned on every hint, or fast but three failed attempts &mdash; a model reviews the profile and confirms or overrides, with a reason.</li>
+      <li><b>Planner re-plans forward.</b> Real evidence is better than a diagnostic, so lessons still marked <code>optional</code> can be flipped back to <code>required</code> if mastery came out weaker than the skip assumed.</li>
+      <li>Optionally one model call writes the human-readable summary <em>after</em> the numbers exist.</li>
+    </ol>
+    <h5>Exceptions</h5>
+    <ul><li><b>Session abandoned</b> with no submissions. Record the abandonment &mdash; quitting is evidence &mdash; but do not move mastery.</li><li><b>Job fails.</b> Retry. The profile is a cache; a stale one degrades quality but does not break the request path.</li><li><b>Re-plan would un-skip a lesson the student already passed.</b> Leave it &mdash; never send someone backwards through completed work.</li></ul>
+    <h5>Postconditions</h5>
+    <div class="writes">writes &rarr; concept_mastery (target + carried) &middot; student_lesson_plan (re-planned) &middot; student_profile &middot; ai_interaction</div>
+    <p class="tail">Step 2 is where cumulative learning pays off. A student who learned variables in week one keeps being assessed on them every time a later mission carries them &mdash; without a single extra mission being built.</p>
+  </div>
+</div>
+
+<div class="uc">
+  <div class="uc-head"><span class="uc-id">UC-07</span><span class="uc-name">Enter the challenge arena</span><span class="uc-mod">domain/composer.py + ai/graphs/mission_gen.py</span></div>
+  <dl class="uc-meta">
+    <div><dt>Primary actor</dt><dd>Student</dd></div>
+    <div><dt>Trigger</dt><dd>Opens Challenges, having finished the roadmap</dd></div>
+    <div><dt>Endpoint</dt><dd><code>POST /v1/challenges/next</code></dd></div>
+    <div><dt>Model call</dt><dd><span class="model">Yes &middot; validated</span></dd></div>
+  </dl>
+  <div class="uc-body">
+    <h5>Preconditions</h5>
+    <ul><li>The student has mastered at least two concepts.</li></ul>
+    <h5>Main flow</h5>
+    <ol>
+      <li>Select the mastered concepts, weighted toward the weakest &mdash; a challenge should stretch, not flatter.</li>
+      <li>Composer sets: <b>no scaffolding</b>, a shorter hint ladder, a higher difficulty band.</li>
+      <li>Generation composes a scenario mixing those concepts, in any world the student has visited.</li>
+      <li>Validator checks it as in UC-02.</li>
+      <li>Return the challenge; record the result against every concept it touched.</li>
+    </ol>
+    <h5>Exceptions</h5>
+    <ul><li><b>Fewer than two concepts mastered.</b> Keep Challenges locked and say why.</li><li><b>Repeated failure.</b> Drop the difficulty band rather than reintroducing scaffolding &mdash; the arena's whole point is that there is none.</li></ul>
+    <h5>Postconditions</h5>
+    <div class="writes">writes &rarr; generated_mission &middot; mission_session &middot; concept_mastery &middot; ai_interaction</div>
+    <p class="tail">This is where generation matters most: there is no fixed lesson order to fall back on, so every challenge has to be composed. It is also the only place a mission may mix worlds.</p>
+  </div>
+</div>
+
+<p class="snum">Section 04</p>
+<h2>One student, one mission, end to end</h2>
+<p>Nour is 13, in Grade 8 in Mansoura. She is at lesson 4 &mdash; conditionals, in Cairo Metro, carrying variables. Her mastery on variables is shaky, so nothing gets scaffolded away.</p>
+<div class="scroll"><table>
+  <thead><tr><th>Step</th><th>What Nour sees</th><th>Use case</th><th>Rows written</th></tr></thead>
+  <tbody>
+    <tr><td>Opens the map</td><td>Cairo Metro, next stop lit</td><td class="m">UC-02</td><td class="m">generated_mission</td></tr>
+    <tr><td>1 &middot; Encounter</td><td>Crowded platform. TICO: &ldquo;the gate is stuck shut!&rdquo;</td><td class="m">UC-02</td><td class="m">mission_session</td></tr>
+    <tr><td>3 &middot; Discover</td><td>Stuck. Asks TICO &mdash; gets a nudge, not an answer</td><td class="m">UC-03 rung 1</td><td class="m">hint_event</td></tr>
+    <tr><td>5 &middot; Guided coding</td><td>Writes <code>=</code> instead of <code>==</code>; code fails</td><td class="m">UC-05</td><td class="m">error_category</td></tr>
+    <tr><td>5 &middot; Guided coding</td><td>Next hint names comparison specifically</td><td class="m">UC-03 rung 2</td><td class="m">hint_event</td></tr>
+    <tr><td>5 &middot; Guided coding</td><td>&ldquo;Why two equals?&rdquo; TICO explains in Arabic</td><td class="m">UC-04</td><td class="m">checkpoints</td></tr>
+    <tr><td>7 &middot; Independent</td><td>Gate opens. Passengers board. +50 XP</td><td class="m">UC-05</td><td class="m">code_submission</td></tr>
+    <tr><td>Session close</td><td>&mdash; nothing on screen &mdash;</td><td class="m">UC-06</td><td class="m">concept_mastery &times;2</td></tr>
+    <tr><td>Next visit</td><td>Same world, delayed-train scenario, threshold raised</td><td class="m">UC-02</td><td class="m">generated_mission</td></tr>
+  </tbody>
+</table></div>
+
+<div class="note teal">
+  <p class="lbl">Two things this table is showing</p>
+  <p>First: <strong>the session close writes two mastery rows, not one.</strong> Conditionals at full weight, variables at carried weight &mdash; Nour practised both, so both move. Second: her next mission is the <strong>same world with a different situation</strong>. Cairo Metro didn't change, the <code>if</code> mechanic didn't change; the scene, the numbers and the story did. That is what generation produces.</p>
+</div>
+
+<div class="note">
+  <p class="lbl">Both assumptions are now settled</p>
+  <p>UC-03 runs a <strong>4-rung ladder</strong>: orient, question, name the concept with a foreign example, then walk to the fix in words. No rung emits a complete solution, so the &ldquo;ladder exhausted&rdquo; path leads to a <strong>mini-practice</strong> rather than the answer. UC-05 assumes the engine executes <strong>Python</strong> and returns results &mdash; which also fixes the <code>verbs</code> in every world manifest as Python (<code>gate.open()</code>, <code>station.passengers -&gt; int</code>). Every model call routes through Gemini via <code>ai/router.py</code>.</p>
+</div>
+
+<footer>
+  TICO &middot; Code Egypt &mdash; AI service use cases &middot; SONIC team, VICTORIS 5.0<br>
+  Companion documents: the AI layer architecture &middot; the build roadmap
+</footer>
+</div>

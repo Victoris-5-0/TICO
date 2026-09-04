@@ -1,0 +1,19 @@
+venv/
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.coverage
+
+# secrets — the Supabase service-role key and the Gemini key must never reach the repo
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db

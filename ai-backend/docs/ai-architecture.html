@@ -1,0 +1,631 @@
+<title>TICO AI Layer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+:root{
+  --paper:#F5F3EE; --surface:#FFFFFF; --surface-2:#EDEAE3;
+  --ink:#17211F; --ink-2:#43514D; --muted:#77837E;
+  --line:#DCD7CD; --line-strong:#BEB6A8;
+  --accent:#C9502A; --accent-soft:#F7E7E0;
+  --teal:#1D5B57; --teal-soft:#DEEAE7;
+  --warn:#8A5D0F;
+  --sans:"IBM Plex Sans",ui-sans-serif,system-ui,sans-serif;
+  --display:"Archivo","IBM Plex Sans",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --paper:#0F1917; --surface:#16211E; --surface-2:#1D2926;
+    --ink:#E9E5DC; --ink-2:#B4BDB8; --muted:#8B978F;
+    --line:#2A3733; --line-strong:#3F4D48;
+    --accent:#E8815A; --accent-soft:#3A241C;
+    --teal:#71C1B4; --teal-soft:#16302C;
+    --warn:#D9A441;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#0F1917; --surface:#16211E; --surface-2:#1D2926;
+  --ink:#E9E5DC; --ink-2:#B4BDB8; --muted:#8B978F;
+  --line:#2A3733; --line-strong:#3F4D48;
+  --accent:#E8815A; --accent-soft:#3A241C;
+  --teal:#71C1B4; --teal-soft:#16302C;
+  --warn:#D9A441;
+}
+*{box-sizing:border-box}
+body{background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1080px;margin:0 auto;padding:0 28px 96px}
+.mast{border-bottom:1px solid var(--line);padding:52px 0 30px}
+.kicker{font-family:var(--mono);font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);margin:0 0 20px}
+h1{font-family:var(--display);font-weight:700;font-size:clamp(34px,5.2vw,54px);line-height:1.04;letter-spacing:-.02em;margin:0;text-wrap:balance;max-width:19ch}
+.dek{font-size:18px;color:var(--ink-2);max-width:62ch;margin:20px 0 0}
+.facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:1px;background:var(--line);border:1px solid var(--line);margin-top:34px}
+.fact{background:var(--surface);padding:14px 16px}
+.fact dt{font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:0 0 5px}
+.fact dd{margin:0;font-weight:600;font-size:14.5px;line-height:1.35}
+nav{position:sticky;top:0;z-index:20;background:var(--paper);border-bottom:1px solid var(--line);padding:11px 0;margin-bottom:56px}
+nav ul{display:flex;flex-wrap:wrap;gap:20px;list-style:none;margin:0 auto;padding:0 28px;max-width:1080px}
+nav a{font-family:var(--mono);font-size:12px;color:var(--ink-2);text-decoration:none}
+nav a:hover{color:var(--accent)}
+a:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+section{margin-bottom:76px;scroll-margin-top:70px}
+.snum{font-family:var(--mono);font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin:0 0 10px}
+h2{font-family:var(--display);font-weight:700;font-size:clamp(25px,3.1vw,34px);line-height:1.14;letter-spacing:-.015em;margin:0 0 18px;text-wrap:balance}
+h3{font-family:var(--display);font-weight:600;font-size:19px;margin:38px 0 12px}
+h4{font-family:var(--mono);font-weight:500;font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:28px 0 10px}
+p{max-width:66ch;margin:0 0 16px}
+ul.body,ol.body{max-width:66ch;padding-left:20px;margin:0 0 16px}
+ul.body li,ol.body li{margin-bottom:9px}
+code{font-family:var(--mono);font-size:.875em;background:var(--surface-2);padding:1.5px 5px;border-radius:3px}
+strong{font-weight:600}
+a{color:var(--accent)}
+pre{background:var(--surface-2);border:1px solid var(--line);padding:14px 16px;overflow-x:auto;font-family:var(--mono);font-size:12.5px;line-height:1.7;margin:18px 0}
+pre code{background:none;padding:0;font-size:inherit}
+.note{border-left:3px solid var(--accent);background:var(--surface);padding:16px 20px;margin:24px 0;max-width:70ch}
+.note.teal{border-left-color:var(--teal)}
+.note.warn{border-left-color:var(--warn)}
+.note p:last-child{margin-bottom:0}
+.note .lbl{font-family:var(--mono);font-size:10.5px;letter-spacing:.11em;text-transform:uppercase;color:var(--accent);margin:0 0 7px}
+.note.teal .lbl{color:var(--teal)}
+.note.warn .lbl{color:var(--warn)}
+.scroll{overflow-x:auto;margin:22px 0;border:1px solid var(--line);background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-size:13.5px;min-width:560px}
+th{font-family:var(--mono);font-weight:500;font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);text-align:left;padding:11px 14px;border-bottom:1px solid var(--line-strong);white-space:nowrap;vertical-align:bottom}
+td{padding:11px 14px;border-bottom:1px solid var(--line);vertical-align:top;line-height:1.5}
+tr:last-child td{border-bottom:none}
+td.m,th.m{font-family:var(--mono);font-size:12.5px;white-space:nowrap}
+td.wrapm{font-family:var(--mono);font-size:12px;line-height:1.7;white-space:normal;min-width:260px}
+.pk{color:var(--accent);font-weight:500}
+.fk{color:var(--teal);font-weight:500}
+figure{margin:30px 0;border:1px solid var(--line);background:var(--surface);padding:26px 22px 0}
+figure svg{display:block;width:100%;max-width:100%;height:auto;color:var(--ink)}
+figcaption{font-size:13px;color:var(--ink-2);border-top:1px solid var(--line);margin:22px -22px 0;padding:13px 22px;line-height:1.55}
+figcaption b{font-weight:600;color:var(--ink)}
+.dtxt{font-family:var(--mono);font-size:12px;fill:currentColor}
+.dtxt-s{font-family:var(--mono);font-size:10.5px;fill:currentColor;opacity:.64}
+.dtxt-b{font-family:var(--mono);font-size:12px;font-weight:500;fill:currentColor}
+.bx{fill:var(--surface-2);stroke:var(--line-strong);stroke-width:1.25}
+.bx-a{fill:var(--accent-soft);stroke:var(--accent);stroke-width:1.5}
+.bx-t{fill:var(--teal-soft);stroke:var(--teal);stroke-width:1.5}
+.bx-g{fill:none;stroke:var(--line-strong);stroke-width:1.25;stroke-dasharray:5 4}
+.ln{fill:none;stroke:currentColor;stroke-width:1.4;opacity:.75}
+.ln-a{fill:none;stroke:var(--accent);stroke-width:1.6}
+.caps{display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:1px;background:var(--line);border:1px solid var(--line);margin:24px 0}
+.cap{background:var(--surface);padding:17px 19px}
+.cap .n{font-family:var(--mono);font-size:10.5px;color:var(--accent);letter-spacing:.08em;margin:0}
+.cap h5{font-family:var(--display);font-size:16px;font-weight:600;margin:5px 0 7px}
+.cap p.d{font-size:13px;color:var(--ink-2);margin:0 0 9px;max-width:none;line-height:1.5}
+.cap .mod{font-family:var(--mono);font-size:11.5px;color:var(--teal);word-break:break-all;margin:0}
+.cap .abs{font-size:11.5px;color:var(--muted);margin:6px 0 0;font-style:italic}
+footer{border-top:1px solid var(--line);padding-top:22px;font-family:var(--mono);font-size:11.5px;color:var(--muted);line-height:1.9}
+@media (max-width:640px){.wrap{padding:0 18px 64px}nav ul{padding:0 18px;gap:14px}figure{padding:18px 14px 0}figcaption{margin:18px -14px 0;padding:12px 14px}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+
+<div class="wrap">
+<header class="mast">
+  <p class="kicker">TICO &middot; Code Egypt &middot; SONIC team</p>
+  <h1>The AI layer, and how it plugs in</h1>
+  <p class="dek">One FastAPI service, six AI capabilities, eight tables in their own Postgres schema. The concept order is fixed; which lessons a student actually needs is not. Missions are composed at runtime from an inventory of worlds, characters and props.</p>
+  <dl class="facts">
+    <div class="fact"><dt>Service</dt><dd>1 app &middot; 6 modules</dd></div>
+    <div class="fact"><dt>Schema</dt><dd><code>ai</code> &middot; 8 tables</dd></div>
+    <div class="fact"><dt>MVP scope</dt><dd>4 concepts &middot; 3 worlds</dd></div>
+    <div class="fact"><dt>Stack</dt><dd>Sanjeev course</dd></div>
+    <div class="fact"><dt>Prod host</dt><dd>AWS EC2 Ubuntu</dd></div>
+  </dl>
+</header>
+</div>
+
+<nav><ul>
+  <li><a href="#boundary">01 Boundary</a></li>
+  <li><a href="#model">02 Learning model</a></li>
+  <li><a href="#services">03 Six services</a></li>
+  <li><a href="#escalation">04 Rules and models</a></li>
+  <li><a href="#pipeline">05 Generation</a></li>
+  <li><a href="#internals">06 Internals</a></li>
+  <li><a href="#schema">07 Database</a></li>
+  <li><a href="#stack">08 Stack &amp; deploy</a></li>
+</ul></nav>
+
+<div class="wrap">
+
+<section id="boundary">
+  <p class="snum">Section 01</p>
+  <h2>Where the AI service starts and stops</h2>
+  <p>The single most important thing to agree on before anyone writes code: <strong>this service returns JSON decisions and nothing else.</strong> It never renders game state, never executes student code, and never owns a game table.</p>
+  <p>Next.js on Vercel owns the UI, the game engine, the code editor and code execution. It reads plain game data straight from Supabase under row-level security. It calls <code>tico-ai</code> when it needs a judgement or a mission.</p>
+
+  <figure>
+    <svg viewBox="0 0 880 540" role="img" aria-label="Layered integration diagram: the browser talks to Next.js on Vercel, which calls the tico-ai FastAPI service, which reaches Supabase Postgres and the model provider. Next.js also reads Supabase directly under row-level security.">
+      <defs>
+        <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker>
+        <marker id="ara" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#C9502A"/></marker>
+      </defs>
+      <rect class="bx" x="240" y="24" width="400" height="76" rx="3"/>
+      <text class="dtxt-b" x="440" y="52" text-anchor="middle">Student browser</text>
+      <text class="dtxt-s" x="440" y="72" text-anchor="middle">game canvas &middot; code editor &middot; execution runtime</text>
+      <line class="ln" x1="440" y1="100" x2="440" y2="150" marker-end="url(#ar)"/>
+      <text class="dtxt-s" x="452" y="130">actions</text>
+      <rect class="bx" x="240" y="156" width="400" height="86" rx="3"/>
+      <text class="dtxt-b" x="440" y="184" text-anchor="middle">Next.js on Vercel</text>
+      <text class="dtxt-s" x="440" y="204" text-anchor="middle">UI &middot; game engine &middot; API routes</text>
+      <text class="dtxt-s" x="440" y="222" text-anchor="middle">TS backend &middot; code execution</text>
+      <line class="ln" x1="440" y1="242" x2="440" y2="292" marker-end="url(#ar)"/>
+      <text class="dtxt-s" x="452" y="266">HTTPS &middot; Supabase JWT &middot; JSON</text>
+      <rect class="bx-a" x="200" y="298" width="480" height="124" rx="3"/>
+      <text class="dtxt-b" x="440" y="326" text-anchor="middle">tico-ai &mdash; FastAPI</text>
+      <text class="dtxt-s" x="440" y="346" text-anchor="middle">orchestration + 6 AI capability modules</text>
+      <text class="dtxt-s" x="440" y="364" text-anchor="middle">verifies JWT &middot; owns the ai schema</text>
+      <text class="dtxt-s" x="440" y="382" text-anchor="middle">service-role key never leaves here</text>
+      <text class="dtxt-s" x="440" y="404" text-anchor="middle">AWS EC2 &middot; Nginx &rarr; Gunicorn &rarr; systemd</text>
+      <line class="ln" x1="300" y1="422" x2="300" y2="454" marker-end="url(#ar)"/>
+      <line class="ln" x1="600" y1="422" x2="600" y2="454" marker-end="url(#ar)"/>
+      <rect class="bx-t" x="130" y="460" width="250" height="64" rx="3"/>
+      <text class="dtxt-b" x="255" y="486" text-anchor="middle">Supabase</text>
+      <text class="dtxt-s" x="255" y="506" text-anchor="middle">Postgres &middot; Storage</text>
+      <rect class="bx" x="500" y="460" width="250" height="64" rx="3"/>
+      <text class="dtxt-b" x="625" y="486" text-anchor="middle">Model provider</text>
+      <text class="dtxt-s" x="625" y="506" text-anchor="middle">via ai/router.py</text>
+      <path class="ln-a" d="M240,199 H60 V492 H124" marker-end="url(#ara)"/>
+      <text class="dtxt-s" x="72" y="356">direct reads</text>
+      <text class="dtxt-s" x="72" y="372">RLS-protected</text>
+    </svg>
+    <figcaption><b>Two paths to the database, on purpose.</b> Next.js reads plain game data itself under RLS (the orange path) &mdash; routing every read through FastAPI would add a hop for no benefit. FastAPI uses the service-role key, which bypasses RLS, so it must re-check authorisation per request from the verified JWT.</figcaption>
+  </figure>
+
+  <div class="note warn">
+    <p class="lbl">Decide this once, write it down</p>
+    <p>FastAPI holds the service-role key and therefore <strong>bypasses row-level security entirely</strong>. Every endpoint must confirm that the <code>user_id</code> in the verified JWT actually owns the session or student it is being asked about. Miss this and any logged-in student can read another student's data by changing an ID.</p>
+  </div>
+</section>
+
+<section id="model">
+  <p class="snum">Section 02</p>
+  <h2>The learning model</h2>
+  <p>Every design decision below follows from these six properties.</p>
+
+  <h3>1. The concept order is fixed</h3>
+  <p>Programming is learned in order &mdash; variables, then conditions, then loops, then functions. The system never reorders concepts, and there is no prerequisite graph to traverse.</p>
+
+  <h3>2. But which lessons a student needs is not fixed</h3>
+  <p>An experienced student may already know loops. Forcing them through every loops lesson to reach functions wastes exactly the students you most want to keep. So after the diagnostic, each lesson is marked <strong>required</strong> or <strong>optional</strong> for that student, and their path is the fixed sequence <em>minus</em> what they have proven they don't need. <strong>The order never changes; the membership does.</strong> That is a filter over an ordered list, not a graph traversal.</p>
+
+  <h3>3. Learning is cumulative &mdash; target and carried concepts</h3>
+  <p>Concepts do not disappear once taught. A loops mission still uses variables and conditions. So every lesson has a <strong>target concept</strong> (the new thing) and a set of <strong>carried concepts</strong> (already learned, exercised again).</p>
+  <p>This lives in <code>level_concept</code> with <code>is_primary</code> and <code>weight</code>. It is the most load-bearing join in the schema: it tells the system what a mission touches and how much each result should move each concept's mastery. It also keeps early concepts alive &mdash; a student who learned variables in week one keeps being assessed on them, without a single extra mission.</p>
+
+  <h3>4. Worlds are chapters spanning several lessons</h3>
+  <div class="scroll"><table>
+    <thead><tr><th>Lessons</th><th>World</th><th>Target concept</th><th>Carried</th></tr></thead>
+    <tbody>
+      <tr><td class="m">1&ndash;3</td><td>Cairo Metro</td><td>Variables</td><td class="m">&mdash;</td></tr>
+      <tr><td class="m">4&ndash;6</td><td>Cairo Metro</td><td>Conditionals</td><td class="m">variables</td></tr>
+      <tr><td class="m">7&ndash;9</td><td>Cairo Traffic</td><td>Loops</td><td class="m">variables, conditionals</td></tr>
+      <tr><td class="m">10&ndash;12</td><td>Nile / farming</td><td>Functions</td><td class="m">all three</td></tr>
+    </tbody>
+  </table></div>
+  <p>Twelve lessons, four concepts, three worlds for the MVP. The world changes less often than the concept does, so a map gets several lessons before the student leaves it.</p>
+
+  <h3>5. Adaptation happens inside a lesson</h3>
+  <p>Not which concept, not which world &mdash; both fixed. Adaptation has three levers: <strong>how much of the carried concepts is pre-scaffolded</strong> in the starter code, <strong>how many reps</strong> before moving on, and <strong>advance or hold</strong> at the concept gate.</p>
+
+  <h3>6. After the roadmap: the challenge arena</h3>
+  <p>Students who finish enter <strong>Challenges</strong> &mdash; tasks across every mastered concept, mixed, with no scaffolding and a shorter hint ladder. Already in the product's IA: the landing page has a Challenges nav item. It is also where generated variety matters most, because there is no lesson order to fall back on.</p>
+</section>
+
+<section id="services">
+  <p class="snum">Section 03</p>
+  <h2>Six services</h2>
+  <p>The proposal named nine. Several turned out to be the same thing wearing different names &mdash; TICO is the mascot, the hint-giver and every in-world voice, so those are one service, not three.</p>
+
+  <div class="caps">
+    <div class="cap"><p class="n">01</p><h5>TICO</h5><p class="d">The mascot, and the only voice in the game. Three modes: give the next hint rung, answer a question in conversation, react to an event. One persona, one prompt family.</p><p class="mod">ai/chains/tico_hint.py &middot; ai/graphs/tico_chat.py</p><p class="abs">absorbs: Hinting + Coaching + NPC control</p></div>
+    <div class="cap"><p class="n">02</p><h5>Code analysis</h5><p class="d">Classifies a failed submission into one category from a fixed enum and names the misconception. Feeds TICO's next hint.</p><p class="mod">ai/chains/classify_error.py</p><p class="abs">absorbs: Code analysis</p></div>
+    <div class="cap"><p class="n">03</p><h5>Student model</h5><p class="d">Weighted mastery across target and carried concepts, recomputed after every session. Numbers from Python; the readable summary from a model.</p><p class="mod">services/student_model.py &middot; domain/mastery.py</p><p class="abs">absorbs: Learning analytics</p></div>
+    <div class="cap"><p class="n">04</p><h5>Path planner</h5><p class="d">Turns the diagnostic into a personal lesson plan: which lessons are required, which can be skipped. Rules propose, a model reviews every skip.</p><p class="mod">services/planner.py &middot; domain/plan.py</p><p class="abs">absorbs: Personalization + Roadmap</p></div>
+    <div class="cap"><p class="n">05</p><h5>Adaptive composer</h5><p class="d">Turns the student model into instructions for the next mission: scaffold plan, difficulty, reps, advance or hold. Rules decide; a model reviews when the evidence conflicts.</p><p class="mod">domain/composer.py</p><p class="abs">absorbs: Difficulty adaptation</p></div>
+    <div class="cap"><p class="n">06</p><h5>Mission generation</h5><p class="d">Composes a scenario from the world inventory against the composer's parameters, then a Python validator checks it before any student sees it.</p><p class="mod">ai/graphs/mission_gen.py</p><p class="abs">absorbs: Mission generation</p></div>
+  </div>
+</section>
+
+<section id="escalation">
+  <p class="snum">Section 04</p>
+  <h2>Rules propose, the model reviews</h2>
+  <p>Two of the six services &mdash; the planner and the composer &mdash; make decisions about a student rather than writing text for one. Those decisions follow the same pattern, and it is worth stating once because it is the answer to &ldquo;where exactly is the AI here?&rdquo;</p>
+
+  <p>A threshold rule is fast, reproducible, free and explainable &mdash; but it is equally confident whether the evidence is clear or contradictory. A student with high accuracy <em>and</em> heavy hint use is genuinely ambiguous, and a rule just picks a side. So:</p>
+
+  <figure>
+    <svg viewBox="0 0 760 420" role="img" aria-label="Escalation pattern: evidence goes to a deterministic rule which produces a decision and a confidence. If the evidence is clear the decision is applied directly. If it conflicts, a model reviews the full profile and confirms or overrides with a written reason before the decision is applied and logged.">
+      <defs>
+        <marker id="are" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker>
+        <marker id="area" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#C9502A"/></marker>
+      </defs>
+      <rect class="bx" x="150" y="20" width="380" height="54" rx="3"/>
+      <text class="dtxt-b" x="170" y="43">Evidence</text>
+      <text class="dtxt-s" x="170" y="61">mastery &middot; attempts &middot; hints used &middot; time &middot; error types</text>
+      <line class="ln" x1="340" y1="74" x2="340" y2="92" marker-end="url(#are)"/>
+
+      <rect class="bx-t" x="150" y="98" width="380" height="54" rx="3"/>
+      <text class="dtxt-b" x="170" y="121">Rule &mdash; pure Python, no model</text>
+      <text class="dtxt-s" x="170" y="139">produces a decision AND a confidence</text>
+      <line class="ln" x1="340" y1="152" x2="340" y2="170" marker-end="url(#are)"/>
+
+      <rect class="bx" x="150" y="176" width="380" height="54" rx="3"/>
+      <text class="dtxt-b" x="170" y="199">Is the evidence conflicting?</text>
+      <text class="dtxt-s" x="170" y="217">high accuracy but heavy hints &middot; fast but sloppy &middot; thin data</text>
+      <line class="ln" x1="340" y1="230" x2="340" y2="248" marker-end="url(#are)"/>
+
+      <rect class="bx-a" x="150" y="254" width="380" height="54" rx="3"/>
+      <text class="dtxt-b" x="170" y="277">Model reviews the whole profile</text>
+      <text class="dtxt-s" x="170" y="295">confirms or overrides &mdash; and writes the reason</text>
+      <line class="ln" x1="340" y1="308" x2="340" y2="326" marker-end="url(#are)"/>
+
+      <rect class="bx" x="150" y="332" width="380" height="54" rx="3"/>
+      <text class="dtxt-b" x="170" y="355">Apply &middot; log decided_by + reason</text>
+      <text class="dtxt-s" x="170" y="373">auditable: you can always answer &ldquo;why did it do that?&rdquo;</text>
+
+      <path class="ln-a" d="M530,203 H612 V359 H536" marker-end="url(#area)"/>
+      <text class="dtxt-s" x="620" y="272">clear-cut &mdash;</text>
+      <text class="dtxt-s" x="620" y="288">apply the rule,</text>
+      <text class="dtxt-s" x="620" y="304">no model call</text>
+    </svg>
+    <figcaption><b>A deterministic floor with model escalation on ambiguity.</b> Most decisions never reach a model, so the system stays cheap and reproducible. The ones that do are exactly the ones where judgement over messy evidence beats a threshold &mdash; and because <code>decided_by</code> and the reason are logged, you can always show a teacher or a judge why a specific student got a specific decision.</figcaption>
+  </figure>
+
+  <div class="note">
+    <p class="lbl">Where this applies, and where it does not</p>
+    <p><strong>Planner:</strong> a rule proposes required/optional per lesson; the model reviews <em>every skip</em>, because skipping on the evidence of one short diagnostic is inherently low-confidence. <strong>Composer:</strong> a rule sets the scaffold plan and the advance/hold call; the model reviews only when the profile is contradictory. <strong>Mastery numbers are never model-produced</strong> &mdash; the inputs are counts and the output is a float, which is the one shape where a model is strictly worse: slower, costlier, and different every call.</p>
+  </div>
+</section>
+
+<section id="pipeline">
+  <p class="snum">Section 05</p>
+  <h2>How a mission gets made</h2>
+  <p><strong>Creating the mission and adapting it are one pipeline, not two.</strong> The plan says which lesson is next for this student; the composer says how hard and how much help; generation composes the scenario from the inventory against those parameters.</p>
+
+  <figure>
+    <svg viewBox="0 0 800 500" role="img" aria-label="Mission generation pipeline: the lesson plan supplies the next required lesson, the student model supplies mastery, the adaptive composer computes parameters, mission generation composes a scenario using the world inventory, a Python validator checks it against the same inventory, and a validated generated mission is returned.">
+      <defs><marker id="ar5" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
+      <rect class="bx" x="200" y="20" width="400" height="54" rx="3"/>
+      <text class="dtxt-b" x="220" y="43">Lesson plan &rarr; next required lesson</text>
+      <text class="dtxt-s" x="220" y="61">optional lessons skipped &middot; target + carried concepts &middot; world</text>
+      <line class="ln" x1="400" y1="74" x2="400" y2="92" marker-end="url(#ar5)"/>
+      <rect class="bx" x="200" y="98" width="400" height="54" rx="3"/>
+      <text class="dtxt-b" x="220" y="121">Student model</text>
+      <text class="dtxt-s" x="220" y="139">mastery on the target and each carried concept</text>
+      <line class="ln" x1="400" y1="152" x2="400" y2="170" marker-end="url(#ar5)"/>
+      <rect class="bx-t" x="200" y="176" width="400" height="54" rx="3"/>
+      <text class="dtxt-b" x="220" y="199">Adaptive composer</text>
+      <text class="dtxt-s" x="220" y="217">scaffold plan &middot; difficulty params &middot; reps &middot; advance?</text>
+      <line class="ln" x1="400" y1="230" x2="400" y2="248" marker-end="url(#ar5)"/>
+      <rect class="bx-g" x="20" y="254" width="160" height="54" rx="3"/>
+      <text class="dtxt" x="100" y="276" text-anchor="middle">World inventory</text>
+      <text class="dtxt-s" x="100" y="293" text-anchor="middle">the manifest</text>
+      <line class="ln" x1="180" y1="281" x2="194" y2="281" marker-end="url(#ar5)"/>
+      <path class="ln" d="M100,308 V359 H194" marker-end="url(#ar5)"/>
+      <rect class="bx-a" x="200" y="254" width="400" height="54" rx="3"/>
+      <text class="dtxt-b" x="220" y="277">Mission generation &rarr; model</text>
+      <text class="dtxt-s" x="220" y="295">scene &middot; characters &middot; brief &middot; starter code &middot; solution</text>
+      <line class="ln" x1="400" y1="308" x2="400" y2="326" marker-end="url(#ar5)"/>
+      <rect class="bx-t" x="200" y="332" width="400" height="54" rx="3"/>
+      <text class="dtxt-b" x="220" y="355">Validator &mdash; Python, no model</text>
+      <text class="dtxt-s" x="220" y="373">every id and verb exists &middot; solution runs &middot; concept present</text>
+      <line class="ln" x1="400" y1="386" x2="400" y2="404" marker-end="url(#ar5)"/>
+      <rect class="bx" x="200" y="410" width="400" height="54" rx="3"/>
+      <text class="dtxt-b" x="220" y="433">generated_mission &middot; validated = true</text>
+      <text class="dtxt-s" x="220" y="451">persisted and reusable &middot; handed to the engine</text>
+    </svg>
+    <figcaption><b>The inventory is read twice &mdash; once to compose, once to check.</b> The model proposes a scenario using only what the manifest lists; a Python validator then re-reads the same file and rejects anything referencing a scene, prop or verb that does not exist. That second read is what makes a generated mission safe to put in front of a child.</figcaption>
+  </figure>
+
+  <h3>The world inventory</h3>
+  <p>Each world is one manifest listing everything a mission there may use: scenes, characters, props, mechanics, and what may vary. If it is not in the file, the AI cannot put it in a mission &mdash; generation is <strong>selection from a closed set, never invention</strong>.</p>
+
+  <pre><code>props:
+  - id: gate
+    states: [open, closed]
+    verbs:
+      - "gate.open()"
+      - "gate.close()"
+
+  - id: passenger_counter
+    reads:
+      - "station.passengers  -&gt; int"
+
+constraints:
+  may_vary:     [scene, params, brief_wording, npc_lines, carried_scaffold]
+  may_not_vary: [world, target_concept, mechanic, prop_verbs, solution_shape]</code></pre>
+
+  <p>The <code>verbs</code> and <code>reads</code> lists are the important part: they are the actual code API the student writes against. If the model invents <code>gate.unlock()</code> and the engine only implements <code>gate.open()</code>, the mission is unsolvable. Listing them lets the validator catch that before it ships. <strong>The asset catalogue and the game API are the same document.</strong> A worked example is at <code>content/worlds/cairo_metro.yaml</code>.</p>
+
+  <h3>What varies, and what adaptation changes</h3>
+  <p>Same world, same target concept, same mechanic &mdash; three missions:</p>
+  <div class="scroll"><table>
+    <thead><tr><th>Scene</th><th>Situation</th><th>Condition the student writes</th></tr></thead>
+    <tbody>
+      <tr><td class="m">platform_day</td><td>Crowded platform</td><td class="m">station.passengers &gt; 30</td></tr>
+      <tr><td class="m">control_room</td><td>Delayed train</td><td class="m">train.delay_minutes &gt; 5</td></tr>
+      <tr><td class="m">ticket_hall</td><td>Child discount</td><td class="m">passenger.age &lt; 12</td></tr>
+    </tbody>
+  </table></div>
+  <p>Take the first. Target concept: conditionals. Carried: variables.</p>
+  <div class="scroll"><table>
+    <thead><tr><th>Mastery on <code>variables</code></th><th>What the composer instructs</th><th>What the student writes</th></tr></thead>
+    <tbody>
+      <tr><td>Strong</td><td>Pre-declare the counter in the starter code</td><td>Only the <code>if</code></td></tr>
+      <tr><td>Shaky</td><td>Leave the counter out; TICO's hints cover it too</td><td>The variable <em>and</em> the <code>if</code> &mdash; deliberate review</td></tr>
+    </tbody>
+  </table></div>
+  <p>Same world, same mission, same mechanics. The only thing that moved is how much of the carried concept was scaffolded &mdash; decided before the model was called.</p>
+</section>
+
+<section id="internals">
+  <p class="snum">Section 06</p>
+  <h2>Inside the service</h2>
+  <figure>
+    <svg viewBox="0 0 900 300" role="img" aria-label="Dependency diagram: api slash v1 calls services, which fan out to domain, repositories and ai. Repositories reach Supabase and ai reaches the model provider.">
+      <defs><marker id="ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
+      <rect class="bx" x="20" y="110" width="150" height="64" rx="3"/>
+      <text class="dtxt-b" x="95" y="138" text-anchor="middle">api/v1/</text>
+      <text class="dtxt-s" x="95" y="157" text-anchor="middle">routers only</text>
+      <line class="ln" x1="170" y1="142" x2="224" y2="142" marker-end="url(#ar2)"/>
+      <rect class="bx-a" x="230" y="110" width="150" height="64" rx="3"/>
+      <text class="dtxt-b" x="305" y="138" text-anchor="middle">services/</text>
+      <text class="dtxt-s" x="305" y="157" text-anchor="middle">use-cases</text>
+      <path class="ln" d="M380,142 H410 V48 H434" marker-end="url(#ar2)"/>
+      <path class="ln" d="M410,142 H434" marker-end="url(#ar2)"/>
+      <path class="ln" d="M380,142 H410 V228 H434" marker-end="url(#ar2)"/>
+      <rect class="bx" x="440" y="20" width="150" height="56" rx="3"/>
+      <text class="dtxt-b" x="515" y="44" text-anchor="middle">domain/</text>
+      <text class="dtxt-s" x="515" y="62" text-anchor="middle">mastery &middot; plan &middot; composer</text>
+      <rect class="bx" x="440" y="110" width="150" height="56" rx="3"/>
+      <text class="dtxt-b" x="515" y="134" text-anchor="middle">repositories/</text>
+      <text class="dtxt-s" x="515" y="152" text-anchor="middle">SQLAlchemy</text>
+      <rect class="bx" x="440" y="200" width="150" height="56" rx="3"/>
+      <text class="dtxt-b" x="515" y="224" text-anchor="middle">ai/</text>
+      <text class="dtxt-s" x="515" y="242" text-anchor="middle">chains &middot; graphs</text>
+      <line class="ln" x1="590" y1="138" x2="674" y2="138" marker-end="url(#ar2)"/>
+      <line class="ln" x1="590" y1="228" x2="674" y2="228" marker-end="url(#ar2)"/>
+      <rect class="bx-t" x="680" y="110" width="190" height="56" rx="3"/>
+      <text class="dtxt-b" x="775" y="134" text-anchor="middle">Supabase Postgres</text>
+      <text class="dtxt-s" x="775" y="152" text-anchor="middle">the ai schema</text>
+      <rect class="bx" x="680" y="200" width="190" height="56" rx="3"/>
+      <text class="dtxt-b" x="775" y="224" text-anchor="middle">Model provider</text>
+      <text class="dtxt-s" x="775" y="242" text-anchor="middle">via router.py</text>
+    </svg>
+    <figcaption><b>Dependencies point one way: <code>api &rarr; services &rarr; domain / repositories / ai</code>.</b> Routers never import SQLAlchemy; <code>domain/</code> never imports LangChain. Mastery, the plan rules and the composer all live in <code>domain/</code>, so every decision rule in the system is testable with no database and no API key.</figcaption>
+  </figure>
+
+  <h3>Where LangGraph earns its place</h3>
+  <p>Two things: <strong>TICO's chat</strong>, which has genuine state across turns, and <strong>mission generation</strong>, which is a real generate &rarr; validate &rarr; repair loop. Everything else is a plain LangChain runnable &mdash; a one-shot hint through a graph is ceremony. For TICO's chat, use the Postgres checkpointer with <code>thread_id = mission_session.id</code>, in a <code>langgraph</code> schema Alembic ignores.</p>
+
+  <h3>Endpoints</h3>
+  <div class="scroll"><table>
+    <thead><tr><th>#</th><th>Endpoint</th><th>Service</th><th>Writes</th></tr></thead>
+    <tbody>
+      <tr><td class="m">1</td><td class="m">POST /v1/hints</td><td>TICO &mdash; hint mode</td><td class="m">hint_event &middot; ai_interaction</td></tr>
+      <tr><td class="m">2</td><td class="m">POST /v1/submissions/analyze</td><td>Code analysis</td><td class="m">error_category &middot; ai_interaction</td></tr>
+      <tr><td class="m">3</td><td class="m">POST /v1/students/{id}/refresh</td><td>Student model</td><td class="m">concept_mastery &middot; student_profile</td></tr>
+      <tr><td class="m">4</td><td class="m">POST /v1/students/{id}/plan</td><td>Path planner &mdash; after the diagnostic</td><td class="m">student_lesson_plan &middot; ai_interaction</td></tr>
+      <tr><td class="m">5</td><td class="m">POST /v1/missions/next</td><td>Composer + generation</td><td class="m">generated_mission &middot; ai_interaction</td></tr>
+      <tr><td class="m">6</td><td class="m">POST /v1/tico/messages</td><td>TICO &mdash; chat mode, SSE</td><td class="m">checkpoints &middot; ai_interaction</td></tr>
+      <tr><td class="m">7</td><td class="m">POST /v1/challenges/next</td><td>Challenge arena</td><td class="m">generated_mission &middot; ai_interaction</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section id="schema">
+  <p class="snum">Section 07</p>
+  <h2>The database</h2>
+  <p>The existing ERD is a competent gamified-LMS schema. Its problem is that it records <em>outcomes</em>, and adaptive AI runs on <em>evidence</em>.</p>
+  <div class="note">
+    <p class="lbl">The one-sentence version</p>
+    <p><code>LEVEL_PROGRESS</code> tells you a student finished level 7 with two stars. It cannot tell you they took four attempts, burned hints 1 through 4, kept writing <code>=</code> instead of <code>==</code>, and are shaky on conditions but fine on loops. <strong>The second sentence is the student model. It is the product.</strong></p>
+  </div>
+
+  <figure>
+    <svg viewBox="0 0 900 430" role="img" aria-label="Tree diagram: the user game table has four children, student_profile, student_lesson_plan, mission_session and concept_mastery, and mission_session has three children: hint_event, ai_interaction and code_submission. Separately, level connects to level_concept, and mission_template feeds generated_mission.">
+      <defs><marker id="ar4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
+      <rect class="bx-g" x="350" y="16" width="200" height="48" rx="3"/>
+      <text class="dtxt-b" x="450" y="38" text-anchor="middle">user</text>
+      <text class="dtxt-s" x="450" y="55" text-anchor="middle">game table &middot; read-only</text>
+      <path class="ln" d="M450,64 V100 H110 V118" marker-end="url(#ar4)"/>
+      <path class="ln" d="M450,100 H340 V118" marker-end="url(#ar4)"/>
+      <path class="ln" d="M450,64 V118" marker-end="url(#ar4)"/>
+      <path class="ln" d="M450,100 H790 V118" marker-end="url(#ar4)"/>
+      <rect class="bx" x="20" y="130" width="180" height="48" rx="3"/>
+      <text class="dtxt" x="110" y="152" text-anchor="middle">student_profile</text>
+      <text class="dtxt-s" x="110" y="169" text-anchor="middle">cache &middot; 1 per student</text>
+      <rect class="bx-a" x="250" y="130" width="180" height="48" rx="3"/>
+      <text class="dtxt" x="340" y="152" text-anchor="middle">student_lesson_plan</text>
+      <text class="dtxt-s" x="340" y="169" text-anchor="middle">required / optional</text>
+      <rect class="bx-a" x="450" y="130" width="180" height="48" rx="3"/>
+      <text class="dtxt" x="540" y="152" text-anchor="middle">mission_session</text>
+      <text class="dtxt-s" x="540" y="169" text-anchor="middle">1 per playthrough</text>
+      <rect class="bx" x="700" y="130" width="180" height="48" rx="3"/>
+      <text class="dtxt" x="790" y="152" text-anchor="middle">concept_mastery</text>
+      <text class="dtxt-s" x="790" y="169" text-anchor="middle">student &times; concept</text>
+      <path class="ln" d="M540,178 V214 H290 V232" marker-end="url(#ar4)"/>
+      <path class="ln" d="M540,178 V232" marker-end="url(#ar4)"/>
+      <path class="ln" d="M540,214 H750 V232" marker-end="url(#ar4)"/>
+      <rect class="bx" x="200" y="244" width="180" height="48" rx="3"/>
+      <text class="dtxt" x="290" y="266" text-anchor="middle">hint_event</text>
+      <text class="dtxt-s" x="290" y="283" text-anchor="middle">1 per hint shown</text>
+      <rect class="bx" x="450" y="244" width="180" height="48" rx="3"/>
+      <text class="dtxt" x="540" y="266" text-anchor="middle">ai_interaction</text>
+      <text class="dtxt-s" x="540" y="283" text-anchor="middle">1 per model call</text>
+      <rect class="bx-g" x="660" y="244" width="180" height="48" rx="3"/>
+      <text class="dtxt" x="750" y="266" text-anchor="middle">code_submission</text>
+      <text class="dtxt-s" x="750" y="283" text-anchor="middle">game table &middot; extended</text>
+      <rect class="bx-g" x="60" y="340" width="170" height="48" rx="3"/>
+      <text class="dtxt" x="145" y="362" text-anchor="middle">level</text>
+      <text class="dtxt-s" x="145" y="379" text-anchor="middle">game table</text>
+      <line class="ln" x1="230" y1="364" x2="264" y2="364" marker-end="url(#ar4)"/>
+      <rect class="bx-a" x="270" y="340" width="200" height="48" rx="3"/>
+      <text class="dtxt" x="370" y="362" text-anchor="middle">level_concept</text>
+      <text class="dtxt-s" x="370" y="379" text-anchor="middle">is_primary &middot; weight</text>
+      <rect class="bx" x="520" y="340" width="170" height="48" rx="3"/>
+      <text class="dtxt" x="605" y="362" text-anchor="middle">mission_template</text>
+      <text class="dtxt-s" x="605" y="379" text-anchor="middle">from the manifest</text>
+      <line class="ln" x1="690" y1="364" x2="719" y2="364" marker-end="url(#ar4)"/>
+      <rect class="bx" x="725" y="340" width="160" height="48" rx="3"/>
+      <text class="dtxt" x="805" y="362" text-anchor="middle">generated_mission</text>
+      <text class="dtxt-s" x="805" y="379" text-anchor="middle">per student</text>
+    </svg>
+    <figcaption><b>Every AI table hangs off <code>user</code> or off <code>mission_session</code>.</b> Dashed boxes are game tables the AI service reads but never alters. Three are highlighted: <code>student_lesson_plan</code> holds the personal path, <code>mission_session</code> is the join point for all evidence, and <code>level_concept</code> is what makes cumulative learning representable.</figcaption>
+  </figure>
+
+  <h3>The eight tables</h3>
+  <div class="scroll"><table>
+    <thead><tr><th>Table</th><th>Columns</th><th>Why it exists</th></tr></thead>
+    <tbody>
+      <tr><td class="m">concept_mastery</td><td class="wrapm"><span class="pk">user_id</span> &middot; <span class="pk">concept_id</span> &middot; mastery(0&ndash;1) &middot; confidence &middot; evidence_count &middot; last_seen_at &middot; updated_at</td><td>The student model's spine. Updated by target <em>and</em> carried concepts, weighted.</td></tr>
+      <tr><td class="m">student_lesson_plan</td><td class="wrapm"><span class="pk">user_id</span> &middot; <span class="pk">level_id</span> &middot; requirement(required&#124;optional&#124;done&#124;skipped) &middot; reason &middot; decided_by(rule&#124;model) &middot; confidence &middot; decided_at</td><td>The personal path through the fixed order. <code>decided_by</code> and <code>reason</code> make every skip auditable.</td></tr>
+      <tr><td class="m">mission_session</td><td class="wrapm"><span class="pk">id</span> &middot; <span class="fk">user_id</span> &middot; <span class="fk">level_id</span> &middot; <span class="fk">generated_mission_id</span> &middot; phase &middot; started_at &middot; ended_at &middot; outcome &middot; hints_used &middot; time_spent_ms</td><td>One row per playthrough. Also the LangGraph <code>thread_id</code>.</td></tr>
+      <tr><td class="m">hint_event</td><td class="wrapm"><span class="pk">id</span> &middot; <span class="fk">session_id</span> &middot; <span class="fk">submission_id?</span> &middot; hint_level &middot; <span class="fk">concept_id</span> &middot; text &middot; model &middot; was_used &middot; created_at</td><td>Hint dependency is a core input to the student model; nothing stored a hint before.</td></tr>
+      <tr><td class="m">ai_interaction</td><td class="wrapm"><span class="pk">id</span> &middot; <span class="fk">user_id?</span> &middot; <span class="fk">session_id?</span> &middot; capability &middot; model &middot; prompt_version &middot; input &middot; output &middot; tokens_in &middot; tokens_out &middot; cost_usd &middot; latency_ms &middot; status &middot; moderation_flag &middot; created_at</td><td>Cost dashboard, bug log, eval dataset and safety audit trail in one table. <strong>Build it first.</strong></td></tr>
+      <tr><td class="m">mission_template</td><td class="wrapm"><span class="pk">id</span> &middot; world_id &middot; mechanic_id &middot; target_concept_id &middot; carried_concept_ids &middot; scenes &middot; props_required &middot; param_schema(jsonb) &middot; difficulty_band</td><td>The DB projection of a mechanic in the world manifest. The bounds generation may not cross.</td></tr>
+      <tr><td class="m">generated_mission</td><td class="wrapm"><span class="pk">id</span> &middot; <span class="fk">template_id</span> &middot; <span class="fk">user_id</span> &middot; scene_id &middot; params(jsonb) &middot; content(jsonb) &middot; scaffold_plan(jsonb) &middot; validated &middot; engine_version &middot; created_at</td><td>One composed scenario. <code>validated</code> is set by the validator, never by the model. Reusable.</td></tr>
+      <tr><td class="m">student_profile</td><td class="wrapm"><span class="pk">user_id</span> &middot; self_reported_level &middot; skill_band &middot; hint_dependency &middot; syntax_vs_logic &middot; pace &middot; locale &middot; last_computed_at &middot; model_version</td><td>What every prompt loads. Recompute in the background, never in the request path.</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>Changes to game tables</h3>
+  <div class="scroll"><table>
+    <thead><tr><th>Table</th><th>Add</th><th>Why</th></tr></thead>
+    <tbody>
+      <tr><td class="m">level_concept</td><td class="m">is_primary &middot; weight</td><td><strong>The critical one.</strong> Makes cumulative learning representable.</td></tr>
+      <tr><td class="m">concept</td><td class="m">sequence_order</td><td>The fixed concept order, as a sort column.</td></tr>
+      <tr><td class="m">code_submission</td><td class="m">session_id &middot; attempt_number &middot; phase &middot; hints_used_before &middot; error_category</td><td>Attaches submissions to a session and records the classifier's verdict.</td></tr>
+      <tr><td class="m">level</td><td class="m">difficulty_score &middot; estimated_minutes &middot; world_id &middot; is_skippable</td><td>Some lessons must never be optional; the planner needs to know which.</td></tr>
+      <tr><td class="m">campaign</td><td class="m">environment_key</td><td>Links a world to its manifest file.</td></tr>
+      <tr><td class="m">user</td><td class="m">locale &middot; grade_or_age_band</td><td>Arabic-first copy, age-appropriate tone.</td></tr>
+    </tbody>
+  </table></div>
+
+  <h4>Deliberately not built</h4>
+  <ul class="body">
+    <li><strong><code>concept_prerequisite</code>.</strong> The concept order is a sort column, not a graph. Per-student variation lives in <code>student_lesson_plan</code> instead.</li>
+    <li><strong>pgvector / RAG.</strong> Not enough content volume to beat the manifest and SQL filters.</li>
+    <li><strong>A chat message table.</strong> LangGraph's checkpointer already persists conversation state.</li>
+    <li><strong>Teacher analytics tables.</strong> Postgres views over the above. No new writes.</li>
+  </ul>
+
+  <div class="note warn">
+    <p class="lbl">Migration ownership &mdash; the thing most likely to break the demo</p>
+    <p>Every AI table lives in its own Postgres schema, <code>ai</code>. Alembic is configured with <code>version_table_schema="ai"</code> and an <code>include_object</code> filter so autogenerate only ever sees these tables. Without it, you and the game developer both run <code>alembic revision --autogenerate</code> against one Supabase database and generate drop-table migrations for each other's work.</p>
+  </div>
+</section>
+
+<section id="stack">
+  <p class="snum">Section 08</p>
+  <h2>Stack and deployment</h2>
+  <p>Tooling and deployment follow Sanjeev Thiyagarajan's FastAPI course. Three things had to change; each is deliberate.</p>
+  <div class="scroll"><table>
+    <thead><tr><th>Concern</th><th>Choice</th><th>Same as course?</th></tr></thead>
+    <tbody>
+      <tr><td>Framework</td><td class="m">FastAPI + Uvicorn</td><td>Yes</td></tr>
+      <tr><td>ORM</td><td class="m">SQLAlchemy, synchronous</td><td>Yes</td></tr>
+      <tr><td>Driver</td><td class="m">psycopg2-binary</td><td>Yes</td></tr>
+      <tr><td>Migrations</td><td class="m">Alembic, scoped to ai</td><td>Yes, plus scoping</td></tr>
+      <tr><td>Config</td><td class="m">app/config.py &middot; BaseSettings</td><td>Yes</td></tr>
+      <tr><td>Tests</td><td class="m">pytest</td><td>Yes</td></tr>
+      <tr><td>Container</td><td class="m">Docker &middot; dev + prod compose</td><td>Yes</td></tr>
+      <tr><td>CI/CD</td><td class="m">GitHub Actions</td><td>Yes</td></tr>
+      <tr><td>Process</td><td class="m">Gunicorn + uvicorn workers, systemd</td><td>Yes</td></tr>
+      <tr><td>Proxy / TLS</td><td class="m">Nginx + Certbot</td><td>Yes</td></tr>
+      <tr><td>Validation</td><td class="m">Pydantic v2</td><td><strong>No &mdash; course pins v1</strong></td></tr>
+      <tr><td>Auth</td><td class="m">Verify Supabase JWT</td><td><strong>No &mdash; course mints its own</strong></td></tr>
+      <tr><td>Prod host</td><td class="m">AWS EC2 Ubuntu</td><td><strong>No &mdash; course also uses Heroku</strong></td></tr>
+    </tbody>
+  </table></div>
+  <ol class="body">
+    <li><strong>Pydantic v2, not v1.</strong> LangChain and LangGraph require it. The one thing that cannot be copied.</li>
+    <li><strong>Verify JWTs, don't issue them.</strong> Supabase Auth owns login, so the course's <code>oauth2.py</code> is dropped.</li>
+    <li><strong>No Heroku.</strong> Free tier is gone and the architecture diagram says AWS &mdash; so the course's Ubuntu VM recipe runs on EC2.</li>
+  </ol>
+  <div class="note teal">
+    <p class="lbl">A bonus from following the course exactly</p>
+    <p>Sticking with <strong>synchronous</strong> SQLAlchemy and psycopg2 removes a whole class of problem: the asyncpg prepared-statement failure against Supabase's pgbouncer pooler simply does not apply. Deploy FastAPI on EC2 rather than Vercel &mdash; Python serverless plus long SSE streams plus LangGraph checkpoints is a bad combination.</p>
+  </div>
+
+  <h3>Safety, because the users are 10 to 17</h3>
+  <ul class="body">
+    <li>Every model output crosses a Pydantic model. Invalid &rarr; retry once &rarr; authored fallback. A child mid-mission never sees a 500.</li>
+    <li>Moderate free text the student types <em>before</em> it enters a prompt; record the verdict on <code>ai_interaction</code>.</li>
+    <li>No complete solution before the final hint rung. Asserted in tests, not trusted to a prompt.</li>
+    <li>Pass <code>locale</code> explicitly &mdash; TICO speaks Egyptian Arabic, code identifiers stay English.</li>
+    <li><strong>A generated mission is never shown unvalidated.</strong> Rejected twice &rarr; fall back to template defaults.</li>
+    <li><strong>A lesson marked skippable can always be replayed.</strong> Skipping is a suggestion, never a lock-out.</li>
+  </ul>
+
+  <h4>The eval suite &mdash; 30 to 50 cases, in CI</h4>
+  <ul class="body">
+    <li><strong>Hint leak test.</strong> Early rungs contain no identifier from the solution. Pure string assertion.</li>
+    <li><strong>Generation legality.</strong> Every generated mission references only ids and verbs in the manifest, and its solution passes its own tests.</li>
+    <li><strong>Classifier accuracy.</strong> 30 hand-labelled wrong submissions, measured and tracked.</li>
+    <li><strong>Planner safety.</strong> Synthetic diagnostics in; assert no lesson is skipped when its concept mastery is below threshold, and that <code>is_skippable = false</code> lessons are never optional.</li>
+    <li><strong>Composer sanity.</strong> Assert a weak carried concept is never scaffolded away entirely.</li>
+  </ul>
+
+  <h3>Ownership</h3>
+  <div class="scroll"><table>
+    <thead><tr><th>Area</th><th>Owner</th><th>Rule</th></tr></thead>
+    <tbody>
+      <tr><td class="m">alembic/</td><td>Ahmed</td><td>Nobody else runs <code>alembic revision</code> &mdash; not the game developer, not the AI teammate. One person, one migration history.</td></tr>
+      <tr><td class="m">schemas/</td><td>Ahmed</td><td>He writes the Pydantic DTOs; the AI teammate builds against whatever they say. Written first, before either lane starts.</td></tr>
+      <tr><td class="m">api/ &middot; repositories/ &middot; models/ &middot; core/</td><td>Ahmed</td><td>The spine, plus deployment.</td></tr>
+      <tr><td class="m">domain/ &middot; ai/ &middot; evals/</td><td>AI teammate</td><td>Hint ladder, mastery, plan, composer, chains, graphs, prompts, guards. All testable with no DB and no API key.</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>Settled: the language is Python</h3>
+  <p>Student code is Python, so manifest <code>verbs</code> are Python (<code>gate.open()</code>, <code>station.passengers -&gt; int</code>), starter code is Python, and hint prose uses Python terms &mdash; <code>=</code> versus <code>==</code>, indentation, <code>if</code>/<code>elif</code>. The Figma mockup showing JavaScript is superseded.</p>
+
+  <h3>The hint ladder &mdash; 4 rungs</h3>
+  <p>The server counts prior <code>hint_event</code> rows and fixes the rung in <code>domain/hint_ladder.py</code> before any model is called. The model writes prose for that rung only. Worked on the most common Python beginner error, <code>=</code> instead of <code>==</code>:</p>
+  <div class="scroll"><table>
+    <thead><tr><th>Rung</th><th>Job</th><th>TICO says</th></tr></thead>
+    <tbody>
+      <tr><td class="m">1</td><td>Orient</td><td>&ldquo;The gate never opens. Look carefully at the line where you check the passengers.&rdquo;</td></tr>
+      <tr><td class="m">2</td><td>Question</td><td>&ldquo;In Python, what is the difference between <code>=</code> and <code>==</code>? What is your condition trying to do?&rdquo;</td></tr>
+      <tr><td class="m">3</td><td>Name it, show a foreign example</td><td>&ldquo;This is assignment versus comparison. Comparing looks like <code>if age == 12:</code>&rdquo;</td></tr>
+      <tr><td class="m">4</td><td>Walk to the fix, in words</td><td>&ldquo;Your condition should compare, not store. Change the single <code>=</code> in that line to <code>==</code>.&rdquo;</td></tr>
+    </tbody>
+  </table></div>
+  <p><strong>No rung ever emits a complete solution.</strong> After rung 4 the student goes to a <strong>mini-practice</strong> on that one idea and then returns to the mission &mdash; exactly what the team's UX flow already showed. It also makes the claim &ldquo;TICO never hands over the answer&rdquo; literally true, which is a stronger thing to say to a judge than &ldquo;not until the last hint&rdquo;.</p>
+  <p>The leak test is graded by rung: rungs 1&ndash;2 contain no identifier from the solution, rung 3 contains none of the student's target values, and rung 4 contains no complete runnable line.</p>
+
+  <h3>Model routing &mdash; Google Gemini</h3>
+  <p><code>langchain-google-genai</code> / <code>ChatGoogleGenerativeAI</code>, key in <code>GOOGLE_API_KEY</code>, read through <code>config.py</code>. One dictionary in <code>ai/router.py</code>, read from settings so it changes without a deploy.</p>
+  <div class="scroll"><table>
+    <thead><tr><th>Route</th><th>Volume</th><th>Model</th><th>Why</th></tr></thead>
+    <tbody>
+      <tr><td>TICO hints, NPC lines, reactions</td><td>High</td><td class="m">gemini-3.5-flash-lite</td><td>Short, templated, latency-sensitive</td></tr>
+      <tr><td>Error classification</td><td>High</td><td class="m">gemini-3.5-flash-lite</td><td>Small structured output; escalate on low confidence</td></tr>
+      <tr><td>Escalation review</td><td>Low</td><td class="m">gemini-3.5-flash</td><td>Judgement over a contradictory profile</td></tr>
+      <tr><td>Mission generation</td><td>Medium</td><td class="m">gemini-3.5-flash</td><td>Structured composition, validated in Python after</td></tr>
+      <tr><td>TICO chat</td><td>Medium</td><td class="m">gemini-3.5-flash</td><td>Conversational, streams</td></tr>
+    </tbody>
+  </table></div>
+  <ul class="body">
+    <li><strong>Pin stable IDs and avoid <code>-preview</code> models</strong> &mdash; <code>gemini-3-pro-preview</code> has already been shut down. Do not build a demo on something that can disappear.</li>
+    <li><strong>Avoid <code>gemini-2.5-*</code></strong> &mdash; retiring 20 October 2026. That is after your deadline, but there is no reason to start on a retiring model.</li>
+    <li><code>with_structured_output()</code> accepts Pydantic models directly, which is exactly what <code>guards.py</code> needs.</li>
+  </ul>
+  <div class="note warn">
+    <p class="lbl">One consequence of choosing Gemini</p>
+    <p><strong>Prompt caching will not carry the cost story here.</strong> Gemini's context caching is built for large contexts and carries minimum-token thresholds; TICO's hint prompts are short and will not reach them. That promotes the <strong>Postgres hint cache from an optimisation to a requirement</strong> &mdash; it is now the primary cost lever, and the reason beginners failing in identical ways is such a useful property. Also check the rate limit on whichever tier the key sits on: a per-minute cap tripping mid-demo is indistinguishable from a broken service.</p>
+  </div>
+
+  <h3>Every build decision is now settled</h3>
+  <p>Language, provider, model map, ladder length, ownership, schema, and scope. Nothing in this document is waiting on an answer.</p>
+</section>
+
+<footer>
+  TICO &middot; Code Egypt &mdash; AI layer architecture &middot; SONIC team, VICTORIS 5.0<br>
+  Companion documents: the service use cases &middot; the build roadmap &middot; Repo rules in AGENTS.md
+</footer>
+</div>
