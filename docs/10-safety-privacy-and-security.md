@@ -38,9 +38,9 @@ Do not send names, email addresses, avatar URLs, auth tokens, IP addresses, exac
 
 ## Account deletion
 
-Settings provides a clear delete-account flow with fresh authentication. It shows what will be deleted and any unavoidable backup delay, then enqueues an idempotent deletion job. Delete or anonymize the public profile, progress, submissions, conversations, AI-schema learner records, storage objects, and analytics identifiers; revoke sessions immediately. Maintain only the minimum tombstone needed to make retries idempotent and meet legal obligations.
+Settings provides a clear delete-account flow with fresh authentication. It shows what will be deleted and any unavoidable backup delay, then enqueues an idempotent deletion job. Delete or anonymize the profile, progress, submissions, conversations, AI capability records in the shared public schema, storage objects, and analytics identifiers; revoke sessions immediately. Maintain only the minimum tombstone needed to make retries idempotent and meet legal obligations.
 
-Automated integration tests prove cross-schema deletion. Backups expire on a documented schedule and are access-controlled; deletion documentation must state that window accurately.
+Automated integration tests prove deletion across all linked game and AI tables. Backups expire on a documented schedule and are access-controlled; deletion documentation must state that window accurately.
 
 ## TICO safety boundaries
 
@@ -65,7 +65,7 @@ Automated integration tests prove cross-schema deletion. Backups expire on a doc
 | Stored XSS | render prose as text or sanitized restricted Markdown; never render raw model/user HTML |
 | CSRF/session misuse | platform-recommended cookie/token flow, origin checks on sensitive endpoints, SameSite policy |
 | Secret exposure | server-only environment variables, no `NEXT_PUBLIC_*` secrets, secret scanning and rotation |
-| Database overreach | least-privilege roles, RLS/ownership checks, AI Alembic restricted to `ai` schema |
+| Database overreach | least-privilege roles, RLS/ownership checks, Prisma-only migrations, no DDL permission for the AI runtime |
 | Asset abuse | reviewed allowlisted IDs, MIME/dimension checks, signed private upload path |
 
 ## Security headers

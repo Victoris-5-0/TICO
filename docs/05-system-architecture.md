@@ -6,12 +6,11 @@
 flowchart LR
     U[Learner browser] -->|HTTPS| N[Next.js on Vercel]
     U -->|Pyodide worker| P[Local Python sandbox]
-    N -->|Prisma SQL| D[(Supabase Postgres public schema)]
+    N -->|Prisma SQL + migrations| D[(Supabase Postgres public schema)]
     N -->|Auth SDK / JWT| A[Supabase Auth]
     N -->|Object access| S[Supabase Storage]
     N -->|signed HTTPS + learner JWT context| F[FastAPI AI service]
-    F -->|sync SQLAlchemy| I[(Supabase Postgres ai schema)]
-    F -->|read-only approved views| D
+    F -->|sync SQLAlchemy reads/writes; no migrations| D
     F -->|model API| G[Google Gemini]
 ```
 
@@ -19,7 +18,7 @@ flowchart LR
 
 ### Next.js client/backend
 
-`client/` owns pages, React UI, Supabase browser/server auth integration, authorization for game actions, Prisma models and migrations for the `public` game schema, learner progress, content publication UI, asset delivery, browser-runner integration, and the BFF boundary presented to browsers.
+`client/` owns pages, React UI, Supabase browser/server auth integration, authorization for game actions, all Prisma models and migrations in the shared `public` schema, learner progress, content publication UI, asset delivery, browser-runner integration, and the BFF boundary presented to browsers.
 
 Use Server Components for reads and Server Actions for authenticated mutations. Route Handlers are reserved for auth callbacks, streaming proxy endpoints, webhooks, and service callbacks.
 
@@ -29,7 +28,7 @@ Use Server Components for reads and Server Actions for authenticated mutations. 
 
 Its dependency direction is `api → services → domain / repositories / ai`. Routers contain no SQLAlchemy queries. `domain/` has no model or database imports. Every model call passes through `app/ai/router.py` and returns a Pydantic v2 model.
 
-The service owns only the PostgreSQL `ai` schema. Its Alembic configuration must reject objects outside that schema. Game data is accessed through narrow read-only views or request payloads.
+The service owns no database migrations. It maps the Prisma-owned tables in the shared `public` schema with synchronous SQLAlchemy and may read or write only the rows required by its use cases. It must not add Alembic or issue schema-changing SQL. Prisma model and migration changes happen in `client/` first; matching SQLAlchemy mappings are then updated and contract-tested.
 
 ## Authentication and authorization
 
@@ -70,7 +69,7 @@ Roles are `STUDENT`, `TEACHER`, and `ADMIN`. Role checks occur server-side at ea
 ## Deployment
 
 - Vercel deploys `client/` and runs server-side Prisma access.
-- Supabase hosts PostgreSQL, Auth, and Storage. Runtime database traffic uses the transaction/session pooler appropriate to the client; migrations use a direct/session connection.
+- Supabase hosts PostgreSQL, Auth, and Storage. Runtime database traffic uses the pooler appropriate to each client; Prisma migrations use a direct/session connection.
 - AWS EC2 is the AI production baseline: Nginx → Gunicorn with Uvicorn workers under systemd. A Docker image keeps Render deployment viable.
 - Static Pyodide assets are pinned and served from the application/CDN with integrity and cache headers.
 

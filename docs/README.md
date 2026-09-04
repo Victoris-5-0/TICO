@@ -35,3 +35,7 @@ These documents are the implementation contract. Product changes must update the
 - **TICO**: the hoopoe mascot, companion, hint giver, and only conversational persona.
 
 The concept order is fixed. Personalization changes lesson membership and scaffolding, never the pedagogical order.
+
+## Database authority
+
+`client/prisma/schema.prisma` is the only schema and migration source for both game and AI tables. All tables use the shared PostgreSQL `public` schema. The Python service maintains matching synchronous SQLAlchemy models for runtime reads/writes only; it has no Alembic migrations. The eight target AI tables described in [06 — Data model and contracts](06-data-model-and-contracts.md) remain planned until a Prisma migration adds them.

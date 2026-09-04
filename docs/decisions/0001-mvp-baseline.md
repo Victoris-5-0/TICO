@@ -16,7 +16,7 @@ TICO needs a coherent starting point for multiple contributors building a child-
 4. Young learner and undergraduate modes share correctness contracts but differ in language and scaffolding.
 5. Arabic (`ar-EG`) and English ship together; Arabic UI is RTL while code/output is LTR and Python identifiers stay English.
 6. Accounts are mandatory. Supabase Auth provides email/password and Google OAuth/JWT; there is no anonymous or guardian-approval flow in MVP.
-7. Next.js 16 on Vercel owns UI/game/public schema; Pyodide in a browser worker executes code; FastAPI on AWS EC2 (portable container) owns AI services and only the `ai` schema; Supabase hosts database/auth/storage.
+7. Next.js 16 on Vercel owns UI/game behavior and Prisma owns every table and migration in the shared PostgreSQL `public` schema. Pyodide in a browser worker executes code. FastAPI on AWS EC2 (portable container) owns AI behavior and uses synchronous SQLAlchemy mappings without migration authority. Supabase hosts database/auth/storage.
 8. The AI service has six capabilities and one TICO persona. Rules propose learner decisions; a model reviews conflicts. Mastery is always deterministic.
 9. Mission generation selects from closed world manifests, validates structured output and executable tests, retries once, then uses a reviewed template. Human review is mandatory before publication.
 10. Under-13 learners use reviewed static hints until approved provider data controls are documented. Chat and learning history are retained until account deletion under the current product decision.

@@ -16,7 +16,7 @@ Tests follow the risk boundaries, not only the code layout.
 
 - Pure-domain tests for mastery, lesson planning, composer levers, confidence, and hint-rung selection.
 - Schema tests for every Pydantic DTO and OpenAPI examples.
-- Repository tests against an isolated `ai` schema.
+- Repository tests against isolated copies of the Prisma-owned AI tables.
 - Contract tests using the client fixtures.
 - Validator tests for unknown assets/verbs, bad locales, concept drift, broken solutions/tests, and answer leaks.
 - Model calls mocked in unit/integration suites; opt-in provider smoke tests never run on untrusted pull requests.
@@ -41,13 +41,13 @@ An MVP release proves:
 - an AI draft with an unknown asset, missing locale, leaking hint, or failing solution cannot publish;
 - AI outage falls back to a template mission and static hints;
 - under-13 accounts cannot reach a live model path;
-- deleting an account removes linked data across public and `ai` schemas.
+- deleting an account removes linked data across all game and AI tables.
 
 ## CI pipeline
 
-Every change runs formatting/lint, TypeScript typecheck, client unit/component tests, Prisma schema validation, Python lint/typecheck, pytest, contract tests, manifest validation, translation completeness, and production builds. E2E and model evaluations may run as protected jobs with appropriate fixtures and secrets.
+Every change runs formatting/lint, TypeScript typecheck, client unit/component tests, Prisma schema validation, Python lint/typecheck, pytest, Prisma-to-SQLAlchemy mapping checks, contract tests, manifest validation, translation completeness, and production builds. E2E and model evaluations may run as protected jobs with appropriate fixtures and secrets.
 
-Migration checks reject destructive changes without an explicit reviewed plan. AI Alembic checks fail if any operation targets outside schema `ai`.
+Migration checks reject destructive changes without an explicit reviewed plan. CI rejects Alembic configuration or schema-changing SQL in the AI service and verifies that mapped identifiers exist in the Prisma migration result.
 
 ## Environments
 
@@ -83,7 +83,7 @@ Initial internal targets, reviewed after pilot data:
 - duplicate XP awards: zero;
 - under-13 live model calls: zero.
 
-Alert on elevated auth errors, database saturation, runner asset failure, AI provider failure/rate limit, validation fallback spikes, cost anomalies, cross-schema migration attempts, deletion-job failure, and any under-13 model-route event.
+Alert on elevated auth errors, database saturation, runner asset failure, AI provider failure/rate limit, validation fallback spikes, cost anomalies, unauthorized DDL attempts from the AI runtime, deletion-job failure, and any under-13 model-route event.
 
 ## Release and rollback
 

@@ -21,7 +21,7 @@ There is one TICO persona. Do not create separate NPC chat agents.
 
 All calls use `app/ai/router.py`; no inline model IDs. Configuration initially routes high-volume hints/reactions and classification to a stable low-latency Gemini Flash Lite class model, and mission generation, conflict review, and chat to a stable Gemini Flash class model. Exact supported IDs are environment configuration and must be verified before deployment. Avoid preview and scheduled-for-retirement IDs.
 
-Every call returns a Pydantic v2 model where structured output is expected and logs capability, model, prompt version, input/output tokens, estimated cost, latency, cache result, safety outcome, trace ID, and failure type to `ai.ai_interaction`.
+Every call returns a Pydantic v2 model where structured output is expected and logs capability, model, prompt version, input/output tokens, estimated cost, latency, cache result, safety outcome, trace ID, and failure type to `ai_interaction`.
 
 ## Mission generation pipeline
 

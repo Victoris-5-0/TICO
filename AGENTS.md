@@ -18,6 +18,20 @@ TICO is an intelligent programming companion platform. The repository is a monor
 
 All contributors and AI agents must keep these boundaries clear. Do not place Next.js application code at the repository root, and do not mix Python AI service code into `client/`.
 
+## Required Reading Before Work
+
+Every agent must read [the documentation map](docs/README.md) and then the documents for its work lane before editing code. At minimum:
+
+- Product, curriculum, or content: `docs/01-product-and-game-design.md`, `docs/02-python-curriculum.md`, and `docs/03-egypt-world-bibles.md`.
+- Client/UI: `docs/04-ux-design-and-localization.md`, `docs/05-system-architecture.md`, and `docs/10-safety-privacy-and-security.md`.
+- Database or cross-service contracts: `docs/05-system-architecture.md` and `docs/06-data-model-and-contracts.md`.
+- Browser execution: `docs/07-browser-python-runner.md`.
+- AI backend: first read `ai-backend/AGENTS.md`, then the AI reading list defined there.
+- Assets: `docs/09-asset-bible-and-image-prompts.md`.
+- Testing, operations, or delivery planning: `docs/11-testing-and-operations.md` and `docs/12-roadmap-and-agent-playbook.md`.
+
+`docs/decisions/0001-mvp-baseline.md` records settled MVP decisions. A change that contradicts it requires an explicit product decision and a superseding ADR; do not silently diverge in code.
+
 ## 1. Tech Stack & Tooling
 
 ### Client
@@ -57,9 +71,13 @@ TICO/
 - Import the shared instance with `import { db } from "@/lib/db";`.
 
 ### Schema Management
-- Source of truth: `client/prisma/schema.prisma`.
+- `client/prisma/schema.prisma` is the single source of truth for every application and AI table.
+- All tables currently live in the shared PostgreSQL `public` schema. There is no separate AI-owned database schema.
+- Prisma owns all migrations. The Python service maps these tables with SQLAlchemy for reads and writes but never creates or migrates them; do not add Alembic.
 - After schema changes, from `client/` run `pnpm db:generate` and create/apply the appropriate migration.
 - Never manually alter production tables without matching Prisma migrations in `client/prisma/migrations/`.
+- Use explicit snake-case table and column mappings so Prisma and SQLAlchemy stay aligned.
+- Never run `prisma migrate reset` against the shared database.
 
 ### Prisma Configuration
 - Prisma config lives at `client/prisma.config.ts`.

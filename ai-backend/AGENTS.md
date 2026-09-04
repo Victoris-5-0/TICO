@@ -7,6 +7,20 @@ Structure, tooling and deployment follow **Sanjeev Thiyagarajan's FastAPI course
 (`github.com/Sanjeev-Thiyagarajan/fastapi-course`), extended with an `ai/` layer.
 Where this repo departs from the course, it says so below — don't "fix" it back.
 
+## Required reading before work
+
+Before changing this service, read:
+
+1. `../docs/02-python-curriculum.md` for concept order and assessment rules.
+2. `../docs/03-egypt-world-bibles.md` for the closed world vocabulary.
+3. `../docs/05-system-architecture.md` for service and trust boundaries.
+4. `../docs/06-data-model-and-contracts.md` for Prisma ownership, entities and DTO invariants.
+5. `../docs/08-ai-generation-and-companion.md` for capability, hint and validation behavior.
+6. `../docs/10-safety-privacy-and-security.md` and `../docs/11-testing-and-operations.md` for release gates.
+7. `docs/ai-architecture.html`, `docs/use-cases.html` and `docs/roadmap.html` for service-specific detail.
+
+If a document conflicts with this file's database migration rules, stop and update the document: Prisma is the sole schema and migration authority.
+
 ## What this service is
 
 - **One** FastAPI app with **six** AI capability modules. Not nine deployables.
@@ -20,8 +34,10 @@ Where this repo departs from the course, it says so below — don't "fix" it bac
 > **Pending confirmation with the repo owner.** Direction is settled, credentials are not.
 
 `client/prisma/schema.prisma` is the single source of truth for **every** table, including
-the eight AI tables. The root `AGENTS.md` already says so and we follow it rather than
-carving out an exception.
+the eight planned AI tables. The current Prisma schema still contains the earlier game
+scaffold; do not assume the target AI tables exist until their Prisma migration is present.
+The root `AGENTS.md` already defines Prisma ownership and we follow it rather than carving
+out an exception.
 
 - **No Alembic in this service.** SQLAlchemy is used for reads and writes only; it maps to
   tables it did not create and owns no migration history.
@@ -172,7 +188,7 @@ no database and no API key.
 - **Every model call goes through `app/ai/router.py`** and returns a Pydantic model. No
   inline model IDs anywhere else.
 - **Prompts live in `app/ai/prompts/`.** Bump the version string when you change one.
-- **Log every model call** to `ai.ai_interaction` — capability, model, tokens, cost, latency.
+- **Log every model call** to `ai_interaction` — capability, model, tokens, cost, latency.
 - **The server narrows, the model chooses.** Code produces a closed set of legal options;
   the model only picks among them or writes prose. Never an unbounded space.
 - **Mastery numbers are computed in Python**, never produced by a model.
@@ -197,7 +213,7 @@ no database and no API key.
 
 ## Database
 
-Eight AI tables, defined in `client/prisma/schema.prisma`: `concept_mastery`,
+Eight planned AI tables, to be defined in `client/prisma/schema.prisma`: `concept_mastery`,
 `student_lesson_plan`, `mission_session`,
 `hint_event`, `ai_interaction`, `mission_template`, `generated_mission`, `student_profile`.
 Build `ai_interaction` first —

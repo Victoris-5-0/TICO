@@ -11,7 +11,7 @@ Build vertical slices that a learner can actually use. Contracts and determinist
 - Keep monorepo boundaries and service instructions current.
 - Establish design tokens, locale routing, typed translations, and responsive shell.
 - Integrate Supabase email/password + Google authentication; create the mapped app profile.
-- Expand Prisma game schema and migrations around world → lesson → mission/version → session/submission/progress.
+- Expand the Prisma schema and migrations around world → lesson → mission/version → session/submission/progress plus the eight AI capability tables.
 - Define Pydantic DTOs and OpenAPI fixtures before implementing AI services.
 - Add CI for client, Python, contracts, manifests, and docs.
 
@@ -66,13 +66,13 @@ After M0 contracts are merged, agents may work in these bounded lanes:
 | --- | --- | --- |
 | Client shell | routes, components, localization, styling | shared DTO semantics, auth policy |
 | Runner | editor, worker, harness, browser tests | progression truth, AI execution |
-| Game data | Prisma public schema, seed, transactions | `ai` schema |
+| Game data | all Prisma models/migrations in `public`, seed, transactions | Python runtime mappings without a synced contract |
 | AI contracts | Pydantic schemas, OpenAPI, fixtures | client contract without synced fixture |
 | AI domain | mastery, planning, composer, hint ladder | concept order or mastery via model |
 | AI model | prompts, router, guards, evals | unvalidated publication, inline model IDs |
 | Content/assets | manifests, mission content, asset metadata | new IDs outside reviewed manifest process |
 
-Only the designated migration owner creates AI Alembic revisions. Prisma migrations remain owned by the client/data lane.
+Only the designated migration owner changes `client/prisma/schema.prisma` or creates Prisma migrations. The AI service has no Alembic history and never changes database structure.
 
 ## Agent start checklist
 
@@ -95,7 +95,7 @@ AI-specific changes also require Pydantic structured output, router-only model s
 
 1. Locale-aware visual shell and translated landing page.
 2. Supabase auth server/client utilities and protected `/learn` route.
-3. Public-schema v2 design and migration for worlds/concepts/mission versions.
+3. Shared public-schema v2 design and Prisma migration for game and AI capability tables.
 4. Shared contract examples plus FastAPI Pydantic scaffold.
 5. World YAML schema and bakery manifest.
 6. Browser runner protocol and worker initialization spike.
