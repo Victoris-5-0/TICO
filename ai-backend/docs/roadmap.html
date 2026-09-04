@@ -155,20 +155,20 @@ footer{border-top:1px solid var(--line);padding-top:22px;margin-top:60px;font-fa
 <p>Sizes below are working days for one person. Here is how they land against 15 September with the work split two ways.</p>
 
 <h3>Who owns what</h3>
-<p>The dependency rule pays off here. <code>domain/</code> has zero I/O and <code>ai/</code> only needs the router, so both can be built and tested against fixtures with <strong>no database and no running server</strong>. That makes a clean two-way split with almost no blocking.</p>
+<p>The dependency rule pays off here. <code>rules/</code> has zero I/O and <code>ai/</code> only needs the router, so both can be built and tested against fixtures with <strong>no database and no running server</strong>. That makes a clean two-way split with almost no blocking.</p>
 <div class="scroll"><table>
   <thead><tr><th>Ahmed &mdash; the spine</th><th>AI teammate &mdash; the intelligence</th></tr></thead>
   <tbody>
     <tr>
-      <td class="m">app/main.py &middot; config.py &middot; database.py<br>api/v1/ routers<br>repositories/ &middot; models/<br>core/ auth + logging<br>alembic/ &middot; nginx/ &middot; deployment</td>
-      <td class="m">domain/hint_ladder.py<br>domain/mastery.py &middot; composer.py<br>ai/chains/ &middot; ai/graphs/<br>ai/prompts/ &middot; guards.py &middot; router.py<br>evals/</td>
+      <td class="m">app/main.py &middot; config.py &middot; database.py<br>api/v1/ routers<br>queries/ &middot; models_tables/<br>core/ auth + logging<br>nginx/ &middot; deployment<br>the AI models in schema.prisma</td>
+      <td class="m">rules/hint_ladder.py<br>rules/mastery.py &middot; composer.py<br>ai/chains/ &middot; ai/graphs/<br>ai/prompts/ &middot; guards.py &middot; router.py<br>evals/</td>
     </tr>
   </tbody>
 </table></div>
 
 <div class="note">
   <p class="lbl">The one thing that makes or breaks the split</p>
-  <p><strong>Agree the Pydantic DTOs in <code>schemas/</code> together, on day one, before either of you writes anything else.</strong> They are the contract between the two lanes. Get them right and you will barely block each other for eleven days; skip it and you will spend the week merging. Only one person &mdash; Ahmed &mdash; ever runs <code>alembic revision</code>.</p>
+  <p><strong>Agree the Pydantic DTOs in <code>schemas/</code> together, on day one, before either of you writes anything else.</strong> They are the contract between the two lanes. Get them right and you will barely block each other for eleven days; skip it and you will spend the week merging. Only one person &mdash; Ahmed &mdash; ever touches the schema.</p>
 </div>
 
 <h3>Day by day</h3>
@@ -176,15 +176,15 @@ footer{border-top:1px solid var(--line);padding-top:22px;margin-top:60px;font-fa
   <thead><tr><th>Date</th><th>Ahmed</th><th>AI teammate</th></tr></thead>
   <tbody>
     <tr><td class="m">Thu 4 Sep</td><td>Write <code>schemas/</code> DTOs and send them over &middot; git init + repo &middot; app skeleton &middot; requirements</td><td>ai/router.py with the Gemini map &middot; prompts scaffold</td></tr>
-    <tr><td class="m">Fri 5 Sep</td><td>Supabase + /health &middot; <code>ai</code> schema &middot; Alembic scoping &middot; JWT</td><td>ai/router.py &middot; TICO persona v1</td></tr>
-    <tr><td class="m">Sat 6 Sep</td><td><strong>First EC2 deploy</strong> &middot; CI &middot; ORM models (8 tables)</td><td>hint_ladder.py + tests</td></tr>
-    <tr><td class="m">Sun 7 Sep</td><td>Migration &middot; read-only views &middot; sessions &middot; ai_interaction logger</td><td>mastery.py + weighted-update tests</td></tr>
+    <tr><td class="m">Fri 5 Sep</td><td>DB connection + /health &middot; JWT verify &middot; <strong>stub all 7 endpoints</strong></td><td>ai/router.py &middot; TICO persona v1</td></tr>
+    <tr><td class="m">Sat 6 Sep</td><td><strong>Deploy the stubbed API</strong> &middot; send the client the URL &middot; CI &middot; ORM models</td><td>hint_ladder.py + tests</td></tr>
+    <tr><td class="m">Sun 7 Sep</td><td>Migration &middot; read-only views &middot; sessions &middot; ai_interactions logger</td><td>mastery.py + weighted-update tests</td></tr>
     <tr><td class="m">Mon 8 Sep</td><td>Seed sequence_order &middot; repositories &middot; hint cache</td><td>tico_hint chain &middot; guards.py</td></tr>
     <tr><td class="m">Tue 9 Sep</td><td>POST /v1/hints &middot; call cap middleware</td><td><strong>Hint leak test</strong> &middot; authored fallbacks &middot; classify_error</td></tr>
-    <tr><td class="m">Wed 10 Sep</td><td>POST /v1/submissions/analyze</td><td>Classifier eval set &middot; composer.py</td></tr>
+    <tr><td class="m">Wed 10 Sep</td><td><strong>Integration checkpoint 1</strong> &middot; POST /v1/submissions/analyze</td><td>Classifier eval set &middot; composer.py</td></tr>
     <tr><td class="m">Thu 11 Sep</td><td>student_model service &middot; /refresh background</td><td>plan.py &middot; composer tests</td></tr>
     <tr><td class="m">Fri 12 Sep</td><td>POST /students/{id}/plan &middot; lesson_plan writes</td><td><strong>Escalation review chain</strong> &middot; planner safety eval</td></tr>
-    <tr><td class="m">Sat 13 Sep</td><td>Manifest loader &middot; mission_template &middot; /missions/next</td><td>mission_gen graph &middot; validator</td></tr>
+    <tr><td class="m">Sat 13 Sep</td><td>Manifest loader &middot; /missions/next &middot; <strong>Integration checkpoint 2</strong></td><td>mission_gen graph &middot; validator</td></tr>
     <tr><td class="m">Sun 14 Sep</td><td>tico_chat endpoint + SSE &middot; redeploy</td><td>tico_chat graph + checkpointer &middot; moderation</td></tr>
     <tr><td class="m">Mon 15 Sep</td><td>/challenges/next &middot; final deploy &middot; smoke test</td><td>Arena selection &middot; evals green &middot; demo script</td></tr>
   </tbody>
@@ -192,7 +192,7 @@ footer{border-top:1px solid var(--line);padding-top:22px;margin-top:60px;font-fa
 
 <div class="note teal">
   <p class="lbl">Deploy on day 3, not day 11</p>
-  <p>The EC2 deploy is scheduled for <strong>6 September</strong> with nothing but <code>/health</code> on it. Nginx, Gunicorn, systemd and TLS always take longer the first time, and discovering that on 14 September is how a working backend fails to reach a judge. Get the pipeline working while it is cheap, then redeploy all week.</p>
+  <p>The EC2 deploy is scheduled for <strong>6 September</strong>, and it carries <strong>the whole stubbed API</strong> rather than just <code>/health</code>. Two reasons. Nginx, Gunicorn, systemd and TLS always take longer the first time, and discovering that on the 14th is how a working backend fails to reach a judge. And the moment it is up, the client team has a real URL to build against &mdash; nine days of integration instead of two.</p>
 </div>
 
 <p class="snum">Section 03</p>
@@ -212,7 +212,7 @@ footer{border-top:1px solid var(--line);padding-top:22px;margin-top:60px;font-fa
 
 <div class="note warn">
   <p class="lbl">The real risk is not your hours</p>
-  <p>You can work 9.5-hour days. What you cannot do is work through a blocker that belongs to someone else. <strong>Every stretch that is over-loaded also depends on something a teammate owes you</strong> &mdash; the error enum for M3, <code>level_concept.weight</code> for M4, and the prop verbs for M5. If any of those arrive late, the overload compounds into the next stretch and there is no slack left to absorb it. Chase them from day one, not from the day you need them.</p>
+  <p>You can work 9.5-hour days. What you cannot do is work through a blocker that belongs to someone else. <strong>Every stretch that is over-loaded also depends on something a teammate owes you</strong> &mdash; the error enum for M3, <code>exercise_concepts.weight</code> for M4, and the prop verbs for M5. If any of those arrive late, the overload compounds into the next stretch and there is no slack left to absorb it. Chase them from day one, not from the day you need them.</p>
 </div>
 
 <h3>Triage order, if a blocker does land</h3>
@@ -237,18 +237,20 @@ footer{border-top:1px solid var(--line);padding-top:22px;margin-top:60px;font-fa
   <div class="ms-side"><p class="id">M0</p><p class="sz">~2 days</p></div>
   <div class="ms-body">
     <h4>Foundations</h4>
-    <p>The Sanjeev course skeleton, plus the one thing his course doesn't have: a schema boundary that stops two developers destroying each other's migrations.</p>
+    <p>The Sanjeev course skeleton, minus its migration layer. Prisma in <code>client/</code> owns the schema, so this service starts smaller than the course does.</p>
     <ul>
       <li><code>git init</code>, push, branch protection on <code>main</code></li>
       <li><code>app/</code> skeleton: <code>main.py</code>, <code>config.py</code>, <code>database.py</code>, <code>api/v1/</code></li>
       <li><code>requirements.txt</code> pinned; venv documented in the README</li>
       <li>Supabase via the session pooler; <code>GET /health</code> does a real DB round-trip</li>
       <li>Create the <code>ai</code> Postgres schema</li>
-      <li>Alembic with <code>version_table_schema="ai"</code> + <code>include_object</code> filter</li>
-      <li>Supabase JWT verification and per-request ownership checks in <code>core/auth.py</code></li>
+      <li>Agree with the repo owner: AI tables go in <code>client/prisma/schema.prisma</code>; get the <code>DATABASE_URL</code>; confirm whether auth is Supabase or client-issued</li>
+      <li><strong>Stub all seven endpoints</strong> with realistic fixtures &mdash; input validated, shapes final, behaviour fake</li>
+      <li>Send the client team the base URL, <code>/docs</code>, and the <code>openapi-typescript</code> command</li>
+      <li>JWT verification and per-request ownership checks in <code>core/auth.py</code></li>
       <li>GitHub Actions: pytest on every push</li>
     </ul>
-    <p class="exit"><span class="lbl">Exit criteria</span> A teammate can clone, <code>alembic upgrade head</code>, run the server and hit <code>/health</code> with a real JWT. Autogenerate produces an <em>empty</em> migration &mdash; proving it cannot see game tables.</p>
+    <p class="exit"><span class="lbl">Exit criteria</span> A teammate can clone, install, run the server and hit <code>/health</code> with a real JWT and a real database round-trip &mdash; <strong>and the client team can already call all seven endpoints on a deployed URL and generate typed calls from <code>/openapi.json</code>.</strong></p>
     <p class="dep">depends on: nothing &mdash; start today</p>
   </div>
 </div>
@@ -259,16 +261,17 @@ footer{border-top:1px solid var(--line);padding-top:22px;margin-top:60px;font-fa
     <h4>The evidence layer</h4>
     <p>All eight tables and the session lifecycle everything else hangs off. Nothing here is intelligent yet &mdash; that is the point. Build the recorder before the reasoner.</p>
     <ul>
-      <li>ORM models + first migration for the eight <code>ai</code> tables, including <code>student_lesson_plan</code></li>
-      <li><code>level.is_skippable</code> agreed with the game dev &mdash; which lessons may never be optional</li>
-      <li>Read-only views onto <code>user</code>, <code>level</code>, <code>concept</code>, <code>code_submission</code></li>
-      <li><strong><code>level_concept.is_primary</code> and <code>.weight</code></strong> agreed with the game dev and populated &mdash; the join cumulative learning depends on</li>
+      <li>The eight AI models added to <code>client/prisma/schema.prisma</code> with <code>@@map</code> / <code>@map</code>, migrated once from <code>client/</code></li>
+      <li>SQLAlchemy models mapped to those tables &mdash; reads and writes only, no migrations</li>
+      <li><code>lessons.is_skippable</code> agreed with the game dev &mdash; which lessons may never be optional</li>
+      <li>Read-only views onto <code>user</code>, <code>level</code>, <code>concept</code>, <code>submissions</code></li>
+      <li><strong><code>exercise_concepts.is_primary</code> and <code>.weight</code></strong> agreed with the game dev and populated &mdash; the join cumulative learning depends on</li>
       <li><code>concept.sequence_order</code> populated: variables &rarr; conditionals &rarr; loops &rarr; functions</li>
       <li><code>POST /v1/sessions</code> and session close</li>
-      <li><code>ai_interaction</code> logging helper, wired so no model call can bypass it</li>
+      <li><code>ai_interactions</code> logging helper, wired so no model call can bypass it</li>
     </ul>
     <p class="exit"><span class="lbl">Exit criteria</span> A fake playthrough can be written end to end by test code: session opens, submissions and hints record against it, session closes with a duration. Query the rows and reconstruct what happened.</p>
-    <p class="dep">depends on: M0 &middot; needs the concept list and level_concept weights</p>
+    <p class="dep">depends on: M0 &middot; needs the concept list and exercise_concepts weights</p>
   </div>
 </div>
 
@@ -278,13 +281,13 @@ footer{border-top:1px solid var(--line);padding-top:22px;margin-top:60px;font-fa
     <h4>TICO hints &mdash; the first thing worth showing</h4>
     <p>The design rule made real in one endpoint. The server picks the rung; TICO only writes that rung's prose.</p>
     <ul>
-      <li><code>domain/hint_ladder.py</code> &mdash; <strong>4 rungs</strong>, pure function, fully unit-tested, no DB</li>
+      <li><code>rules/hint_ladder.py</code> &mdash; <strong>4 rungs</strong>, pure function, fully unit-tested, no DB</li>
       <li><code>ai/router.py</code> with the Gemini map, and <code>ai/prompts/</code> with a version string</li>
       <li>TICO's persona prompt: warm, Egyptian Arabic dialogue, English identifiers</li>
       <li><code>ai/chains/tico_hint.py</code> &mdash; <code>with_structured_output()</code>, one call, <code>gemini-3.5-flash-lite</code></li>
       <li><code>ai/guards.py</code> &mdash; Pydantic validation, retry once, authored fallback</li>
-      <li><strong>Postgres hint cache</strong> on <code>(level_id, rung, error_category, scaffold_state)</code> &mdash; P0, not optional</li>
-      <li><code>POST /v1/hints</code> end to end, writing <code>hint_event</code></li>
+      <li><strong>Postgres hint cache</strong> on <code>(exercise_id, rung, error_tag, scaffold_state)</code> &mdash; P0, not optional</li>
+      <li><code>POST /v1/hints</code> end to end, writing <code>hint_events</code></li>
       <li><strong>Hint leak test in CI</strong>, graded by rung: 1&ndash;2 no solution identifier, 3 none of the student's target values, 4 no complete runnable line</li>
       <li>Authored fallback hints for all four rungs</li>
       <li>Per-student daily call cap in middleware</li>
@@ -298,12 +301,13 @@ footer{border-top:1px solid var(--line);padding-top:22px;margin-top:60px;font-fa
   <div class="ms-side"><p class="id">M3</p><p class="sz">~2 days</p></div>
   <div class="ms-body">
     <h4>Code analysis</h4>
-    <p>Turns a failed submission into a labelled error category &mdash; what makes hints specific rather than generic, and what feeds mastery in M4.</p>
+    <p>Turns a failed submission into a coarse <strong>family</strong> for the numbers and an open <strong>tag</strong> for the cache and the hint. What makes hints specific rather than generic, and what feeds mastery in M4.</p>
     <ul>
-      <li>Agree a fixed error-category enum with the game team</li>
+      <li><code>ErrorFamily</code> &mdash; seven closed values, decided here, blocked on nobody</li>
+      <li>Open <code>tag</code> vocabulary + the <code>error_tag</code> table, so it grows from real students</li>
       <li><code>ai/chains/classify_error.py</code> &mdash; small structured output</li>
-      <li><code>POST /v1/submissions/analyze</code>, writing <code>error_category</code> back</li>
-      <li>Feed <code>error_category</code> into the M2 cache key</li>
+      <li><code>POST /v1/submissions/analyze</code>, writing <code>family</code> and <code>tag</code> back</li>
+      <li>Feed <code>tag</code> into the M2 hint cache key</li>
       <li><strong>Classifier eval</strong> &mdash; 30 hand-labelled wrong submissions, accuracy tracked</li>
     </ul>
     <p class="exit"><span class="lbl">Exit criteria</span> Accuracy measured and written down. Hints visibly improve because they now know <em>why</em> the code is wrong.</p>
@@ -317,10 +321,10 @@ footer{border-top:1px solid var(--line);padding-top:22px;margin-top:60px;font-fa
     <h4>Student model, planner and composer</h4>
     <p>Where the platform stops being a quiz with hints and starts being adaptive. Every decision here follows the same shape: <strong>a pure-Python rule proposes, and a model reviews the risky calls.</strong></p>
     <ul>
-      <li><code>domain/mastery.py</code> &mdash; mastery and confidence from attempts, hints, time. Pure, no model</li>
-      <li><strong>Weighted updates</strong>: target concept at full weight, each carried concept at its <code>level_concept.weight</code></li>
-      <li><code>domain/plan.py</code> &mdash; proposes <code>required</code> / <code>optional</code> per lesson from the diagnostic, with a confidence</li>
-      <li><code>domain/composer.py</code> &mdash; scaffold plan per carried concept, difficulty params, reps, advance-or-hold</li>
+      <li><code>rules/mastery.py</code> &mdash; mastery and confidence from attempts, hints, time. Pure, no model</li>
+      <li><strong>Weighted updates</strong>: target concept at full weight, each carried concept at its <code>exercise_concepts.weight</code></li>
+      <li><code>rules/plan.py</code> &mdash; proposes <code>required</code> / <code>optional</code> per lesson from the diagnostic, with a confidence</li>
+      <li><code>rules/composer.py</code> &mdash; scaffold plan per carried concept, difficulty params, reps, advance-or-hold</li>
       <li><strong>The escalation layer</strong> &mdash; a model reviews <em>every</em> proposed skip and <em>every</em> conflicting composer decision; writes <code>decided_by</code> and <code>reason</code></li>
       <li><code>services/planner.py</code> + <code>POST /v1/students/{id}/plan</code> &mdash; beginner path and diagnostic path</li>
       <li><code>services/student_model.py</code> + <code>POST /v1/students/{id}/refresh</code>, background on session close, including forward re-planning</li>
@@ -338,10 +342,10 @@ footer{border-top:1px solid var(--line);padding-top:22px;margin-top:60px;font-fa
     <h4>Mission generation &mdash; MVP complete</h4>
     <p>Closes the loop. The roadmap fixes the concept and the world; the composer fixes the difficulty and the scaffolding; generation composes the scenario from the inventory against both.</p>
     <ul>
-      <li>Manifest loader + <code>mission_template</code> rows projected from the three world files</li>
+      <li>Manifest loader + <code>mission_templates</code> rows projected from the three world files</li>
       <li><code>ai/graphs/mission_gen.py</code> &mdash; generate &rarr; validate &rarr; repair &times;2</li>
       <li><strong>The validator</strong> &mdash; every scene, prop and verb exists in the manifest; the solution passes its own tests; the target concept is actually present</li>
-      <li><code>generated_mission.validated</code> set by the validator, never by the model</li>
+      <li><code>generated_missions.validated</code> set by the validator, never by the model</li>
       <li>Reuse: an equivalent params + scaffold combination returns the existing row</li>
       <li><code>POST /v1/missions/next</code> &mdash; the full pipeline in one call</li>
       <li><strong>Generation legality eval</strong> in CI over all three worlds</li>
@@ -357,8 +361,8 @@ footer{border-top:1px solid var(--line);padding-top:22px;margin-top:60px;font-fa
     <h4>TICO chat and the challenge arena</h4>
     <p>The conversational mentor and the post-roadmap arena. Scheduled for 14&ndash;15 September, landing alongside submission &mdash; the tightest stretch in the plan.</p>
     <ul>
-      <li><code>ai/graphs/tico_chat.py</code> &mdash; Postgres checkpointer, <code>thread_id = mission_session.id</code></li>
-      <li>Checkpoint tables in a <code>langgraph</code> schema Alembic ignores</li>
+      <li><code>ai/graphs/tico_chat.py</code> &mdash; Postgres checkpointer, <code>thread_id = practice_sessions.id</code></li>
+      <li>Checkpoint tables in their own <code>langgraph</code> schema, which Prisma does not manage</li>
       <li><code>POST /v1/tico/messages</code> with SSE streaming</li>
       <li>Input moderation before any student text enters a prompt</li>
       <li><code>POST /v1/challenges/next</code> &mdash; mastered concepts mixed, no scaffolding, shorter ladder</li>
@@ -378,11 +382,11 @@ footer{border-top:1px solid var(--line);padding-top:22px;margin-top:60px;font-fa
     <tr><td>Hint ladder length</td><td><strong>4 rungs.</strong> Orient &rarr; question &rarr; name the concept with a foreign example &rarr; walk to the fix in words. No rung ever emits a complete solution; after rung 4 comes a mini-practice.</td></tr>
     <tr><td>Model provider</td><td><strong>Google Gemini.</strong> <code>gemini-3.5-flash-lite</code> for hints, NPC lines and classification; <code>gemini-3.5-flash</code> for escalation review, generation and chat. No <code>-preview</code> models, no <code>gemini-2.5-*</code>.</td></tr>
     <tr><td>Editor language</td><td><strong>Python.</strong> Manifest verbs, starter code and hint prose are all Python.</td></tr>
-    <tr><td>Alembic ownership</td><td><strong>Ahmed.</strong> Nobody else runs <code>alembic revision</code> &mdash; not the game developer, not the AI teammate.</td></tr>
+    <tr><td>Migrations</td><td><strong>Prisma owns the schema</strong> &mdash; <code>client/prisma/schema.prisma</code> is the single source of truth, including the eight AI tables. No Alembic in this service. <em>Pending confirmation with the repo owner.</em></td></tr>
     <tr><td>Pydantic schemas</td><td><strong>Ahmed writes them</strong>; the AI teammate builds against whatever they say.</td></tr>
   </tbody>
 </table></div>
-<p>One open item remains, and it belongs to someone else: <strong><code>level_concept</code> weights</strong> &mdash; who sets them, needed before M1. That sits in section 06 with the rest of the external dependencies.</p>
+<p>One open item remains, and it belongs to someone else: <strong><code>exercise_concepts</code> weights</strong> &mdash; who sets them, needed before M1. That sits in section 06 with the rest of the external dependencies.</p>
 
 <div class="note warn">
   <p class="lbl">One consequence of choosing Gemini</p>
@@ -395,26 +399,48 @@ footer{border-top:1px solid var(--line);padding-top:22px;margin-top:60px;font-fa
   <thead><tr><th>From</th><th>What</th><th>Needed by</th></tr></thead>
   <tbody>
     <tr><td>Game / DB developer</td><td>The concept list and its fixed order</td><td class="m">M1</td></tr>
-    <tr><td>Game / DB developer</td><td><code>level_concept.is_primary</code> and <code>.weight</code> for every lesson</td><td class="m">M1</td></tr>
-    <tr><td>Game / DB developer + you</td><td><code>level.is_skippable</code> &mdash; which lessons a student may never skip, however good the diagnostic looks</td><td class="m">M1</td></tr>
+    <tr><td>Game / DB developer</td><td><code>exercise_concepts.is_primary</code> and <code>.weight</code> for every lesson</td><td class="m">M1</td></tr>
+    <tr><td>Game / DB developer + you</td><td><code>lessons.is_skippable</code> &mdash; which lessons a student may never skip, however good the diagnostic looks</td><td class="m">M1</td></tr>
     <tr><td>Content / pedagogy</td><td>The <strong>diagnostic mission</strong>: one task touching all four concepts lightly, used to build the lesson plan</td><td class="m">M4</td></tr>
-    <tr><td>Game / DB developer</td><td>Agreement on <code>code_submission.session_id</code> and the other Tier 2 columns</td><td class="m">M1</td></tr>
-    <tr><td>Game / DB developer</td><td>A fixed error-category enum</td><td class="m">M3</td></tr>
+    <tr><td>Game / DB developer</td><td>Agreement on <code>submissions.session_id</code> and the other Tier 2 columns</td><td class="m">M1</td></tr>
     <tr><td><strong>Game engine developer</strong></td><td><strong>The exact verbs and reads each prop exposes to student code</strong> &mdash; the manifest cannot be finished without this</td><td class="m">M5</td></tr>
     <tr><td>Content / design</td><td>Three world manifests: scenes, characters, props, mechanics</td><td class="m">M5</td></tr>
     <tr><td>UI / UX</td><td>Hint panel behaviour &mdash; does a used hint stay visible? does it cost XP?</td><td class="m">M2</td></tr>
     <tr><td>Frontend</td><td>Whether <code>Run Code</code> and <code>Check Answer</code> are one submission or two</td><td class="m">M3</td></tr>
-    <tr><td>Team lead</td><td>Provider credits and the VICTORIS Phase 1 deadline</td><td class="m">M0</td></tr>
+    <tr><td>Repo owner</td><td>The <code>DATABASE_URL</code>, and whether auth is Supabase or client-issued</td><td class="m">M0 &middot; today</td></tr>
+    <tr><td>Whoever owns Next.js</td><td>A name against the two integration checkpoints</td><td class="m">M0 &middot; today</td></tr>
   </tbody>
 </table></div>
 
 <p class="snum">Section 07</p>
+<h2>What the client team needs from you</h2>
+<p>The mirror of the table above, and the one that was missing. Your APIs are somebody else's dependency, and they cannot build a screen against an endpoint that does not exist yet.</p>
+<div class="scroll"><table>
+  <thead><tr><th>What</th><th>To whom</th><th>By</th></tr></thead>
+  <tbody>
+    <tr><td><strong>All seven endpoints stubbed</strong> &mdash; shapes final, behaviour fake</td><td>Next.js dev</td><td class="m">5 Sep</td></tr>
+    <tr><td>A deployed base URL + <code>/docs</code> + the <code>openapi-typescript</code> command</td><td>Next.js dev</td><td class="m">6 Sep</td></tr>
+    <tr><td>The auth story &mdash; which header, which token, what a 401 looks like</td><td>Next.js dev</td><td class="m">6 Sep</td></tr>
+    <tr><td><strong>Warning that TICO chat is SSE, not JSON</strong> &mdash; real frontend work</td><td>Next.js dev</td><td class="m">6 Sep</td></tr>
+    <tr><td>Integration checkpoint 1 &mdash; the hint panel, end to end</td><td>Next.js dev</td><td class="m">10 Sep</td></tr>
+    <tr><td>Integration checkpoint 2 &mdash; the mission loop, end to end</td><td>Next.js dev</td><td class="m">13 Sep</td></tr>
+    <tr><td>The eight AI models in <code>schema.prisma</code>, announced before the migration lands</td><td>Repo owner</td><td class="m">6 Sep</td></tr>
+    <tr><td>Notice of any contract change, <em>before</em> it is pushed</td><td>Next.js dev</td><td class="m">ongoing</td></tr>
+  </tbody>
+</table></div>
+
+<div class="note warn">
+  <p class="lbl">The failure this prevents</p>
+  <p>Built milestone by milestone with no stubs, the first working call to <code>/v1/missions/next</code> would land on <strong>13 September</strong> &mdash; giving the client two days to integrate the core loop and one to build streaming chat, on the same days you are writing them. That is the shape of a demo where the backend works and the screen does not.</p>
+</div>
+
+<p class="snum">Section 08</p>
 <h2>The five things most likely to go wrong</h2>
 <div class="scroll"><table>
   <thead><tr><th>Risk</th><th>Why it bites</th><th>Mitigation</th></tr></thead>
   <tbody>
     <tr><td><strong>The manifests aren't ready</strong></td><td>M5 is the largest milestone and cannot start without them. They depend on the game engine developer, not on you &mdash; which makes it the easiest deadline to miss.</td><td>Start the manifests at M0 as a parallel track. Get the prop verbs in writing early, even as a draft.</td></tr>
-    <tr><td><strong>Duelling Alembic migrations</strong></td><td>Two developers autogenerating against one Supabase project produce drop-table migrations for each other's work. The classic way a student team wrecks its database before a demo.</td><td>The <code>ai</code> schema split at M0. Verify by running autogenerate and confirming an empty migration.</td></tr>
+    <tr><td><strong><code>prisma migrate reset</code> on the shared database</strong></td><td>It uses <code>DROP CASCADE</code> and wipes everyone's data, and Prisma offers it as the fix whenever it detects schema drift. One tired "y" at 1am and the whole team's database is gone. This is now the only migration hazard, and it belongs to whoever is typing.</td><td>Ban <code>reset</code> against the shared database &mdash; it belongs on a throwaway local DB. Write it into the root <code>AGENTS.md</code>, not a group chat. Announce every migration before pushing it.</td></tr>
     <tr><td><strong>The service bypasses RLS</strong></td><td>FastAPI holds the service-role key. Without a per-request ownership check, any student can read another's data by changing an ID.</td><td>Ownership assertion at M0, with a test that tries to read someone else's session.</td></tr>
     <tr><td><strong>A hint leaks the answer</strong></td><td>One screenshot of TICO handing over the solution undermines the entire pedagogical claim in front of judges.</td><td>The string-assertion leak test in CI at M2. No model needed, runs in milliseconds.</td></tr>
     <tr><td><strong>A generated mission is unsolvable</strong></td><td>If generation invents a verb the engine doesn't implement, a child is stuck on something impossible &mdash; and it will happen live.</td><td>The validator at M5 re-reads the manifest and runs the solution against its own tests before anything ships.</td></tr>

@@ -1,0 +1,350 @@
+<title>TICO Team Interfaces</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+:root{
+  --paper:#F5F3EE; --surface:#FFFFFF; --surface-2:#EDEAE3;
+  --ink:#17211F; --ink-2:#43514D; --muted:#77837E;
+  --line:#DCD7CD; --line-strong:#BEB6A8;
+  --accent:#C9502A; --accent-soft:#F7E7E0;
+  --teal:#1D5B57; --teal-soft:#DEEAE7;
+  --warn:#8A5D0F;
+  --sans:"IBM Plex Sans",ui-sans-serif,system-ui,sans-serif;
+  --display:"Archivo","IBM Plex Sans",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --paper:#0F1917; --surface:#16211E; --surface-2:#1D2926;
+    --ink:#E9E5DC; --ink-2:#B4BDB8; --muted:#8B978F;
+    --line:#2A3733; --line-strong:#3F4D48;
+    --accent:#E8815A; --accent-soft:#3A241C;
+    --teal:#71C1B4; --teal-soft:#16302C;
+    --warn:#D9A441;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#0F1917; --surface:#16211E; --surface-2:#1D2926;
+  --ink:#E9E5DC; --ink-2:#B4BDB8; --muted:#8B978F;
+  --line:#2A3733; --line-strong:#3F4D48;
+  --accent:#E8815A; --accent-soft:#3A241C;
+  --teal:#71C1B4; --teal-soft:#16302C;
+  --warn:#D9A441;
+}
+*{box-sizing:border-box}
+body{background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1080px;margin:0 auto;padding:0 28px 96px}
+.mast{border-bottom:1px solid var(--line);padding:52px 0 30px}
+.kicker{font-family:var(--mono);font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);margin:0 0 20px}
+h1{font-family:var(--display);font-weight:700;font-size:clamp(34px,5.2vw,52px);line-height:1.05;letter-spacing:-.02em;margin:0;text-wrap:balance;max-width:18ch}
+.dek{font-size:18px;color:var(--ink-2);max-width:64ch;margin:20px 0 0}
+.facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1px;background:var(--line);border:1px solid var(--line);margin-top:32px}
+.fact{background:var(--surface);padding:14px 16px}
+.fact dt{font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:0 0 5px}
+.fact dd{margin:0;font-weight:600;font-size:14.5px;line-height:1.35}
+nav{position:sticky;top:0;z-index:20;background:var(--paper);border-bottom:1px solid var(--line);padding:11px 0;margin-bottom:52px}
+nav ul{display:flex;flex-wrap:wrap;gap:20px;list-style:none;margin:0 auto;padding:0 28px;max-width:1080px}
+nav a{font-family:var(--mono);font-size:12px;color:var(--ink-2);text-decoration:none}
+nav a:hover{color:var(--accent)}
+a{color:var(--accent)}
+a:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+section{margin-bottom:72px;scroll-margin-top:70px}
+.snum{font-family:var(--mono);font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin:0 0 10px}
+h2{font-family:var(--display);font-weight:700;font-size:clamp(24px,3vw,32px);line-height:1.15;letter-spacing:-.015em;margin:0 0 16px;text-wrap:balance}
+h3{font-family:var(--display);font-weight:600;font-size:18.5px;margin:34px 0 12px}
+h4{font-family:var(--mono);font-weight:500;font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:26px 0 10px}
+p{max-width:68ch;margin:0 0 15px}
+ul.body,ol.body{max-width:68ch;padding-left:20px;margin:0 0 15px}
+ul.body li,ol.body li{margin-bottom:8px}
+code{font-family:var(--mono);font-size:.875em;background:var(--surface-2);padding:1.5px 5px;border-radius:3px}
+pre{background:var(--surface-2);border:1px solid var(--line);padding:14px 16px;overflow-x:auto;font-family:var(--mono);font-size:12.5px;line-height:1.7;margin:16px 0}
+pre code{background:none;padding:0;font-size:inherit}
+strong{font-weight:600}
+.note{border-left:3px solid var(--accent);background:var(--surface);padding:15px 19px;margin:22px 0;max-width:72ch}
+.note.warn{border-left-color:var(--warn)}
+.note.teal{border-left-color:var(--teal)}
+.note p:last-child{margin-bottom:0}
+.note .lbl{font-family:var(--mono);font-size:10.5px;letter-spacing:.11em;text-transform:uppercase;color:var(--accent);margin:0 0 6px}
+.note.warn .lbl{color:var(--warn)}
+.note.teal .lbl{color:var(--teal)}
+.scroll{overflow-x:auto;margin:20px 0;border:1px solid var(--line);background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-size:13.5px;min-width:560px}
+th{font-family:var(--mono);font-weight:500;font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);text-align:left;padding:11px 14px;border-bottom:1px solid var(--line-strong);white-space:nowrap;vertical-align:bottom}
+td{padding:11px 14px;border-bottom:1px solid var(--line);vertical-align:top;line-height:1.5}
+tr:last-child td{border-bottom:none}
+td.m,th.m{font-family:var(--mono);font-size:12.5px}
+td.nw{white-space:nowrap}
+.pill{display:inline-block;font-family:var(--mono);font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;padding:2px 7px;border-radius:2px;border:1px solid currentColor;white-space:nowrap}
+.p-crit{color:var(--accent)} .p-soon{color:var(--warn)} .p-ok{color:var(--teal)}
+figure{margin:28px 0;border:1px solid var(--line);background:var(--surface);padding:26px 22px 0}
+figure svg{display:block;width:100%;max-width:100%;height:auto;color:var(--ink)}
+figcaption{font-size:13px;color:var(--ink-2);border-top:1px solid var(--line);margin:22px -22px 0;padding:13px 22px;line-height:1.55}
+figcaption b{font-weight:600;color:var(--ink)}
+.dtxt{font-family:var(--mono);font-size:12px;fill:currentColor}
+.dtxt-s{font-family:var(--mono);font-size:10.5px;fill:currentColor;opacity:.65}
+.dtxt-b{font-family:var(--mono);font-size:12px;font-weight:500;fill:currentColor}
+.bx{fill:var(--surface-2);stroke:var(--line-strong);stroke-width:1.25}
+.bx-a{fill:var(--accent-soft);stroke:var(--accent);stroke-width:1.5}
+.bx-t{fill:var(--teal-soft);stroke:var(--teal);stroke-width:1.5}
+.ln{fill:none;stroke:currentColor;stroke-width:1.4;opacity:.75}
+footer{border-top:1px solid var(--line);padding-top:20px;font-family:var(--mono);font-size:11.5px;color:var(--muted);line-height:1.9}
+@media (max-width:640px){.wrap{padding:0 18px 60px}nav ul{padding:0 18px;gap:14px}figure{padding:18px 14px 0}figcaption{margin:18px -14px 0;padding:12px 14px}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+
+<div class="wrap">
+<header class="mast">
+  <p class="kicker">TICO &middot; Code Egypt &middot; SONIC team</p>
+  <h1>Who owes what, and how the pieces connect</h1>
+  <p class="dek">The AI backend is not built in isolation. Six things must arrive from other people before it can work, and five things must reach the client team before they can build a screen. This is both lists, with dates, plus exactly how the Next.js app talks to the Python service.</p>
+  <dl class="facts">
+    <div class="fact"><dt>Deadline</dt><dd>15 Sep 2026</dd></div>
+    <div class="fact"><dt>Inbound</dt><dd>10 items</dd></div>
+    <div class="fact"><dt>Outbound</dt><dd>8 items</dd></div>
+    <div class="fact"><dt>Long pole</dt><dd>Prop verbs</dd></div>
+  </dl>
+</header>
+</div>
+
+<nav><ul>
+  <li><a href="#map">01 The map</a></li>
+  <li><a href="#inbound">02 What I need</a></li>
+  <li><a href="#outbound">03 What they need</a></li>
+  <li><a href="#integrate">04 Client integration</a></li>
+  <li><a href="#checkpoints">05 Checkpoints</a></li>
+  <li><a href="#today">06 Send today</a></li>
+</ul></nav>
+
+<div class="wrap">
+
+<section id="map">
+  <p class="snum">Section 01</p>
+  <h2>The map</h2>
+  <p>Four groups, one shared database, one HTTP boundary. Everything that goes wrong between now and the 15th goes wrong on one of these arrows.</p>
+
+  <figure>
+    <svg viewBox="0 0 900 470" role="img" aria-label="Diagram: the game and database developer plus content and UX feed the shared Postgres and the world manifests. The Next.js client calls the Python AI backend over HTTP. Both read the same Postgres.">
+      <defs><marker id="ai" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
+
+      <rect class="bx" x="40" y="20" width="220" height="72" rx="3"/>
+      <text class="dtxt-b" x="150" y="46" text-anchor="middle">Game / DB developer</text>
+      <text class="dtxt-s" x="150" y="66" text-anchor="middle">schema.prisma &middot; concepts</text>
+      <text class="dtxt-s" x="150" y="82" text-anchor="middle">weights &middot; migrations</text>
+
+      <rect class="bx" x="330" y="20" width="220" height="72" rx="3"/>
+      <text class="dtxt-b" x="440" y="46" text-anchor="middle">Content / pedagogy</text>
+      <text class="dtxt-s" x="440" y="66" text-anchor="middle">world manifests</text>
+      <text class="dtxt-s" x="440" y="82" text-anchor="middle">lessons &middot; diagnostic</text>
+
+      <rect class="bx" x="620" y="20" width="220" height="72" rx="3"/>
+      <text class="dtxt-b" x="730" y="46" text-anchor="middle">Game engine developer</text>
+      <text class="dtxt-s" x="730" y="66" text-anchor="middle">prop verbs and reads</text>
+      <text class="dtxt-s" x="730" y="82" text-anchor="middle">code execution</text>
+
+      <line class="ln" x1="150" y1="92" x2="150" y2="168" marker-end="url(#ai)"/>
+      <line class="ln" x1="440" y1="92" x2="440" y2="168" marker-end="url(#ai)"/>
+      <line class="ln" x1="730" y1="92" x2="730" y2="168" marker-end="url(#ai)"/>
+
+      <rect class="bx-t" x="40" y="174" width="220" height="60" rx="3"/>
+      <text class="dtxt-b" x="150" y="199" text-anchor="middle">Shared Postgres</text>
+      <text class="dtxt-s" x="150" y="219" text-anchor="middle">Prisma owns the schema</text>
+
+      <rect class="bx" x="330" y="174" width="220" height="60" rx="3"/>
+      <text class="dtxt-b" x="440" y="199" text-anchor="middle">content/worlds/*.yaml</text>
+      <text class="dtxt-s" x="440" y="219" text-anchor="middle">the closed inventory</text>
+
+      <rect class="bx" x="620" y="174" width="220" height="60" rx="3"/>
+      <text class="dtxt-b" x="730" y="199" text-anchor="middle">Prop API</text>
+      <text class="dtxt-s" x="730" y="219" text-anchor="middle">gate.open() &middot; passengers</text>
+
+      <line class="ln" x1="440" y1="234" x2="440" y2="286" marker-end="url(#ai)"/>
+      <path class="ln" d="M730,234 V260 H452" marker-end="url(#ai)"/>
+
+      <rect class="bx-a" x="330" y="292" width="220" height="70" rx="3"/>
+      <text class="dtxt-b" x="440" y="318" text-anchor="middle">tico-ai &mdash; FastAPI</text>
+      <text class="dtxt-s" x="440" y="338" text-anchor="middle">6 AI capabilities</text>
+      <text class="dtxt-s" x="440" y="354" text-anchor="middle">JSON decisions only</text>
+
+      <path class="ln" d="M150,234 V326 H324" marker-end="url(#ai)"/>
+
+      <line class="ln" x1="440" y1="362" x2="440" y2="396" marker-end="url(#ai)"/>
+      <text class="dtxt-s" x="452" y="384">HTTPS &middot; JWT</text>
+
+      <rect class="bx" x="330" y="402" width="220" height="56" rx="3"/>
+      <text class="dtxt-b" x="440" y="426" text-anchor="middle">Next.js client</text>
+      <text class="dtxt-s" x="440" y="444" text-anchor="middle">UI &middot; game engine &middot; execution</text>
+
+      <path class="ln" d="M330,430 H80 V240" marker-end="url(#ai)"/>
+      <text class="dtxt-s" x="88" y="330">reads directly</text>
+      <text class="dtxt-s" x="88" y="346">via Prisma</text>
+    </svg>
+    <figcaption><b>Two paths to the database, one path to the AI.</b> The client reads plain game data itself through Prisma; it calls the Python service only when it needs a judgement. The world manifest sits between the game engine developer and generation &mdash; and it is the arrow with no slack behind it.</figcaption>
+  </figure>
+</section>
+
+<section id="inbound">
+  <p class="snum">Section 02</p>
+  <h2>What I need from the rest of the team</h2>
+  <p>Ten items. Three of them block work that starts today.</p>
+
+  <div class="scroll"><table>
+    <thead><tr><th>What</th><th>From</th><th class="nw">By</th><th>Why it blocks</th></tr></thead>
+    <tbody>
+      <tr><td><strong>The <code>DATABASE_URL</code></strong>, and whether there is a dev database or one shared instance</td><td>Repo owner</td><td class="m nw">4 Sep <span class="pill p-crit">now</span></td><td>The service cannot connect. Everything downstream stops.</td></tr>
+      <tr><td><strong>Auth: Supabase Auth, or client-issued sessions?</strong></td><td>Repo owner</td><td class="m nw">4 Sep <span class="pill p-crit">now</span></td><td>Changes <code>core/auth.py</code> entirely. Building on the wrong assumption wastes a day.</td></tr>
+      <tr><td><strong>Green light to add the AI models to <code>schema.prisma</code></strong></td><td>Repo owner</td><td class="m nw">5 Sep <span class="pill p-crit">now</span></td><td>No tables, no evidence layer, no adaptation.</td></tr>
+      <tr><td><strong>Prop verbs and reads for Cairo Metro, in Python</strong> &mdash; e.g. <code>gate.open()</code>, <code>station.passengers -&gt; int</code></td><td>Game engine dev</td><td class="m nw">10 Sep <span class="pill p-soon">long pole</span></td><td>Mission generation cannot start. M5 has no slack behind it.</td></tr>
+      <tr><td>The concept list and its fixed order</td><td>Game / DB dev</td><td class="m nw">6 Sep</td><td><code>concepts.sequence_order</code> is the whole roadmap.</td></tr>
+      <tr><td><strong><code>exercise_concepts.is_primary</code> and <code>.weight</code></strong> for every exercise</td><td>Game / DB dev + pedagogy</td><td class="m nw">6 Sep</td><td>Cumulative learning is unrepresentable without it. Blocks M4.</td></tr>
+      <tr><td><code>lessons.is_skippable</code> &mdash; which lessons may never be skipped</td><td>Game / DB dev</td><td class="m nw">6 Sep</td><td>The planner could otherwise skip something foundational.</td></tr>
+      <tr><td>The Cairo Metro world manifest &mdash; scenes, characters, props, mechanics</td><td>Content</td><td class="m nw">12 Sep</td><td>Generation selects only from this. Nothing else may appear in a mission.</td></tr>
+      <tr><td>The diagnostic mission &mdash; one task touching all four concepts lightly</td><td>Content</td><td class="m nw">12 Sep</td><td>The path planner has nothing to place a student from.</td></tr>
+      <tr><td>Hint panel behaviour &mdash; does a used hint stay visible? does it cost XP?</td><td>UI / UX</td><td class="m nw">8 Sep</td><td>Changes what <code>HintResponse</code> has to carry.</td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="note warn">
+    <p class="lbl">The one to chase daily</p>
+    <p>The <strong>prop verbs</strong> are what student code actually calls. They are simultaneously the game API and the asset catalogue, and mission generation is meaningless without them. Every other blocker has a workaround; this one does not, and it belongs to someone else. Ask on the 4th, ask again on the 6th, and keep asking.</p>
+  </div>
+</section>
+
+<section id="outbound">
+  <p class="snum">Section 03</p>
+  <h2>What the team needs from me</h2>
+  <p>This is the list that was missing from the original plan, and its absence is why the client would have been left with two days to integrate the core loop.</p>
+
+  <div class="scroll"><table>
+    <thead><tr><th>What</th><th>To whom</th><th class="nw">By</th><th>Why</th></tr></thead>
+    <tbody>
+      <tr><td><strong>All seven endpoints stubbed</strong> &mdash; shapes final, behaviour fake</td><td>Next.js dev</td><td class="m nw">5 Sep <span class="pill p-crit">key</span></td><td>Turns their integration window from 2 days into 9.</td></tr>
+      <tr><td>A deployed base URL, <code>/docs</code>, and the codegen command</td><td>Next.js dev</td><td class="m nw">6 Sep</td><td>They generate typed calls instead of hand-writing them.</td></tr>
+      <tr><td>The auth story &mdash; which header, which token, what a 401 looks like</td><td>Next.js dev</td><td class="m nw">6 Sep</td><td>Every call needs it.</td></tr>
+      <tr><td><strong>Warning that TICO chat is SSE, not JSON</strong></td><td>Next.js dev</td><td class="m nw">6 Sep</td><td>Real frontend work. Finding out on the 14th would be brutal.</td></tr>
+      <tr><td>The eight AI models for <code>schema.prisma</code>, announced before the migration lands</td><td>Repo owner</td><td class="m nw">6 Sep</td><td>One shared database. Their data, my migration.</td></tr>
+      <tr><td>The error-family list, once the tag vocabulary starts filling</td><td>Game dev</td><td class="m nw">10 Sep</td><td>They may want to display it.</td></tr>
+      <tr><td>Notice of any contract change, <em>before</em> it is pushed</td><td>Next.js dev</td><td class="m nw">ongoing</td><td>A silent field rename costs them more than it costs me.</td></tr>
+      <tr><td>The <code>ai_interactions</code> cost query, for the pitch</td><td>Team lead</td><td class="m nw">15 Sep</td><td>Shows a judge the AI is measured, not just claimed.</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section id="integrate">
+  <p class="snum">Section 04</p>
+  <h2>How the client integrates</h2>
+  <p>Written for whoever owns the Next.js side. The Python service returns <strong>JSON decisions only</strong> &mdash; it never renders game state and never executes student code.</p>
+
+  <h3>1. Generate the types, don't hand-write them</h3>
+  <p>FastAPI publishes an OpenAPI spec from the same Pydantic models the service validates with, so the types cannot drift:</p>
+  <pre><code>npx openapi-typescript https://&lt;ai-backend&gt;/openapi.json -o client/src/lib/ai-api.d.ts</code></pre>
+  <p>Re-run it whenever the backend says a contract changed. Browse <code>/docs</code> for the interactive version.</p>
+
+  <h3>2. Call it from the server, not the browser</h3>
+  <p>Put the AI calls behind Next.js route handlers or Server Actions. Two reasons: the browser never needs to know the backend URL, and the JWT stays server-side.</p>
+  <pre><code>// client/src/lib/ai.ts
+export async function getHint(token: string, body: HintRequest) {
+  const res = await fetch(`${process.env.AI_BACKEND_URL}/v1/hints`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error((await res.json()).detail);
+  return res.json() as Promise&lt;HintResponse&gt;;
+}</code></pre>
+
+  <h3>3. Auth</h3>
+  <p>Every request carries <code>Authorization: Bearer &lt;token&gt;</code>. The service verifies it and extracts the user id &mdash; <strong>the student is never named in a request body.</strong> A <code>401</code> means the token is missing, expired or malformed; a <code>403</code> means the token is valid but belongs to a different student than the session being asked about.</p>
+
+  <h3>4. The seven endpoints</h3>
+  <div class="scroll"><table>
+    <thead><tr><th>Endpoint</th><th>When the client calls it</th><th>Shape</th></tr></thead>
+    <tbody>
+      <tr><td class="m">POST /v1/sessions</td><td>Student opens a mission</td><td>JSON</td></tr>
+      <tr><td class="m">POST /v1/hints</td><td>Hint button, or a stall threshold</td><td>JSON</td></tr>
+      <tr><td class="m">POST /v1/submissions/analyze</td><td>After the engine runs code and it fails</td><td>JSON</td></tr>
+      <tr><td class="m">POST /v1/students/{id}/plan</td><td>After onboarding / the diagnostic</td><td>JSON</td></tr>
+      <tr><td class="m">POST /v1/students/{id}/refresh</td><td>Session close &mdash; fire and forget</td><td>JSON, background</td></tr>
+      <tr><td class="m">POST /v1/missions/next</td><td>Mission map, or after finishing one</td><td>JSON</td></tr>
+      <tr><td class="m">POST /v1/tico/messages</td><td>Student sends TICO a message</td><td><strong>SSE stream</strong></td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="note warn">
+    <p class="lbl">TICO chat is the one that is different</p>
+    <p><code>/v1/tico/messages</code> streams Server-Sent Events. It is <strong>not</strong> <code>await res.json()</code> &mdash; you need a streaming reader that appends each <code>delta</code> as it arrives. Budget real time for it, and build it against the stub early rather than discovering the shape on the 14th.</p>
+  </div>
+
+  <pre><code>const res = await fetch(url, { method: "POST", headers, body });
+const reader = res.body!.getReader();
+const decoder = new TextDecoder();
+while (true) {
+  const { done, value } = await reader.read();
+  if (done) break;
+  // each frame: { delta, done, blocked?, offered_hint_rung? }
+  appendToBubble(decoder.decode(value));
+}</code></pre>
+
+  <h3>5. Errors, and what to show a child</h3>
+  <p>Every failure returns <code>{ "detail": "...", "code": "..." }</code>. <code>detail</code> is <strong>safe to show a student</strong> &mdash; it is written for a ten-year-old, never a stack trace.</p>
+  <p>A student mid-mission should never see a 500. If a model call fails, the service falls back to an authored hint and still returns <code>200</code>. If you do get a 5xx, show a friendly retry rather than an error code.</p>
+
+  <h3>6. What the client still owns</h3>
+  <ul class="body">
+    <li><strong>Running the code.</strong> The AI service never executes student Python. Run it, then send the results to <code>/submissions/analyze</code>.</li>
+    <li><strong>All rendering.</strong> The service returns a brief, starter code and tests &mdash; not markup.</li>
+    <li><strong>Plain data reads.</strong> Tracks, lessons, progress and XP come from Prisma directly. Do not proxy those through the AI service; it adds a hop for nothing.</li>
+  </ul>
+</section>
+
+<section id="checkpoints">
+  <p class="snum">Section 05</p>
+  <h2>Two integration checkpoints</h2>
+  <p>Half an hour each, sitting together. Not a status meeting &mdash; make one screen actually work end to end.</p>
+  <div class="scroll"><table>
+    <thead><tr><th class="nw">When</th><th>What must work</th></tr></thead>
+    <tbody>
+      <tr><td class="m nw">10 Sep &middot; after M2</td><td>The hint panel calls the real <code>/v1/hints</code> and TICO's words appear on screen, in Arabic, with the rung escalating on repeat presses.</td></tr>
+      <tr><td class="m nw">13 Sep &middot; after M5</td><td>The mission map calls the real <code>/v1/missions/next</code> and a generated Cairo Metro mission renders with its starter code.</td></tr>
+    </tbody>
+  </table></div>
+  <div class="note teal">
+    <p class="lbl">Contract freeze</p>
+    <p>Shapes are stable from <strong>5 September</strong>. Adding an optional field with a default is backwards-compatible and needs no ceremony. Renaming or removing one is breaking &mdash; tell the client before pushing it. Neither schedule has slack to absorb a surprise.</p>
+  </div>
+</section>
+
+<section id="today">
+  <p class="snum">Section 06</p>
+  <h2>Send these today</h2>
+  <p>Four messages. None takes more than two minutes to write, and all four unblock something.</p>
+
+  <h4>To the repo owner</h4>
+  <div class="note">
+    <p>I am adding the AI tables to <code>client/prisma/schema.prisma</code> &mdash; 24 new tables, fully additive, I ran <code>prisma migrate diff</code> and it produces zero drops. Can you send me the <code>DATABASE_URL</code> for <code>ai-backend/.env</code>? Two questions: is there a dev database or is it one shared instance, and does the client use Supabase Auth or issue its own sessions? The second one changes how the Python service verifies tokens.</p>
+  </div>
+
+  <h4>To the game engine developer</h4>
+  <div class="note">
+    <p>For Cairo Metro, I need the exact functions and properties student code can call &mdash; things like <code>gate.open()</code> and <code>station.passengers -&gt; int</code>. Python syntax. This is the biggest blocker on my side: mission generation cannot start without it, and a generated mission that calls a verb you have not implemented is unsolvable for the student. A rough draft on the 6th is far more useful than a perfect list on the 12th.</p>
+  </div>
+
+  <h4>To whoever owns the Next.js side</h4>
+  <div class="note">
+    <p>All seven AI endpoints will be live as stubs on <strong>5 September</strong> &mdash; real shapes, fake data &mdash; so you can start integrating immediately rather than waiting for the logic. Deployed URL on the 6th, and you can generate TypeScript types straight from <code>/openapi.json</code>. One heads-up: TICO's chat endpoint streams SSE, not JSON, so it needs a streaming reader. Can we book half an hour on the 10th to wire the hint panel together?</p>
+  </div>
+
+  <h4>To the team lead</h4>
+  <div class="note">
+    <p>Confirmed we are using Google Gemini. I need to know which API key we have and what rate limit is on that tier &mdash; a per-minute cap that trips during the demo looks exactly like a broken service. Also: who is doing the Next.js integration? I need a name against two checkpoints on the 10th and the 13th.</p>
+  </div>
+</section>
+
+<footer>
+  TICO &middot; Code Egypt &mdash; team interfaces &middot; SONIC team, VICTORIS 5.0<br>
+  Companion documents: the AI layer architecture &middot; the service use cases &middot; the build roadmap &middot; contracts.md
+</footer>
+</div>

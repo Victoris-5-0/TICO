@@ -1,0 +1,119 @@
+# =============================================================================
+# WORLD MANIFEST — TEMPLATE
+#
+# Copy to <world_id>.yaml and fill in. See cairo_metro.yaml for a worked example.
+#
+# The rule that governs this whole file: if it is not written here, the AI may
+# not put it in a mission. Leaving something out is how you forbid it.
+#
+# Two people fill this in together:
+#   - CONTENT / DESIGN   scenes, characters, mechanics, wording
+#   - GAME ENGINE DEV    props: verbs and reads  <- the part nobody else can write
+#
+# Leave TODO where you do not know yet. A manifest with three honest TODOs is
+# more useful than one with three invented verbs.
+# =============================================================================
+
+world:
+  id: TODO                      # snake_case, e.g. cairo_traffic
+  name_en: TODO
+  name_ar: TODO
+  order: TODO                   # chapter position in the fixed roadmap
+  track_slug: TODO              # must match tracks.slug in the database
+  environment_key: TODO         # must match tracks.environment_key
+  mentor_persona: TODO          # who TICO plays here, e.g. traffic_engineer
+
+# -----------------------------------------------------------------------------
+# SCENES — one per backdrop you have artwork for.
+# -----------------------------------------------------------------------------
+scenes:
+  - id: TODO                    # snake_case, referenced by generated missions
+    asset: TODO                 # path in storage
+    description_en: TODO        # one line; the model uses this to set the scene
+    supports: []                # which prop ids can appear in this scene
+
+# -----------------------------------------------------------------------------
+# CHARACTERS — TICO is always available. Add world-specific NPCs.
+# -----------------------------------------------------------------------------
+characters:
+  - id: tico
+    role: mentor
+    asset: tico/tico_idle.png
+    voice: warm, playful, encouraging; never sarcastic
+    language: Egyptian Arabic for dialogue, English for code identifiers
+    beats: [greeting, nudge, success, failure, celebrate]
+
+  # - id: TODO
+  #   role: npc
+  #   voice: TODO
+  #   beats: [problem_intro, reaction]
+
+# -----------------------------------------------------------------------------
+# PROPS — GAME ENGINE DEVELOPER OWNS THIS SECTION.
+#
+# `verbs` are functions student code may CALL.
+# `reads` are properties student code may READ.
+# Write them exactly as the student would type them, in Python.
+#
+# This is the long pole for the whole AI backend. A generated mission that calls
+# a verb the engine has not implemented is unsolvable for a child.
+# -----------------------------------------------------------------------------
+props:
+  - id: TODO
+    asset: TODO
+    states: []                  # optional, e.g. [open, closed]
+    verbs:
+      - "TODO.method()"         # e.g. "gate.open()"
+    reads:
+      - "TODO.property -> type" # e.g. "station.passengers -> int"
+
+# -----------------------------------------------------------------------------
+# MECHANICS — one per kind of task this world teaches.
+# Each becomes a mission_templates row. Generation fills param_schema; it never
+# invents a mechanic and never changes target_concept.
+# -----------------------------------------------------------------------------
+mechanics:
+  - id: TODO                             # snake_case
+    target_concept: TODO                 # must match concepts.slug
+    carried_concepts: []                 # already-taught concepts this exercises
+    scenes: []                           # which scene ids this can be set in
+    props_required: []                   # which props must be present
+    difficulty_band: 5                   # 1-10
+    goal_shape: >
+      TODO — one sentence describing what the student must achieve.
+      Not the wording shown to them; the model writes that.
+    param_schema:
+      TODO_param: { type: int, min: 1, max: 10 }
+      # types: int | enum | string
+      # enum:  { type: enum, options: ["a", "b"] }
+    starter_template: |
+      # {brief}
+      {carried_scaffold}
+      # TODO: what the student must write
+    solution_template: |
+      # TODO — the shape of a correct answer, using ONLY the verbs above
+    tests:
+      - name: TODO
+        setup: ""                        # optional world state before the check
+        call: "TODO"                     # expression to evaluate
+        expected: "TODO"
+
+# -----------------------------------------------------------------------------
+# CARRIED SCAFFOLD — how each carried concept is pre-filled when a student is
+# already strong on it. Substituted into {carried_scaffold}.
+# -----------------------------------------------------------------------------
+carried_scaffold:
+  TODO_concept_slug:
+    FULL: "# TODO — written for the student"
+    PARTIAL: "# TODO — half written, they finish it"
+    NONE: ""
+
+# -----------------------------------------------------------------------------
+# GUARDRAILS — usually copy these as they are.
+# -----------------------------------------------------------------------------
+constraints:
+  may_vary: [scene, params, brief_wording, npc_lines, carried_scaffold]
+  may_not_vary: [world, target_concept, mechanic, prop_verbs, solution_shape]
+  locale: ar-EG
+  reading_age: 10-17
+  max_starter_lines: 12

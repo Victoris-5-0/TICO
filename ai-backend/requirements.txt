@@ -1,0 +1,38 @@
+# TICO AI backend  the dependencies this service actually needs.
+#
+# Constrained, not hard-pinned. After your first successful install run
+#   pip freeze > requirements.lock
+# from INSIDE the venv and commit that. A freeze taken outside the venv captures every
+# package on the machine, which is how this file previously ended up 374 lines long.
+#
+# No Alembic: Prisma owns the schema from client/.
+
+# --- web ---
+fastapi>=0.115,<1.0
+uvicorn[standard]>=0.30,<1.0
+gunicorn>=22.0,<24.0
+
+# --- validation & config (Pydantic v2, not the course's v1) ---
+pydantic>=2.7,<3.0
+pydantic-settings>=2.3,<3.0
+
+# --- database: reads and writes only, no migrations ---
+SQLAlchemy>=2.0,<3.0
+psycopg2-binary>=2.9,<3.0
+
+# --- auth: verify tokens, never issue them ---
+python-jose[cryptography]>=3.3,<4.0
+
+# --- AI: Google Gemini via LangChain ---
+langchain>=0.3,<1.0
+langchain-core>=0.3,<1.0
+langchain-google-genai>=2.0,<3.0
+langgraph>=0.2,<1.0
+langgraph-checkpoint-postgres>=2.0,<3.0
+
+# --- world manifests ---
+PyYAML>=6.0,<7.0
+
+# --- dev ---
+pytest>=8.0,<9.0
+httpx>=0.27,<1.0

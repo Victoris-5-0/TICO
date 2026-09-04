@@ -1,7 +1,7 @@
 # AGENTS.md — `tico-ai`
 
 Python AI backend for **TICO / Code Egypt** (SONIC team, VICTORIS 5.0).
-FastAPI + LangChain/LangGraph over Supabase Postgres.
+FastAPI + LangChain/LangGraph over the team's shared Postgres.
 
 Structure, tooling and deployment follow **Sanjeev Thiyagarajan's FastAPI course**
 (`github.com/Sanjeev-Thiyagarajan/fastapi-course`), extended with an `ai/` layer.
@@ -12,7 +12,33 @@ Where this repo departs from the course, it says so below — don't "fix" it bac
 - **One** FastAPI app with **six** AI capability modules. Not nine deployables.
 - Next.js on Vercel owns the UI, the game engine and code execution. This service returns
   **JSON decisions only** — it never renders game state and never executes student code.
-- It owns the `ai` Postgres schema inside the team's shared Supabase project. Nothing else.
+- It **reads and writes** the AI tables in the team's shared Postgres. It does **not** own
+  their migrations — see below.
+
+## Migrations — Prisma owns the schema
+
+> **Pending confirmation with the repo owner.** Direction is settled, credentials are not.
+
+`client/prisma/schema.prisma` is the single source of truth for **every** table, including
+the eight AI tables. The root `AGENTS.md` already says so and we follow it rather than
+carving out an exception.
+
+- **No Alembic in this service.** SQLAlchemy is used for reads and writes only; it maps to
+  tables it did not create and owns no migration history.
+- **No separate `ai` schema.** The AI tables live in `public` alongside the rest, which
+  means real foreign keys to `user`, `level` and `concept` — better than the workaround a
+  two-tool setup would have forced.
+- Adding a table means editing `client/prisma/schema.prisma`, then from `client/`:
+  `pnpm db:migrate`. Commit the schema change and the generated migration together.
+- Use `@@map("snake_case")` and `@map("snake_case")` on every model and field, so tables
+  read naturally from SQLAlchemy.
+- **Never run `prisma migrate reset` against the shared database.** It uses `DROP CASCADE`
+  and wipes everyone's data. `migrate dev` is fine; `reset` belongs on a throwaway local DB.
+- Tell the team **before** pushing a migration. One shared database means your migration is
+  everyone's migration the moment it lands.
+
+Keeping the SQLAlchemy models in step with `schema.prisma` is manual. Eight tables, so it is
+small — but a rename in Prisma breaks Python at runtime, not at migration time.
 
 ## The learning model — read this before designing anything
 
@@ -39,15 +65,15 @@ Where this repo departs from the course, it says so below — don't "fix" it bac
 |---|---|---|
 | **TICO** — hints, chat, in-world reactions (one character, one persona) | `ai/chains/tico_hint.py`, `ai/graphs/tico_chat.py` | yes, cached |
 | **Code analysis** — classify a failure into a fixed enum | `ai/chains/classify_error.py` | yes, small |
-| **Student model** — weighted mastery over target + carried | `services/student_model.py`, `domain/mastery.py` | summary only |
-| **Path planner** — required/optional lessons from the diagnostic | `services/planner.py`, `domain/plan.py` | reviews every skip |
-| **Adaptive composer** — scaffold plan, difficulty, reps, advance/hold | `domain/composer.py` | reviews conflicts only |
+| **Student model** — weighted mastery over target + carried | `services/student_model.py`, `rules/mastery.py` | summary only |
+| **Path planner** — required/optional lessons from the diagnostic | `services/planner.py`, `rules/plan.py` | reviews every skip |
+| **Adaptive composer** — scaffold plan, difficulty, reps, advance/hold | `rules/composer.py` | reviews conflicts only |
 | **Mission generation** — compose a scenario from the world inventory | `ai/graphs/mission_gen.py` | yes, validated |
 
 ### Rules propose, the model reviews
 
 The planner and the composer decide things *about* a student. Both follow one pattern: a
-pure-Python rule in `domain/` produces a decision **and a confidence**; when the evidence
+pure-Python rule in `rules/` produces a decision **and a confidence**; when the evidence
 conflicts, a model reviews the full profile and confirms or overrides with a written reason.
 Clear-cut cases never reach a model. Always log `decided_by` and `reason` so any decision can
 be explained. **Mastery numbers are the exception — always Python, never a model.**
@@ -71,7 +97,6 @@ references an id or verb that does not exist, or whose solution fails its own te
 python -m venv venv && source venv/Scripts/activate
 pip install -r requirements.txt
 cp .env.example .env
-alembic upgrade head
 uvicorn app.main:app --reload
 pytest
 ```
@@ -81,9 +106,9 @@ pytest
 | Concern | Choice |
 |---|---|
 | Framework | FastAPI + Uvicorn (Gunicorn w/ uvicorn workers in prod) |
-| ORM | SQLAlchemy, **synchronous** — as in the course |
+| ORM | SQLAlchemy, **synchronous**, read/write only — no migrations |
 | Driver | `psycopg2-binary` |
-| Migrations | Alembic, scoped to `ai` |
+| Migrations | **Prisma**, from `client/` — not this service |
 | Validation | Pydantic **v2** (see deviations) |
 | Config | `app/config.py`, Pydantic `BaseSettings` — never read `os.environ` elsewhere |
 | Auth | Verify Supabase JWT (see deviations) |
@@ -96,8 +121,10 @@ pytest
 
 1. **Pydantic v2, not v1.** The course pins `pydantic==1.8.2`; LangChain and LangGraph
    require v2. The one thing that cannot be copied.
-2. **We verify JWTs, we don't issue them.** Supabase Auth owns login. `app/core/auth.py`
-   verifies the token and extracts `user_id`. No user/password table here.
+2. **We verify JWTs, we don't issue them.** `app/core/auth.py` verifies the incoming token
+   and extracts `user_id`. No user/password table here. **Unconfirmed:** this assumes
+   Supabase Auth. If the client issues its own sessions (NextAuth / Better Auth over
+   Prisma), the verification changes shape — ask the repo owner before building on it.
 3. **No Heroku.** Free tier is gone and the architecture diagram says AWS — so the course's
    *Ubuntu VM* recipe runs on EC2. Same `gunicorn.service`, same `nginx/` config.
 
@@ -113,7 +140,7 @@ app/
   database.py          engine, SessionLocal, get_db
   api/v1/              routers ONLY — HTTP in, HTTP out, no logic
   schemas/             Pydantic DTOs — the public contract
-  domain/              pure, zero I/O: mastery.py, plan.py, composer.py, hint_ladder.py
+  rules/              pure, zero I/O: mastery.py, plan.py, composer.py, hint_ladder.py
   services/            use-cases: orchestrate domain + repositories + graphs
   ai/
     graphs/            LangGraph — tico_chat, mission_gen
@@ -121,11 +148,10 @@ app/
     prompts/           versioned templates
     router.py          capability -> model mapping, read from config
     guards.py          output validation, answer-leak check, manifest validator
-  repositories/        SQLAlchemy queries, one module per aggregate
-  models/              ORM for the `ai` schema + read-only views of game tables
+  queries/        SQLAlchemy queries, one module per aggregate
+  models_tables/              SQLAlchemy models mapped to the Prisma-owned tables
   core/                deps, Supabase JWT auth, logging, error handling
 content/worlds/        the world manifests
-alembic/               scoped to the `ai` schema
 nginx/                 prod reverse-proxy config
 tests/ evals/
 ```
@@ -134,15 +160,15 @@ tests/ evals/
 
 `api → services → domain / repositories / ai`
 
-Routers never import SQLAlchemy. `domain/` never imports LangChain. Mastery, the plan rules
-and the composer all live in `domain/`, so every decision rule in the system is testable with
+Routers never import SQLAlchemy. `rules/` never imports LangChain. Mastery, the plan rules
+and the composer all live in `rules/`, so every decision rule in the system is testable with
 no database and no API key.
 
 ## Hard rules
 
-- **Never create or alter a table outside the `ai` schema.** Alembic is configured with
-  `version_table_schema="ai"` and an `include_object` filter. Breaking this drops the game
-  developer's data.
+- **Never create or alter a table from this service.** Schema changes go through
+  `client/prisma/schema.prisma` and `pnpm db:migrate`. Never `prisma migrate reset` against
+  the shared database.
 - **Every model call goes through `app/ai/router.py`** and returns a Pydantic model. No
   inline model IDs anywhere else.
 - **Prompts live in `app/ai/prompts/`.** Bump the version string when you change one.
@@ -171,7 +197,8 @@ no database and no API key.
 
 ## Database
 
-Eight tables in `ai`: `concept_mastery`, `student_lesson_plan`, `mission_session`,
+Eight AI tables, defined in `client/prisma/schema.prisma`: `concept_mastery`,
+`student_lesson_plan`, `mission_session`,
 `hint_event`, `ai_interaction`, `mission_template`, `generated_mission`, `student_profile`.
 Build `ai_interaction` first —
 it is the cost dashboard, bug log, eval set and safety audit trail.
@@ -186,11 +213,11 @@ Per-student variation lives in `student_lesson_plan` instead.
 
 ## Ownership
 
-- **Ahmed owns Alembic.** Nobody else runs `alembic revision` — not the game developer,
-  not the AI teammate. One person, one migration history.
+- **Ahmed owns the AI models in `client/prisma/schema.prisma`.** He writes them and runs
+  the migration; the AI teammate never touches the schema.
 - **Ahmed owns `schemas/`.** He writes the Pydantic DTOs; the AI teammate builds against
   whatever they say. Write them first, before either lane starts — they are the contract.
-- **AI teammate owns `domain/` and `ai/`** — hint ladder, mastery, plan, composer, chains,
+- **AI teammate owns `rules/` and `ai/`** — hint ladder, mastery, plan, composer, chains,
   graphs, prompts, guards, evals. All testable with no DB and no API key.
 
 ## Settled
@@ -202,7 +229,7 @@ Per-student variation lives in `student_lesson_plan` instead.
 
 ## The hint ladder — 4 rungs
 
-The server counts prior `hint_event` rows and fixes the rung in `domain/hint_ladder.py`
+The server counts prior `hint_event` rows and fixes the rung in `rules/hint_ladder.py`
 before any model is called. The model writes prose for **that rung only**.
 
 | Rung | Job | May contain |

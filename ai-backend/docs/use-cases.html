@@ -110,9 +110,9 @@ footer{border-top:1px solid var(--line);padding-top:22px;margin-top:60px;font-fa
   <tbody>
     <tr><td><strong>TICO</strong></td><td class="m">ai/chains/tico_hint.py &middot; ai/graphs/tico_chat.py</td><td>Yes, cached</td><td class="m">UC-03, UC-04</td></tr>
     <tr><td><strong>Code analysis</strong></td><td class="m">ai/chains/classify_error.py</td><td>Yes, small</td><td class="m">UC-05</td></tr>
-    <tr><td><strong>Student model</strong></td><td class="m">services/student_model.py &middot; domain/mastery.py</td><td>Summary only</td><td class="m">UC-06</td></tr>
-    <tr><td><strong>Path planner</strong></td><td class="m">services/planner.py &middot; domain/plan.py</td><td>Reviews every skip</td><td class="m">UC-01, UC-06</td></tr>
-    <tr><td><strong>Adaptive composer</strong></td><td class="m">domain/composer.py</td><td>Reviews conflicts only</td><td class="m">UC-02, UC-06, UC-07</td></tr>
+    <tr><td><strong>Student model</strong></td><td class="m">services/student_model.py &middot; rules/mastery.py</td><td>Summary only</td><td class="m">UC-06</td></tr>
+    <tr><td><strong>Path planner</strong></td><td class="m">services/planner.py &middot; rules/plan.py</td><td>Reviews every skip</td><td class="m">UC-01, UC-06</td></tr>
+    <tr><td><strong>Adaptive composer</strong></td><td class="m">rules/composer.py</td><td>Reviews conflicts only</td><td class="m">UC-02, UC-06, UC-07</td></tr>
     <tr><td><strong>Mission generation</strong></td><td class="m">ai/graphs/mission_gen.py</td><td>Yes, validated</td><td class="m">UC-02, UC-07</td></tr>
   </tbody>
 </table></div>
@@ -181,7 +181,7 @@ footer{border-top:1px solid var(--line);padding-top:22px;margin-top:60px;font-fa
 <h2>The seven use cases</h2>
 
 <div class="uc">
-  <div class="uc-head"><span class="uc-id">UC-01</span><span class="uc-name">Place a new student and build their path</span><span class="uc-mod">services/planner.py + domain/plan.py</span></div>
+  <div class="uc-head"><span class="uc-id">UC-01</span><span class="uc-name">Place a new student and build their path</span><span class="uc-mod">services/planner.py + rules/plan.py</span></div>
   <dl class="uc-meta">
     <div><dt>Primary actor</dt><dd>Student</dd></div>
     <div><dt>Trigger</dt><dd>Finishes onboarding questions</dd></div>
@@ -195,27 +195,27 @@ footer{border-top:1px solid var(--line);padding-top:22px;margin-top:60px;font-fa
     <ol>
       <li>Student says they are new to programming.</li>
       <li>Mark <b>every</b> lesson <code>required</code>. No diagnostic, no model call.</li>
-      <li>Seed <code>student_profile</code> with a low confidence.</li>
+      <li>Seed <code>student_profiles</code> with a low confidence.</li>
     </ol>
     <h5>Main flow &mdash; claims experience</h5>
     <ol>
       <li>Serve one <b>diagnostic mission</b> touching all four MVP concepts lightly.</li>
       <li>Observe: solved or not, attempts, hints used, error categories, time.</li>
-      <li><code>domain/plan.py</code> proposes <code>required</code> or <code>optional</code> for each lesson &mdash; a threshold on the demonstrated mastery of that lesson's target concept. Pure Python, with a confidence.</li>
+      <li><code>rules/plan.py</code> proposes <code>required</code> or <code>optional</code> for each lesson &mdash; a threshold on the demonstrated mastery of that lesson's target concept. Pure Python, with a confidence.</li>
       <li><b>For every lesson the rule wants to mark optional</b>, a model reviews the full diagnostic and confirms or overrides. Skipping on one short diagnostic is inherently low-confidence, so every skip gets reviewed &mdash; not just the ambiguous ones.</li>
-      <li>Write one <code>student_lesson_plan</code> row per lesson, with <code>reason</code> and <code>decided_by</code>.</li>
+      <li>Write one <code>lesson_plans</code> row per lesson, with <code>reason</code> and <code>decided_by</code>.</li>
       <li>One model call writes the friendly summary: what they are skipping and why.</li>
     </ol>
     <h5>Exceptions</h5>
     <ul><li><b>Skipped onboarding.</b> Everything required. Nothing is lost; UC-06 will re-plan as evidence accumulates.</li><li><b>Abandoned the diagnostic.</b> Treat as a beginner signal &mdash; everything required.</li><li><b>Rule wants to skip an <code>is_skippable = false</code> lesson.</b> Refuse before the model is even called.</li><li><b>Model disagrees with the rule.</b> The model wins, and the disagreement is logged &mdash; a run of these means the threshold is wrong.</li></ul>
     <h5>Postconditions</h5>
-    <div class="writes">writes &rarr; student_lesson_plan (one row per lesson) &middot; student_profile &middot; ai_interaction</div>
+    <div class="writes">writes &rarr; lesson_plans (one row per lesson) &middot; student_profiles &middot; ai_interactions</div>
     <p class="tail">The order never changes &mdash; only which lessons are in the path. A skipped lesson stays replayable: <b>skipping is a suggestion, never a lock-out.</b> Self-reported level is a weak prior; set confidence low so two real sessions can override it.</p>
   </div>
 </div>
 
 <div class="uc">
-  <div class="uc-head"><span class="uc-id">UC-02</span><span class="uc-name">Start the next mission</span><span class="uc-mod">domain/composer.py + ai/graphs/mission_gen.py</span></div>
+  <div class="uc-head"><span class="uc-id">UC-02</span><span class="uc-name">Start the next mission</span><span class="uc-mod">rules/composer.py + ai/graphs/mission_gen.py</span></div>
   <dl class="uc-meta">
     <div><dt>Primary actor</dt><dd>Student</dd></div>
     <div><dt>Trigger</dt><dd>Opens the map, or finishes a mission</dd></div>
@@ -224,7 +224,7 @@ footer{border-top:1px solid var(--line);padding-top:22px;margin-top:60px;font-fa
   </dl>
   <div class="uc-body">
     <h5>Preconditions</h5>
-    <ul><li>A <code>student_lesson_plan</code> exists for this student (UC-01).</li><li>A world manifest exists for the world that lesson lives in.</li><li><code>level_concept</code> records the target and carried concepts for that lesson.</li></ul>
+    <ul><li>A <code>lesson_plans</code> exists for this student (UC-01).</li><li>A world manifest exists for the world that lesson lives in.</li><li><code>exercise_concepts</code> records the target and carried concepts for that lesson.</li></ul>
     <h5>Main flow</h5>
     <ol>
       <li><b>Lesson plan</b> returns the next lesson still marked <code>required</code>, skipping any marked <code>optional</code>. Fixed order, a SQL read, no decision.</li>
@@ -233,12 +233,12 @@ footer{border-top:1px solid var(--line);padding-top:22px;margin-top:60px;font-fa
       <li><b>Generation</b> reads the world manifest and composes a scenario against those parameters &mdash; scene, characters, brief, starter code, solution, tests.</li>
       <li><b>Validator</b> re-reads the manifest and rejects anything referencing a scene, prop or verb that does not exist; runs the solution against the tests.</li>
       <li>Invalid &rarr; feed errors back and regenerate. At most two repairs.</li>
-      <li>Persist <code>generated_mission</code> with <code>validated = true</code>, and return it.</li>
+      <li>Persist <code>generated_missions</code> with <code>validated = true</code>, and return it.</li>
     </ol>
     <h5>Exceptions</h5>
     <ul><li><b>Still invalid after two repairs.</b> Fall back to the template's default parameters. The student gets a working mission, never an error.</li><li><b>An equivalent mission was already generated</b> for this template, params and scaffold plan. Reuse the row &mdash; a direct cost saving.</li><li><b>Roadmap complete.</b> Route to the challenge arena (UC-07).</li></ul>
     <h5>Postconditions</h5>
-    <div class="writes">writes &rarr; generated_mission &middot; mission_session (opened) &middot; ai_interaction</div>
+    <div class="writes">writes &rarr; generated_missions &middot; practice_sessions (opened) &middot; ai_interactions</div>
     <p class="tail">This one call is the whole create-and-adapt pipeline. The world and the target concept were fixed before it started; what the model contributed was the <b>situation</b>, chosen from the manifest.</p>
   </div>
 </div>
@@ -253,20 +253,20 @@ footer{border-top:1px solid var(--line);padding-top:22px;margin-top:60px;font-fa
   </dl>
   <div class="uc-body">
     <h5>Preconditions</h5>
-    <ul><li>An open <code>mission_session</code> exists and the JWT owner owns it.</li><li>Prior <code>hint_event</code> rows determine which rung comes next.</li></ul>
+    <ul><li>An open <code>practice_sessions</code> exists and the JWT owner owns it.</li><li>Prior <code>hint_events</code> rows determine which rung comes next.</li></ul>
     <h5>Main flow</h5>
     <ol>
       <li>Count prior hint events for this session and concept.</li>
-      <li><code>domain/hint_ladder.py</code> decides rung <b>N</b> &mdash; pure Python, before any model is involved.</li>
-      <li>Look up the cache on <code>(level_id, rung, error_category, scaffold_state)</code>.</li>
+      <li><code>rules/hint_ladder.py</code> decides rung <b>N</b> &mdash; pure Python, before any model is involved.</li>
+      <li>Look up the cache on <code>(exercise_id, rung, error_tag, scaffold_state)</code>.</li>
       <li>On a miss, the model writes the prose <b>for rung N only</b>, in TICO's voice. It is never shown the solution.</li>
       <li>Guard validates the shape and asserts no solution identifier appears in early rungs.</li>
-      <li>Write <code>hint_event</code>; return the hint with an <code>is_final</code> flag.</li>
+      <li>Write <code>hint_events</code>; return the hint with an <code>is_final</code> flag.</li>
     </ol>
     <h5>Exceptions</h5>
     <ul><li><b>Ladder exhausted.</b> Return the final authored explanation and mark the session fully hinted &mdash; strong evidence for UC-06.</li><li><b>Leak assertion fails.</b> Discard the output, serve the authored hint for that rung, log a prompt regression.</li><li><b>Daily call cap hit.</b> Serve cached or authored hints only.</li></ul>
     <h5>Postconditions</h5>
-    <div class="writes">writes &rarr; hint_event &middot; hint cache &middot; ai_interaction</div>
+    <div class="writes">writes &rarr; hint_events &middot; hint cache &middot; ai_interactions</div>
     <p class="tail">If the composer scaffolded a carried concept away, TICO must not hint about it &mdash; the scaffold state is part of the prompt <em>and</em> the cache key.</p>
   </div>
 </div>
@@ -281,7 +281,7 @@ footer{border-top:1px solid var(--line);padding-top:22px;margin-top:60px;font-fa
   </dl>
   <div class="uc-body">
     <h5>Preconditions</h5>
-    <ul><li>An open <code>mission_session</code> &mdash; it supplies the LangGraph <code>thread_id</code>.</li><li>TICO's persona and the mixed-language rule are in the system prompt.</li></ul>
+    <ul><li>An open <code>practice_sessions</code> &mdash; it supplies the LangGraph <code>thread_id</code>.</li><li>TICO's persona and the mixed-language rule are in the system prompt.</li></ul>
     <h5>Main flow</h5>
     <ol>
       <li>Moderate the student's text <b>before</b> it enters any prompt.</li>
@@ -293,7 +293,7 @@ footer{border-top:1px solid var(--line);padding-top:22px;margin-top:60px;font-fa
     <h5>Exceptions</h5>
     <ul><li><b>Moderation flags the input.</b> A gentle in-character redirect. Record the verdict. Never send the text to a model.</li><li><b>Student asks outright for the answer.</b> TICO refuses in character and offers the next hint rung instead.</li><li><b>Session closed.</b> Reject &mdash; TICO has no context to stand on.</li></ul>
     <h5>Postconditions</h5>
-    <div class="writes">writes &rarr; langgraph checkpoints &middot; ai_interaction (with moderation_flag)</div>
+    <div class="writes">writes &rarr; langgraph checkpoints &middot; ai_interactions (with moderation_flag)</div>
     <p class="tail">Same character and same persona as UC-03. What differs is only state and streaming &mdash; which is why these are one service, not two.</p>
   </div>
 </div>
@@ -308,20 +308,22 @@ footer{border-top:1px solid var(--line);padding-top:22px;margin-top:60px;font-fa
   </dl>
   <div class="uc-body">
     <h5>Preconditions</h5>
-    <ul><li>The game engine has <b>already executed</b> the code and holds the real failure output.</li><li>A fixed error-category enum is agreed with the game team.</li></ul>
+    <ul><li>The game engine has <b>already executed</b> the code and holds the real failure output.</li><li>The seven-value <code>ErrorFamily</code> enum exists. The <code>tag</code> vocabulary does <b>not</b> need to exist &mdash; it grows from real students.</li></ul>
     <h5>Main flow</h5>
     <ol>
       <li>Receive the code, the runtime error and the failing expectation.</li>
-      <li>Model classifies it into <b>one category from the fixed enum</b> and names the misconception in a sentence.</li>
-      <li>Guard rejects any category outside the enum.</li>
-      <li>Write <code>error_category</code> onto <code>code_submission</code>.</li>
-      <li>Return it &mdash; it becomes part of the hint cache key in UC-03 and evidence in UC-06.</li>
+      <li>Model returns three things: a <b>family</b> from the closed seven-value enum, a <b>tag</b> in snake_case, and a one-sentence <b>misconception</b>.</li>
+      <li>The prompt carries the list of tags seen so far. The model reuses one if it fits, otherwise it coins a new one &mdash; so the vocabulary grows from real students instead of being guessed up front.</li>
+      <li>Guard rejects any family outside the enum, and normalises the tag to snake_case.</li>
+      <li>Write <code>family</code> and <code>tag</code> onto <code>submissions</code>; upsert the tag into <code>error_tag</code> with a count.</li>
+      <li>Return them &mdash; the tag becomes part of the hint cache key in UC-03, the family becomes evidence in UC-06.</li>
     </ol>
     <h5>Exceptions</h5>
-    <ul><li><b>Low confidence.</b> Escalate once to a stronger model; if still unclear, label <code>unknown</code> and continue.</li><li><b>Code empty or unchanged</b> from the starter. Skip the model &mdash; that is a stalling signal, not an error.</li><li><b>The error is in a scaffolded region.</b> Flag it: the composer scaffolded something the student still broke, which is useful signal about the scaffold itself.</li></ul>
+    <ul><li><b>Low confidence.</b> Escalate once to a stronger model; if still unclear, family <code>unknown</code> with a descriptive tag and continue. A vague family still leaves a usable tag.</li><li><b>Code empty or unchanged</b> from the starter. Skip the model &mdash; that is a stalling signal, not an error.</li><li><b>The error is in a scaffolded region.</b> Flag it: the composer scaffolded something the student still broke, which is useful signal about the scaffold itself.</li></ul>
     <h5>Postconditions</h5>
-    <div class="writes">writes &rarr; code_submission.error_category &middot; ai_interaction</div>
-    <p class="tail">The AI service <b>never runs the student's code.</b> It receives execution results and reasons about them. That boundary is what keeps the platform deterministic.</p>
+    <div class="writes">writes &rarr; submissions.family + .tag &middot; error_tag (upsert) &middot; ai_interactions</div>
+    <p class="tail">The AI service <b>never runs the student's code.</b> It receives execution results and reasons about them &mdash; that boundary is what keeps the platform deterministic.</p>
+    <p class="tail"><b>Why two levels.</b> A closed enum alone is too narrow: beginners make contextual mistakes that get dumped into <code>unknown</code>, which produces a useless hint. Free text alone breaks the hint cache (never equal twice) and the mastery counts (you cannot count prose). Family gives you the numbers, tag gives you the cache key and a specific hint. <b>Constrain the shape, not the vocabulary.</b></p>
   </div>
 </div>
 
@@ -329,17 +331,17 @@ footer{border-top:1px solid var(--line);padding-top:22px;margin-top:60px;font-fa
   <div class="uc-head"><span class="uc-id">UC-06</span><span class="uc-name">Finish a mission</span><span class="uc-mod">services/student_model.py</span></div>
   <dl class="uc-meta">
     <div><dt>Primary actor</dt><dd>Session worker</dd></div>
-    <div><dt>Trigger</dt><dd>A <code>mission_session</code> closes</dd></div>
+    <div><dt>Trigger</dt><dd>A <code>practice_sessions</code> closes</dd></div>
     <div><dt>Endpoint</dt><dd><code>POST /v1/students/{id}/refresh</code></dd></div>
     <div><dt>Model call</dt><dd><span class="nomodel">None for the numbers</span></dd></div>
   </dl>
   <div class="uc-body">
     <h5>Preconditions</h5>
-    <ul><li>The session is closed, with submissions and hint events attached.</li><li><code>level_concept</code> gives the weight of each concept in that mission.</li></ul>
+    <ul><li>The session is closed, with submissions and hint events attached.</li><li><code>exercise_concepts</code> gives the weight of each concept in that mission.</li></ul>
     <h5>Main flow</h5>
     <ol>
       <li>Gather every piece of evidence: attempts, hints, error categories, timings.</li>
-      <li><code>domain/mastery.py</code> updates mastery <b>for the target concept at full weight and each carried concept at its own weight</b> &mdash; pure Python.</li>
+      <li><code>rules/mastery.py</code> updates mastery <b>for the target concept at full weight and each carried concept at its own weight</b> &mdash; pure Python.</li>
       <li>Upsert <code>concept_mastery</code>.</li>
       <li>Recompute <code>hint_dependency</code>, <code>syntax_vs_logic</code>, <code>pace</code>, <code>skill_band</code>.</li>
       <li><b>Composer decides advance or hold.</b> The rule compares mastery to the gate threshold. If the evidence conflicts &mdash; solved it but leaned on every hint, or fast but three failed attempts &mdash; a model reviews the profile and confirms or overrides, with a reason.</li>
@@ -349,13 +351,13 @@ footer{border-top:1px solid var(--line);padding-top:22px;margin-top:60px;font-fa
     <h5>Exceptions</h5>
     <ul><li><b>Session abandoned</b> with no submissions. Record the abandonment &mdash; quitting is evidence &mdash; but do not move mastery.</li><li><b>Job fails.</b> Retry. The profile is a cache; a stale one degrades quality but does not break the request path.</li><li><b>Re-plan would un-skip a lesson the student already passed.</b> Leave it &mdash; never send someone backwards through completed work.</li></ul>
     <h5>Postconditions</h5>
-    <div class="writes">writes &rarr; concept_mastery (target + carried) &middot; student_lesson_plan (re-planned) &middot; student_profile &middot; ai_interaction</div>
+    <div class="writes">writes &rarr; concept_mastery (target + carried) &middot; lesson_plans (re-planned) &middot; student_profiles &middot; ai_interactions</div>
     <p class="tail">Step 2 is where cumulative learning pays off. A student who learned variables in week one keeps being assessed on them every time a later mission carries them &mdash; without a single extra mission being built.</p>
   </div>
 </div>
 
 <div class="uc">
-  <div class="uc-head"><span class="uc-id">UC-07</span><span class="uc-name">Enter the challenge arena</span><span class="uc-mod">domain/composer.py + ai/graphs/mission_gen.py</span></div>
+  <div class="uc-head"><span class="uc-id">UC-07</span><span class="uc-name">Enter the challenge arena</span><span class="uc-mod">rules/composer.py + ai/graphs/mission_gen.py</span></div>
   <dl class="uc-meta">
     <div><dt>Primary actor</dt><dd>Student</dd></div>
     <div><dt>Trigger</dt><dd>Opens Challenges, having finished the roadmap</dd></div>
@@ -376,7 +378,7 @@ footer{border-top:1px solid var(--line);padding-top:22px;margin-top:60px;font-fa
     <h5>Exceptions</h5>
     <ul><li><b>Fewer than two concepts mastered.</b> Keep Challenges locked and say why.</li><li><b>Repeated failure.</b> Drop the difficulty band rather than reintroducing scaffolding &mdash; the arena's whole point is that there is none.</li></ul>
     <h5>Postconditions</h5>
-    <div class="writes">writes &rarr; generated_mission &middot; mission_session &middot; concept_mastery &middot; ai_interaction</div>
+    <div class="writes">writes &rarr; generated_missions &middot; practice_sessions &middot; concept_mastery &middot; ai_interactions</div>
     <p class="tail">This is where generation matters most: there is no fixed lesson order to fall back on, so every challenge has to be composed. It is also the only place a mission may mix worlds.</p>
   </div>
 </div>
@@ -387,15 +389,15 @@ footer{border-top:1px solid var(--line);padding-top:22px;margin-top:60px;font-fa
 <div class="scroll"><table>
   <thead><tr><th>Step</th><th>What Nour sees</th><th>Use case</th><th>Rows written</th></tr></thead>
   <tbody>
-    <tr><td>Opens the map</td><td>Cairo Metro, next stop lit</td><td class="m">UC-02</td><td class="m">generated_mission</td></tr>
-    <tr><td>1 &middot; Encounter</td><td>Crowded platform. TICO: &ldquo;the gate is stuck shut!&rdquo;</td><td class="m">UC-02</td><td class="m">mission_session</td></tr>
-    <tr><td>3 &middot; Discover</td><td>Stuck. Asks TICO &mdash; gets a nudge, not an answer</td><td class="m">UC-03 rung 1</td><td class="m">hint_event</td></tr>
-    <tr><td>5 &middot; Guided coding</td><td>Writes <code>=</code> instead of <code>==</code>; code fails</td><td class="m">UC-05</td><td class="m">error_category</td></tr>
-    <tr><td>5 &middot; Guided coding</td><td>Next hint names comparison specifically</td><td class="m">UC-03 rung 2</td><td class="m">hint_event</td></tr>
+    <tr><td>Opens the map</td><td>Cairo Metro, next stop lit</td><td class="m">UC-02</td><td class="m">generated_missions</td></tr>
+    <tr><td>1 &middot; Encounter</td><td>Crowded platform. TICO: &ldquo;the gate is stuck shut!&rdquo;</td><td class="m">UC-02</td><td class="m">practice_sessions</td></tr>
+    <tr><td>3 &middot; Discover</td><td>Stuck. Asks TICO &mdash; gets a nudge, not an answer</td><td class="m">UC-03 rung 1</td><td class="m">hint_events</td></tr>
+    <tr><td>5 &middot; Guided coding</td><td>Writes <code>=</code> instead of <code>==</code>; code fails</td><td class="m">UC-05</td><td class="m">family + tag</td></tr>
+    <tr><td>5 &middot; Guided coding</td><td>Next hint names comparison specifically</td><td class="m">UC-03 rung 2</td><td class="m">hint_events</td></tr>
     <tr><td>5 &middot; Guided coding</td><td>&ldquo;Why two equals?&rdquo; TICO explains in Arabic</td><td class="m">UC-04</td><td class="m">checkpoints</td></tr>
-    <tr><td>7 &middot; Independent</td><td>Gate opens. Passengers board. +50 XP</td><td class="m">UC-05</td><td class="m">code_submission</td></tr>
+    <tr><td>7 &middot; Independent</td><td>Gate opens. Passengers board. +50 XP</td><td class="m">UC-05</td><td class="m">submissions</td></tr>
     <tr><td>Session close</td><td>&mdash; nothing on screen &mdash;</td><td class="m">UC-06</td><td class="m">concept_mastery &times;2</td></tr>
-    <tr><td>Next visit</td><td>Same world, delayed-train scenario, threshold raised</td><td class="m">UC-02</td><td class="m">generated_mission</td></tr>
+    <tr><td>Next visit</td><td>Same world, delayed-train scenario, threshold raised</td><td class="m">UC-02</td><td class="m">generated_missions</td></tr>
   </tbody>
 </table></div>
 
