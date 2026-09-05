@@ -11,7 +11,7 @@ The supplied 24-screen reference board and root `ui.md` establish useful qualiti
 
 They are visual references, not the product specification. When they conflict with the TICO docs, follow this guide and the accepted ADR:
 
-- TICO is the friendly hoopoe defined in the asset bible, not the orange robot in the reference.
+- TICO is the friendly orange robot defined by the canonical source sheets in `client/assets/source/tico/`. Those supplied sheets override the earlier hoopoe concept.
 - Launch worlds are the public baladi bakery, Egyptian railway station, and Cairo traffic control—not Code Village, Logic City, or Data Desert.
 - Contemporary Egyptian daily life replaces generic desert, pyramid, pharaonic, or tourist imagery.
 - There are no MVP coins, public leaderboards, lives, social profiles, or streak punishment.
@@ -217,7 +217,7 @@ TICO uses soft rectangles, not a sea of pills.
 
 Use one rounded outline icon family—Lucide is the default—with consistent 1.75–2 px strokes. Icons support labels; they do not replace unfamiliar actions. Mirror directional icons in RTL, but do not mirror universal media, code, check, warning, or brand marks.
 
-The TICO hoopoe appears at meaningful moments:
+The TICO robot appears at meaningful moments:
 
 - hero welcome;
 - onboarding reassurance;
@@ -230,6 +230,21 @@ The TICO hoopoe appears at meaningful moments:
 TICO should normally occupy less than 25% of an application panel and never cover code, task text, input, or result. Use the asset bible's neutral, thinking, and celebration states. Do not invent a different mascot pose style per screen.
 
 World illustration follows `docs/09-asset-bible-and-image-prompts.md`. Use contemporary Egyptian architecture and objects. No logos, readable image text, real official systems, or unrelated ancient-Egypt motifs.
+
+### Establishing art is not the gameplay board
+
+World cards and story briefings may use cinematic side-on or three-quarter establishing art. Interactive missions use a separate **2D orthographic playfield** viewed from the side or from a consistent high three-quarter/top-down camera. Never try to animate characters inside a flattened establishing illustration.
+
+Every playable scene has independent layers:
+
+1. a fixed locale-neutral playfield with readable walkable lanes, boundaries, destinations, and empty interaction slots;
+2. transparent actor and prop sprites generated at that playfield's exact camera angle and scale;
+3. DOM/SVG state overlays for selection, paths, targets, counts, and localized feedback;
+4. a reviewed coordinate/nav graph owned by client content rather than inferred from image pixels at runtime.
+
+Learner code changes semantic scene state; React maps the validated result to actor movement, queue changes, object state, or counters. Motion explains the causal sequence and never determines correctness. Characters must remain legible at their smallest runtime size, cannot cover interaction targets, and receive a visible non-motion state change when reduced motion is enabled.
+
+The bakery prototype under `client/public/assets/worlds/bakery/gameplay/` is the first camera and composition reference. The supplied WhatsApp screenshots are spatial inspiration only and are not a style, layout, or asset source to reproduce.
 
 ## 8. Application shells
 
@@ -609,7 +624,7 @@ TICO speaks friendly Egyptian Arabic for narrative and clear Arabic for technica
 7. Keep accessible HTML semantics; a styled `div` is not a button.
 8. Build locale, RTL, loading, empty, error, reduced-motion, and narrow-layout states with the primary state.
 9. Never fabricate product data, statistics, leaderboard entries, prices, or official Egyptian information.
-10. Never add a robot mascot, generic learning world, coin economy, public leaderboard, or social mechanic from the visual reference.
+10. Use only the canonical TICO robot design; never redesign its antennae, face, proportions, orange body, or gold joint accents. Do not add a generic learning world, coin economy, public leaderboard, or social mechanic from the visual reference.
 11. Reuse approved asset IDs; do not invent filenames or bake localized text into art.
 12. Add component/visual tests for interactive states and verify keyboard and screen-reader behavior.
 

@@ -2,7 +2,7 @@
 
 TICO is a bilingual programming game for children and undergraduates. Learners write real Python in the browser to solve recognizable Egyptian problems: organizing a public bakery queue, dispatching passengers at a railway station, and coordinating Cairo traffic lights.
 
-The product combines a fixed, pedagogically reviewed Python curriculum with adaptive scaffolding and AI-generated mission variations. TICO, a friendly hoopoe, is the single companion and in-world voice. Generated content is always constrained by approved world manifests and validated before it reaches a learner.
+The product combines a fixed, pedagogically reviewed Python curriculum with adaptive scaffolding and AI-generated mission variations. TICO, a friendly orange robot, is the single companion and in-world voice. Generated content is always constrained by approved world manifests and validated before it reaches a learner.
 
 ## Repository
 

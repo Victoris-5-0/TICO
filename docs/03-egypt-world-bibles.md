@@ -4,7 +4,7 @@
 
 The setting is contemporary, lived-in Egypt: useful public places, ordinary people, recognizable materials, Arabic environmental rhythm, and practical community problems. Egypt is the substance of the challenges, not a decorative skin.
 
-TICO is a small hoopoe with a subtle tech satchel. TICO is the only speaking companion persona; human characters create story context and react visually, while instructional dialogue retains TICO's voice.
+TICO is a small friendly orange robot with two asymmetric antennae and a floating gold antenna light. TICO is the only speaking companion persona; human characters create story context and react visually, while instructional dialogue retains TICO's voice. The canonical turnaround and emotion sheets live under `client/assets/source/tico/`.
 
 - Show diverse ages, skin tones, modest and everyday clothing, and mixed abilities without caricature.
 - Prefer local cues: sun-faded paint, patterned tiles, metal shutters, shaded awnings, concrete, enamel signs, and warm daylight.
@@ -27,7 +27,7 @@ Characters are `bakery.hassan` (experienced baker), `bakery.salma` (practical qu
 | `bakery.card_reader` | `requested_loaves`, `allowed_loaves` | `approve()`, `adjust()` | conditional rules; wholly fictional UI |
 | `bakery.flour_sack` | `kilograms` | `use()` | extension calculations |
 
-Represent baladi bread as familiar round flat loaves. Do not claim current subsidy rules, entitlement amounts, prices, or eligibility; all mission data is explicitly fictional. Completion shows a moving queue and stocked trays.
+Represent baladi bread as familiar round flat loaves. Do not claim current subsidy rules, entitlement amounts, prices, or eligibility; all mission data is explicitly fictional. Interactive bakery missions use a separate top-down 2D playfield with fixed queue positions and independent character sprites. Completion shows the character movement, a changed queue state, and stocked trays.
 
 ## World 2 — El Mahatta: Egyptian railway station
 

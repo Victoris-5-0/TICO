@@ -18,6 +18,7 @@ These documents are the implementation contract. Product changes must update the
 | [11 — Testing and operations](11-testing-and-operations.md) | Test pyramid, observability, release gates, incident operations |
 | [12 — Roadmap and agent playbook](12-roadmap-and-agent-playbook.md) | Delivery slices, work ownership, definition of done |
 | [ADR 0001 — MVP baseline](decisions/0001-mvp-baseline.md) | Settled launch decisions and consequences |
+| [ADR 0002 — TICO robot mascot](decisions/0002-tico-robot-mascot.md) | Supersedes the earlier hoopoe mascot and establishes the supplied robot sheets as canonical |
 
 ## Reading routes
 
@@ -33,7 +34,7 @@ These documents are the implementation contract. Product changes must update the
 - **Mission**: a validated playable scenario generated or selected for a lesson.
 - **Session**: one learner's attempt at a mission.
 - **Challenge**: post-roadmap mixed practice with mastered concepts.
-- **TICO**: the hoopoe mascot, companion, hint giver, and only conversational persona.
+- **TICO**: the orange robot mascot, companion, hint giver, and only conversational persona.
 
 The concept order is fixed. Personalization changes lesson membership and scaffolding, never the pedagogical order.
 

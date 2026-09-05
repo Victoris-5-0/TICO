@@ -4,6 +4,10 @@
 
 Generate one asset per image call. Use the prompt's aspect ratio and preserve generous safe margins for responsive crops. Character and prop sheets require transparent backgrounds. Scene plates contain no characters unless requested. Do not generate readable text: signs, tickets, displays, uniforms, and vehicles must be blank or carry abstract fictional marks so the web UI can localize them.
 
+### Canonical TICO source
+
+TICO is the supplied friendly orange robot, not the retired hoopoe concept. The neutral, celebrating, thinking, and determined turnaround sheets in `client/assets/source/tico/` are the identity source of truth. Runtime cutouts live in `client/public/assets/characters/tico/`. Any new pose must use a canonical sheet as an identity reference and preserve the asymmetric antennae, floating gold antenna light, face, proportions, orange body, dark outline, and gold joint accents.
+
 ### Shared style block
 
 Append this block verbatim to every new-generation prompt below:
@@ -12,11 +16,28 @@ Append this block verbatim to every new-generation prompt below:
 
 The shared style block is part of each prompt. The asset-specific text and block together are the copy/paste request. Use the first TICO result as the visual reference for every later TICO pose; use accepted world plates as references for state edits.
 
+## Playable 2D scene contract
+
+Establishing plates support cards, maps, and story moments. They are not gameplay boards. A playable mission uses a fixed orthographic side or high three-quarter/top-down camera, an empty background plate, transparent actors at the same camera angle, and code-native overlays/coordinates. Generate characters separately; never bake actors, arrows, labels, selection rings, or localized UI into the board.
+
+Playfields must expose wide readable routes, unambiguous collision edges, interaction destinations, and empty actor-scale positions. Decorative detail stays outside walkable lanes. A reviewed client-side coordinate graph defines movement; the app never tries to recover navigation geometry from generated pixels.
+
+### Accepted bakery gameplay prototype
+
+- Master board: `client/assets/source/worlds/bakery/playfield-topdown-v1.png`
+- Runtime boards: `client/public/assets/worlds/bakery/gameplay/playfield-topdown-v1.webp` and `playfield-topdown-v1-mobile.webp`
+- Actor masters: `client/assets/source/characters/gameplay/`
+- Runtime actors: `client/public/assets/characters/gameplay/`
+
+**Board prompt:** Create a wide 16:9 orthographic high three-quarter/top-down gameplay board of a contemporary Egyptian public baladi bakery. Put the service counter at the upper edge, a broad cream-tiled public area in the center, and one continuous readable queue route from the lower spawn area to exactly five empty waiting positions and the service window. Use low rails and tile changes for boundaries. Include restrained contemporary Egyptian details such as pale plaster, geometric teal tile trim, awning shade, clay water jug, planter, and bench. Keep walkable spaces large and uncluttered. No people, characters, TICO, vehicles, text, numbers, arrows, UI, logos, flags, official emblems, monuments, or 3D isometric rendering.
+
+**Actor prompt pattern:** Using the accepted bakery playfield as the exact camera, scale, light, outline, and rendering reference, re-render one accepted character from mostly behind and above, facing the top of the canvas. Preserve identity and clothing. Use a compact full-body silhouette readable at 75–80 px on a removable uniform background, with no floor, long shadow, environment, extra character, text, logo, or watermark. One call produces one actor.
+
 ## Global assets — 5 prompts
 
 ### 01 — `global.tico.anchor`
 
-**Prompt:** Create the definitive TICO character reference: a small friendly hoopoe companion standing in a relaxed three-quarter pose, warm orange-brown body, bold black-and-white folded wing pattern, elegant upright crest with rounded tips, bright observant eyes, small teal technology satchel with one simple circular indicator and no text. Full body, centered, transparent background, square canvas, ample padding around crest and feet, crisp silhouette readable at 96 px, neutral welcoming expression. Include no turnaround labels and no extra objects. Append the shared style block.
+**Prompt:** Using `client/assets/source/tico/tico-neutral-turnaround.jpeg` as a strict identity reference, isolate the canonical TICO robot in a relaxed three-quarter pose. Preserve the asymmetric antennae, floating gold antenna light, large observant eyes, small smile, rounded orange body, dark outline, gold shoulder joints, proportions, and clean cel shading exactly. Full body, centered, genuinely transparent background, square canvas, ample padding around antennae, hands, and feet, crisp silhouette readable at 96 px. Include no labels, extra poses, extra objects, text, logo, or watermark.
 
 ### 02 — `global.tico.neutral`
 
