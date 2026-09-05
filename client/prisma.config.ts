@@ -18,5 +18,6 @@ export default defineConfig({
     url: isGenerateCommand
       ? process.env.DATABASE_URL ?? generateOnlyUrl
       : env("DATABASE_URL"),
+    directUrl: env("DIRECT_URL"),
   },
 });
