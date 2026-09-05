@@ -138,6 +138,12 @@ def contains_runnable_python_line(text: str) -> bool:
         if _is_runnable_line(line):
             return True
 
+        # Check if line has a natural-language label before a colon (e.g. "اكتب السطر ده: gate.open()")
+        if ":" in line:
+            suffix = line.split(":", 1)[1].strip()
+            if suffix and _is_runnable_line(suffix):
+                return True
+
         # Also inspect inline code segments inside backticks
         for snippet in re.findall(r"`([^`]+)`", raw_line):
             if _is_runnable_line(snippet):
