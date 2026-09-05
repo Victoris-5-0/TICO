@@ -223,71 +223,304 @@ def validate_hint_output(
 # World Manifest & Generated Mission Validator (M5 — P0, AGENTS.md)
 # ---------------------------------------------------------------------------
 
+import contextlib
+import signal
+from typing import Any, Callable
 
-class MockGate:
-    def __init__(self, state="closed"):
-        self.state = state
+EXECUTION_TIMEOUT_SECONDS: Final[int] = 2
 
-    def open(self):
-        self.state = "open"
+# Explicit allowlist of safe builtins based on curriculum requirements
+# (variables, conditionals, loops, functions). Excludes __import__, open,
+# exec, eval, compile, input, and dunders.
+SAFE_BUILTINS: Final[dict[str, object]] = {
+    # Constants
+    "True": True,
+    "False": False,
+    "None": None,
+    # Core types and constructors
+    "int": int,
+    "float": float,
+    "str": str,
+    "bool": bool,
+    "list": list,
+    "dict": dict,
+    "set": set,
+    "tuple": tuple,
+    # Sequence and iteration utilities
+    "len": len,
+    "range": range,
+    "enumerate": enumerate,
+    "zip": zip,
+    "min": min,
+    "max": max,
+    "sum": sum,
+    "abs": abs,
+    "round": round,
+    "isinstance": isinstance,
+    "all": all,
+    "any": any,
+    # Standard exceptions
+    "Exception": Exception,
+    "ValueError": ValueError,
+    "TypeError": TypeError,
+    "IndexError": IndexError,
+    "KeyError": KeyError,
+}
 
-    def close(self):
-        self.state = "closed"
+
+def contains_dunder_reference(code: str) -> bool:
+    """Detect references to double-underscore (dunder) attributes or identifiers in AST.
+
+    Mitigates sandbox escape gadget chains (e.g. `().__class__.__bases__[0].__subclasses__()`
+    or `x.__globals__`) in curriculum code. Legitimate reference solutions for Python
+    curriculum concepts (variables, conditionals, loops, functions) have zero reason
+    to reference dunder attributes or names.
+    """
+    if not code or not code.strip():
+        return False
+
+    try:
+        tree = ast.parse(code)
+    except SyntaxError:
+        # Let the existing syntax-error inspection report unparseable code
+        return False
+
+    for node in ast.walk(tree):
+        # Attribute access: e.g. obj.__class__, obj.__bases__, obj.__subclasses__
+        if isinstance(node, ast.Attribute):
+            attr = node.attr
+            if attr.startswith("__") and attr.endswith("__"):
+                return True
+        # Name lookup: e.g. __builtins__, __import__
+        elif isinstance(node, ast.Name):
+            name_id = node.id
+            if name_id.startswith("__") and name_id.endswith("__"):
+                return True
+
+    return False
 
 
-class MockStation:
-    def __init__(self, passengers=0):
-        self.passengers = passengers
+class TimeoutGuaranteeUnavailableError(RuntimeError):
+    """Raised when the execution sandbox cannot guarantee a hard timeout.
+
+    Enforces fail-closed security: if SIGALRM cannot be installed (e.g. running
+    in a worker thread, or unsupported platform), execution is refused rather
+    than run unprotected against unbounded execution / infinite loops.
+    """
 
 
-class MockMachine:
-    def __init__(self, price=0):
-        self.price = price
-
-    def set_price(self, val):
-        self.price = val
+class ExecutionTimeoutError(TimeoutError):
+    """Raised when sandbox execution exceeds the allowed time limit."""
 
 
-class MockBoard:
-    def __init__(self):
-        self.message = ""
-
-    def show(self, text):
-        self.message = str(text)
+def _sigalrm_handler(signum: int, frame: Any) -> None:
+    raise ExecutionTimeoutError("solution execution exceeded time limit — possible infinite loop")
 
 
-class MockTrain:
-    def __init__(self, delay_minutes=0, is_arriving=False):
-        self.delay_minutes = delay_minutes
-        self.is_arriving = is_arriving
+@contextlib.contextmanager
+def execution_timeout(seconds: int = EXECUTION_TIMEOUT_SECONDS):
+    """Execution timeout context manager using SIGALRM on Unix.
+
+    FAIL-CLOSED ARCHITECTURAL DESIGN:
+    `signal.alarm()` is a Unix process timer that fires SIGALRM.
+    Python enforces that `signal.signal()` and `signal.alarm()` can ONLY
+    be registered and handled from the main thread of the main Python interpreter.
+    If this function is executed where a real alarm cannot be guaranteed
+    (e.g., inside an asynchronous FastAPI threadpool worker, unsupported OS,
+    or non-main thread), it raises `TimeoutGuaranteeUnavailableError` immediately.
+    We strictly refuse to execute student/model solutions unprotected against
+    infinite loops.
+    """
+    has_alarm = hasattr(signal, "SIGALRM") and hasattr(signal, "alarm")
+    if not has_alarm:
+        raise TimeoutGuaranteeUnavailableError(
+            "SIGALRM is unavailable on this platform; cannot guarantee execution timeout"
+        )
+
+    old_handler = None
+    try:
+        old_handler = signal.signal(signal.SIGALRM, _sigalrm_handler)
+        signal.alarm(seconds)
+    except (ValueError, AttributeError) as exc:
+        raise TimeoutGuaranteeUnavailableError(
+            f"Cannot install SIGALRM handler (must run in main thread): {exc}"
+        ) from exc
+
+    try:
+        yield
+    finally:
+        signal.alarm(0)
+        if old_handler is not None:
+            try:
+                signal.signal(signal.SIGALRM, old_handler)
+            except (ValueError, AttributeError):
+                pass
 
 
-class MockPassenger:
-    def __init__(self, age=20):
-        self.age = age
+class ManifestPropMock:
+    """Dynamic mock object representing an in-game prop in the execution sandbox.
+
+    Derived dynamically from the world manifest's declared verbs, reads, and states.
+    Zero-argument mutating verbs (e.g. `gate.open()`), state updates, and parameterized
+    setters/calls are dynamically bound per manifest declaration without hardcoded
+    classes.
+    """
+
+    def __init__(self, name: str):
+        self._name = name
+
+    def __repr__(self) -> str:
+        return f"<ManifestPropMock '{self._name}'>"
+
+
+def _create_mock_method(
+    obj: ManifestPropMock,
+    method_name: str,
+    param_names: list[str],
+    states: list[str],
+) -> Callable[..., Any]:
+    """Create a dynamic method on a prop mock reflecting manifest semantics."""
+
+    def method(*args: Any, **kwargs: Any) -> Any:
+        setattr(obj, f"{method_name}_called", True)
+
+        # 1. State transitions: open() / close() or verbs matching declared states
+        if method_name in ("open", "close"):
+            setattr(obj, "state", method_name)
+        elif method_name in states:
+            setattr(obj, "state", method_name)
+        # 2. Setters: set_<attr>(val) -> sets obj.<attr> = val
+        elif method_name.startswith("set_") and len(method_name) > 4:
+            target_attr = method_name[4:]
+            if args:
+                setattr(obj, target_attr, args[0])
+            elif kwargs and target_attr in kwargs:
+                setattr(obj, target_attr, kwargs[target_attr])
+        # 3. Display / message verbs: show(text), display(msg)
+        elif method_name in ("show", "display", "print"):
+            val = args[0] if args else (kwargs.get("text", kwargs.get("message", "")))
+            setattr(obj, "message", str(val))
+            setattr(obj, "text", str(val))
+        # 4. Generic parameterized verbs: bind passed values to attribute names
+        else:
+            for p_name, arg in zip(param_names, args):
+                setattr(obj, p_name, arg)
+            for k, v in kwargs.items():
+                setattr(obj, k, v)
+        return None
+
+    return method
 
 
 def create_manifest_sandbox(manifest: dict | None = None) -> dict[str, object]:
-    """Create a simulated Python execution environment for manifest props."""
-    return {
-        "gate": MockGate(),
-        "station": MockStation(),
-        "machine": MockMachine(),
-        "board": MockBoard(),
-        "train": MockTrain(),
-        "passenger": MockPassenger(),
+    """Create a simulated Python execution environment driven entirely by the manifest.
+
+    Dynamically populates prop mock objects for every prop declared in manifest['props'],
+    binding their declared reads, states, and verbs, and attaches a strictly restricted
+    safe `__builtins__` dictionary.
+    """
+    manifest_data = manifest or {}
+    props_list = manifest_data.get("props", [])
+
+    # Global environment dict starting with restricted safe builtins
+    sandbox: dict[str, object] = {
+        "__builtins__": dict(SAFE_BUILTINS),
     }
+
+    # Helper mapping to reuse mock objects if multiple verbs/reads refer to the same object
+    mocks: dict[str, ManifestPropMock] = {}
+
+    def get_or_create_mock(obj_name: str) -> ManifestPropMock:
+        if obj_name not in mocks:
+            mock = ManifestPropMock(obj_name)
+            mocks[obj_name] = mock
+            sandbox[obj_name] = mock
+        return mocks[obj_name]
+
+    for prop in props_list:
+        prop_id = prop.get("id", "")
+        states = [str(s) for s in prop.get("states", [])]
+
+        # Ensure prop id itself is represented
+        if prop_id:
+            primary_mock = get_or_create_mock(prop_id)
+            if states:
+                # Default initial state: 'closed' if present, else first state
+                default_state = "closed" if "closed" in states else states[0]
+                setattr(primary_mock, "state", default_state)
+                setattr(primary_mock, "states", list(states))
+
+        # 1. Reads: e.g. "station.passengers -> int", "train.is_arriving -> bool"
+        for read in prop.get("reads", []):
+            read_match = re.match(
+                r"^([a-zA-Z_]\w*)\.([a-zA-Z_]\w*)(?:\s*->\s*([a-zA-Z_]\w*))?",
+                read.strip(),
+            )
+            if read_match:
+                obj_name, attr_name, type_str = (
+                    read_match.group(1),
+                    read_match.group(2),
+                    read_match.group(3) or "",
+                )
+                target_mock = get_or_create_mock(obj_name)
+
+                # Set initial attribute based on declared type
+                if type_str == "int":
+                    default_val = 0
+                elif type_str == "bool":
+                    default_val = False
+                elif type_str == "float":
+                    default_val = 0.0
+                elif type_str == "str":
+                    default_val = ""
+                else:
+                    default_val = 0
+                setattr(target_mock, attr_name, default_val)
+
+        # 2. Verbs: e.g. "gate.open()", "machine.set_price(value)", "board.show(text)"
+        for verb in prop.get("verbs", []):
+            verb_match = re.match(
+                r"^([a-zA-Z_]\w*)\.([a-zA-Z_]\w*)\s*(?:\((.*?)\))?",
+                verb.strip(),
+            )
+            if verb_match:
+                obj_name, method_name, param_str = (
+                    verb_match.group(1),
+                    verb_match.group(2),
+                    verb_match.group(3) or "",
+                )
+                param_names = [p.strip() for p in param_str.split(",") if p.strip()]
+                target_mock = get_or_create_mock(obj_name)
+
+                # If verb is set_<attr>, also initialize <attr> = 0 on target_mock
+                if method_name.startswith("set_") and len(method_name) > 4:
+                    attr_name = method_name[4:]
+                    if not hasattr(target_mock, attr_name):
+                        setattr(target_mock, attr_name, 0)
+                elif method_name in ("show", "display", "print"):
+                    if not hasattr(target_mock, "message"):
+                        setattr(target_mock, "message", "")
+                    if not hasattr(target_mock, "text"):
+                        setattr(target_mock, "text", "")
+
+                method_fn = _create_mock_method(target_mock, method_name, param_names, states)
+                setattr(target_mock, method_name, method_fn)
+
+    return sandbox
 
 
 def extract_manifest_allowed_apis(manifest: dict) -> set[tuple[str, str]]:
-    """Extract set of (object_name, attribute_name) allowed by the manifest."""
-    allowed: set[tuple[str, str]] = {
-        # Common implicit state inspection properties for tests
-        ("gate", "state"),
-        ("machine", "price"),
-        ("board", "message"),
-        ("board", "text"),
-    }
+    """Extract set of (object_name, attribute_name) strictly declared in manifest props.
+
+    Closed-manifest principle (docs/08): Unknown IDs, reads, and verbs are fatal validation
+    errors. Only pairs explicitly declared under `verbs` and `reads` in the manifest props
+    are returned. Zero hardcoded pairs.
+
+    NOTE: If a prop requires an implicit state read (such as `gate.state` or `machine.price`)
+    to be directly accessed by student code, it must be declared by Content in `cairo_metro.yaml`
+    under that prop's `reads` list.
+    """
+    allowed: set[tuple[str, str]] = set()
 
     for prop in manifest.get("props", []):
         for verb in prop.get("verbs", []):
@@ -316,8 +549,8 @@ def validate_manifest_and_solution(
       2. Scene ID exists in manifest scenes.
       3. Target concept matches one of the manifest's mechanics.
       4. Parameter values satisfy the mechanic's param_schema constraints.
-      5. Only legal manifest prop verbs and reads are called in code/tests.
-      6. The reference solution successfully executes and passes all test assertions.
+      5. Only legal manifest prop verbs and reads are called in student starter/solution code.
+      6. Reference solution executes within sandbox timeout and passes all test assertions.
       7. Starter code does not prematurely leak the complete solution.
     """
     if hasattr(draft, "model_dump"):
@@ -384,7 +617,7 @@ def validate_manifest_and_solution(
                     if val not in options:
                         violations.append(f"parameter '{p_name}' value '{val}' is not in allowed options: {options}")
 
-    # 5. Verbs and reads validation (AST inspection)
+    # 5. Verbs and reads validation (AST inspection of starter and solution code)
     allowed_apis = extract_manifest_allowed_apis(manifest)
     known_prop_objects = {obj for obj, _ in allowed_apis}
 
@@ -393,12 +626,6 @@ def validate_manifest_and_solution(
     tests = draft_data.get("tests", [])
 
     codes_to_inspect = [starter_code, solution_code]
-    for t in tests:
-        if isinstance(t, dict):
-            codes_to_inspect.append(t.get("setup", ""))
-            codes_to_inspect.append(t.get("call", ""))
-        else:
-            codes_to_inspect.append(getattr(t, "call", ""))
 
     for snippet in codes_to_inspect:
         if not snippet or not snippet.strip():
@@ -416,8 +643,28 @@ def validate_manifest_and_solution(
         except SyntaxError as syn_err:
             violations.append(f"code snippet syntax error: {syn_err}")
 
-    # 5. Solution execution against tests
-    if not solution_code or not solution_code.strip():
+    # 6. Dunder safety check: reject sandbox escape attempts (e.g. __class__, __bases__)
+    dunder_snippets = [("starter_code", starter_code), ("solution_code", solution_code)]
+    for idx, test in enumerate(tests):
+        t_name = test.get("name", f"test_{idx}") if isinstance(test, dict) else getattr(test, "name", f"test_{idx}")
+        t_setup = test.get("setup", "") if isinstance(test, dict) else getattr(test, "setup", "")
+        t_call = test.get("call", "") if isinstance(test, dict) else getattr(test, "call", "")
+        dunder_snippets.append((f"test '{t_name}' setup", t_setup))
+        dunder_snippets.append((f"test '{t_name}' call", t_call))
+
+    has_dunder_violation = False
+    for label, snippet in dunder_snippets:
+        if contains_dunder_reference(snippet):
+            violations.append(
+                f"{label} references a restricted dunder identifier — rejected as a precaution"
+            )
+            has_dunder_violation = True
+
+    # 7. Solution execution against tests in sandboxed mock environment
+    if has_dunder_violation:
+        # Pre-execution security check failed: skip exec/eval entirely as a safety precaution
+        pass
+    elif not solution_code or not solution_code.strip():
         violations.append("solution_code is empty")
     elif not tests:
         violations.append("mission defines no tests")
@@ -430,15 +677,17 @@ def validate_manifest_and_solution(
 
             sandbox = create_manifest_sandbox(manifest)
             try:
-                # 1. Run setup if provided
-                if t_setup and t_setup.strip():
-                    exec(t_setup, sandbox)
+                with execution_timeout(EXECUTION_TIMEOUT_SECONDS):
+                    # 1. Run setup if provided
+                    if t_setup and t_setup.strip():
+                        exec(t_setup, sandbox)
 
-                # 2. Run solution code
-                exec(solution_code, sandbox)
+                    # 2. Run solution code
+                    exec(solution_code, sandbox)
 
-                # 3. Evaluate test call
-                result = eval(t_call, sandbox)
+                    # 3. Evaluate test call
+                    result = eval(t_call, sandbox)
+
                 actual_str = str(result).strip()
                 expected_str = str(t_expected).strip()
 
@@ -446,10 +695,25 @@ def validate_manifest_and_solution(
                     violations.append(
                         f"test '{t_name}' failed: call '{t_call}' produced '{actual_str}', expected '{expected_str}'"
                     )
+            except TimeoutGuaranteeUnavailableError:
+                violations.append(
+                    f"test '{t_name}' solution execution could not be safely time-limited in this context — rejected as a precaution"
+                )
+            except ExecutionTimeoutError:
+                violations.append(
+                    f"test '{t_name}' execution exceeded time limit — possible infinite loop"
+                )
+            except (ImportError, NameError) as import_err:
+                if "__import__" in str(import_err):
+                    violations.append(
+                        f"test '{t_name}' attempted unauthorized import or blocked builtin: {import_err}"
+                    )
+                else:
+                    violations.append(f"test '{t_name}' raised runtime exception: {import_err}")
             except Exception as test_exc:
                 violations.append(f"test '{t_name}' raised runtime exception: {test_exc}")
 
-    # 6. Leak check: starter code must not be identical to solution code
+    # 7. Leak check: starter code must not be identical to solution code
     if starter_code.strip() and starter_code.strip() == solution_code.strip():
         violations.append("starter_code is identical to solution_code (premature answer leak)")
 

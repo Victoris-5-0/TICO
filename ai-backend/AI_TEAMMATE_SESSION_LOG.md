@@ -148,7 +148,9 @@ This log tracks autonomous session tasks in `ai-backend/` following the pre-appr
 - **Assumptions made**:
   - AST attribute checking inspects names against manifest prop identifiers to avoid false positives on local student variables.
   - Sandbox mocks represent valid state transitions declared in the manifest.
-- **Open questions for review**: None.
+- **Open questions for review**:
+  - `contains_dunder_reference` also applies to `starter_code` (which is never executed), and could produce a rare false-positive rejection if starter code legitimately contains a dunder-pattern name (e.g. the common `if __name__ == "__main__":` idiom) — flag this as low-priority tech debt, not blocking.
+  - NEEDS DECISION: Static AST dunder blocking mitigates direct gadget chains (e.g. `().__class__.__bases__[0].__subclasses__()`), but is not equivalent to true process-level isolation. Evaluate whether `docs/07-browser-python-runner.md`'s isolated runner should be reused for server-side reference solution execution before real production traffic beyond hackathon evaluation.
 
 ---
 
@@ -166,11 +168,12 @@ This log tracks autonomous session tasks in `ai-backend/` following the pre-appr
 - **Total Blocked Tasks**: 0
   - World manifest dependency (`content/worlds/cairo_metro.yaml`) was present and verified, allowing Tasks 7 and 8 to complete without blocking.
   - Path planner skip escalation review was built with a generic contract against `gemini-3.5-flash`, with integration ready for when `rules/plan.py` unblocks.
-- **Total Open Questions Across All Tasks**: 1
+- **Total Open Questions Across All Tasks**: 2
   - Task 6: `rules/plan.py` is owned by another lane; full end-to-end planner-skip escalation review will be connected once `rules/plan.py` is completed.
+  - Task 8: `contains_dunder_reference` applies to `starter_code` (low-priority tech debt), and process-level runner isolation for server validator needs architectural decision before high-volume production.
 - **Test Suite Results**:
   - Initial tests: 80 passed
-  - Final tests: 175 passed (+95 new tests added, 0 failures)
+  - Final tests: 183 passed (+103 new tests added, 0 failures, 0 skipped)
 
 ### Session Git Log (`git log --oneline -n 7`):
 ```text
