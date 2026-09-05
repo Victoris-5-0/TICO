@@ -131,3 +131,21 @@ This log tracks autonomous session tasks in `ai-backend/` following the pre-appr
   - `cairo_metro.yaml` serves as the authoritative active world manifest.
   - Carried scaffold keys support both uppercase and lowercase enum values.
 - **Open questions for review**: None.
+
+---
+
+### Task 8: The validator: every id/verb exists, solution runs (M5, P0) — Python, not the model
+
+- **CSV Notes verbatim**: `Same manifest dependency as task 7 — if blocked there, this is blocked too; log and skip.`
+- **Status**: DONE (content/worlds/cairo_metro.yaml exists and was verified)
+- **Files touched**:
+  - `ai-backend/app/ai/guards.py`
+  - `ai-backend/app/ai/__init__.py`
+  - `ai-backend/tests/test_manifest_validator.py`
+- **Test count**: 164 -> 175 passed (+11 tests)
+- **Plain-language summary**:
+  Implemented and tested the pure-Python manifest and solution validator (`validate_manifest_and_solution`) in `app/ai/guards.py`. It inspects generated mission drafts against the closed world manifest (`cairo_metro.yaml`), strictly asserting: (1) valid world and scene IDs; (2) target concept supported by manifest mechanics; (3) parameter values satisfy `param_schema` type, bounds, and enum option constraints; (4) AST inspection detects and rejects all illegal or invented prop calls (e.g. `gate.unlock()`, `machine.dispense()`); (5) executes reference solutions inside an in-memory simulated mock sandbox against all declared test assertions (`test.setup`, `solution_code`, `test.call == test.expected`); (6) prevents premature answer leaks where starter code mirrors the solution code.
+- **Assumptions made**:
+  - AST attribute checking inspects names against manifest prop identifiers to avoid false positives on local student variables.
+  - Sandbox mocks represent valid state transitions declared in the manifest.
+- **Open questions for review**: None.

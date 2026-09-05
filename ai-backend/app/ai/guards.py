@@ -306,7 +306,7 @@ def extract_manifest_allowed_apis(manifest: dict) -> set[tuple[str, str]]:
 
 
 def validate_manifest_and_solution(
-    draft: dict,
+    draft: dict | object,
     manifest: dict,
 ) -> GuardResult:
     """Validate a generated mission against the closed world manifest.
@@ -315,24 +315,32 @@ def validate_manifest_and_solution(
       1. World ID matches the manifest.
       2. Scene ID exists in manifest scenes.
       3. Target concept matches one of the manifest's mechanics.
-      4. Only legal manifest prop verbs and reads are called in code/tests.
-      5. The reference solution successfully executes and passes all test assertions.
-      6. Starter code does not prematurely leak the complete solution.
+      4. Parameter values satisfy the mechanic's param_schema constraints.
+      5. Only legal manifest prop verbs and reads are called in code/tests.
+      6. The reference solution successfully executes and passes all test assertions.
+      7. Starter code does not prematurely leak the complete solution.
     """
+    if hasattr(draft, "model_dump"):
+        draft_data = draft.model_dump()
+    elif isinstance(draft, dict):
+        draft_data = draft
+    else:
+        draft_data = dict(getattr(draft, "__dict__", {}))
+
     violations: list[str] = []
 
     # 1. World check
     world_info = manifest.get("world", {})
     expected_world_id = world_info.get("id")
-    draft_world_id = draft.get("world_id")
-    if draft_world_id != expected_world_id:
+    draft_world_id = draft_data.get("world_id")
+    if draft_world_id and draft_world_id != expected_world_id:
         violations.append(
             f"world_id mismatch: draft has '{draft_world_id}', manifest defines '{expected_world_id}'"
         )
 
     # 2. Scene check
     valid_scene_ids = {s.get("id") for s in manifest.get("scenes", [])}
-    draft_scene_id = draft.get("scene_id")
+    draft_scene_id = draft_data.get("scene_id")
     if draft_scene_id not in valid_scene_ids:
         violations.append(
             f"unknown scene_id '{draft_scene_id}'. Valid scenes: {sorted(valid_scene_ids)}"
@@ -341,19 +349,48 @@ def validate_manifest_and_solution(
     # 3. Mechanic and Target Concept check
     mechanics = manifest.get("mechanics", [])
     valid_concepts = {m.get("target_concept") for m in mechanics}
-    draft_concept = draft.get("target_concept_id")
+    draft_concept = draft_data.get("target_concept_id")
     if draft_concept not in valid_concepts:
         violations.append(
             f"target_concept_id '{draft_concept}' not supported in manifest mechanics: {sorted(valid_concepts)}"
         )
 
-    # 4. Verbs and reads validation (AST inspection)
+    # Find matching mechanic
+    matching_mechanic = next(
+        (m for m in mechanics if m.get("target_concept") == draft_concept),
+        None,
+    )
+
+    # 4. Parameter validation against param_schema
+    if matching_mechanic and "param_schema" in matching_mechanic:
+        param_schema = matching_mechanic["param_schema"]
+        draft_params = draft_data.get("params", {})
+        for p_name, p_rules in param_schema.items():
+            if p_name in draft_params:
+                val = draft_params[p_name]
+                p_type = p_rules.get("type")
+                if p_type == "int":
+                    if not isinstance(val, int) or isinstance(val, bool):
+                        violations.append(f"parameter '{p_name}' must be an int, got {type(val).__name__}")
+                    else:
+                        p_min = p_rules.get("min")
+                        p_max = p_rules.get("max")
+                        if p_min is not None and val < p_min:
+                            violations.append(f"parameter '{p_name}' value {val} is below minimum {p_min}")
+                        if p_max is not None and val > p_max:
+                            violations.append(f"parameter '{p_name}' value {val} exceeds maximum {p_max}")
+                elif p_type == "enum":
+                    options = p_rules.get("options", [])
+                    if val not in options:
+                        violations.append(f"parameter '{p_name}' value '{val}' is not in allowed options: {options}")
+
+    # 5. Verbs and reads validation (AST inspection)
     allowed_apis = extract_manifest_allowed_apis(manifest)
     known_prop_objects = {obj for obj, _ in allowed_apis}
 
-    starter_code = draft.get("starter_code", "")
-    solution_code = draft.get("solution_code", "")
-    tests = draft.get("tests", [])
+    starter_code = draft_data.get("starter_code", "")
+    solution_code = draft_data.get("solution_code", "")
+    tests = draft_data.get("tests", [])
 
     codes_to_inspect = [starter_code, solution_code]
     for t in tests:
