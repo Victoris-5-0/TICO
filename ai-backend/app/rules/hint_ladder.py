@@ -88,6 +88,44 @@ TEMPLATED_FALLBACK_PATTERNS: Final[dict[str, dict[int, str]]] = {
     },
 }
 
+# Curated foreign examples for Rung 3 ("show the pattern on a *different* example").
+# Strict safety rule: these foreign examples MUST NOT use identifiers or values from any launch mission.
+CONCEPT_FOREIGN_EXAMPLES: Final[dict[str, dict[str, str]]] = {
+    "ar_EG": {
+        "variables": "زي مثلاً لما ننشئ متغير ونخزن فيه قيمة: `points = 100`",
+        "conditionals": "زي مثلاً لما نفحص شرط باستخدام if: `if score >= 50: pass`",
+        "loops": "زي مثلاً لما نكرر أمر بعدد مرات محدد: `for i in range(3): step()`",
+        "functions": "زي مثلاً لما نعرف دالة ترجع قيمة: `def add(a, b): return a + b`",
+        "lists": "زي مثلاً لما نعمل قايمة عناصر: `colors = ['red', 'blue']`",
+        "dictionaries": "زي مثلاً لما نعمل قاموس مفاتيح وقيم: `scores = {'player': 10}`",
+    },
+    "en": {
+        "variables": "For example, creating a variable: `points = 100`",
+        "conditionals": "For example, checking a condition: `if score >= 50: pass`",
+        "loops": "For example, repeating steps: `for i in range(3): step()`",
+        "functions": "For example, defining a function: `def add(a, b): return a + b`",
+        "lists": "For example, creating a list: `colors = ['red', 'blue']`",
+        "dictionaries": "For example, mapping keys to values: `scores = {'player': 10}`",
+    },
+}
+
+CONCEPT_ALIASES: Final[dict[str, str]] = {
+    "for_loops": "loops",
+    "while_loops": "loops",
+    "for": "loops",
+    "while": "loops",
+    "loop": "loops",
+    "if_else": "conditionals",
+    "if": "conditionals",
+    "conditional": "conditionals",
+    "comparisons": "conditionals",
+    "variable": "variables",
+    "function": "functions",
+    "list": "lists",
+    "dictionary": "dictionaries",
+    "dict": "dictionaries",
+}
+
 
 @dataclass(frozen=True, slots=True)
 class HintLadderDecision:
@@ -204,6 +242,13 @@ def get_authored_fallback(
     # Rungs 1 and 2 must never name or disclose the concept.
     if concept_hint and rung_int in (3, 4):
         template = TEMPLATED_FALLBACK_PATTERNS[loc_key][rung_int]
-        return template.format(concept=concept_hint)
+        base_text = template.format(concept=concept_hint)
+        if rung_int == 3:
+            normalized_key = concept_hint.lower().strip()
+            canonical_key = CONCEPT_ALIASES.get(normalized_key, normalized_key)
+            if canonical_key in CONCEPT_FOREIGN_EXAMPLES[loc_key]:
+                example = CONCEPT_FOREIGN_EXAMPLES[loc_key][canonical_key]
+                return f"{base_text} {example}"
+        return base_text
 
     return GENERIC_FALLBACK_HINTS[loc_key][rung_int]

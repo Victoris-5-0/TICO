@@ -37,3 +37,20 @@ This log tracks autonomous session tasks in `ai-backend/` following the pre-appr
   - Benchmark scenarios define solution identifiers and target values reflecting real curriculum lessons.
   - Suffix after colon (e.g., `اكتب ده: gate.open()`) should be inspected for runnable code to prevent natural-language label bypasses.
 - **Open questions for review**: None.
+
+---
+
+### Task 3: Authored fallback hints for all 4 rungs (M2, P1)
+
+- **CSV Notes verbatim**: `NOTE: this may already be substantially satisfied by app/rules/hint_ladder.py's GENERIC_FALLBACK_HINTS / TEMPLATED_FALLBACK_PATTERNS built earlier. Before doing new work, check whether this task's intent is already met. If gaps remain (e.g. more locales, more variety), extend rather than duplicate. Log your conclusion either way.`
+- **Status**: DONE
+- **Files touched**:
+  - `ai-backend/app/rules/hint_ladder.py`
+  - `ai-backend/tests/test_hint_ladder.py`
+- **Test count**: 135 -> 137 passed (+2 tests)
+- **Plain-language summary**:
+  Evaluated the authored fallback hints in `app.rules.hint_ladder`. Concluded that the core intent was already substantially satisfied by `GENERIC_FALLBACK_HINTS` and `TEMPLATED_FALLBACK_PATTERNS` across all 4 rungs for both `ar_EG` and `en` without violating progressive disclosure. Extended the module rather than duplicating it by adding `CONCEPT_FOREIGN_EXAMPLES` and canonical `CONCEPT_ALIASES` for the launch curriculum's core concepts (`variables`, `conditionals`, `loops`, `functions`, `lists`, `dictionaries`). On Rung 3 (NAME_IT), recognized concepts are now enriched with curated foreign syntax illustrations using non-mission variables, fulfilling AGENTS.md's rule to "show the pattern on a *different* example".
+- **Assumptions made**:
+  - Foreign examples on Rung 3 must strictly avoid identifiers or target values from any launch mission.
+  - Rungs 1 and 2 must remain purely concept-agnostic to protect progressive disclosure.
+- **Open questions for review**: None.

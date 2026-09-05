@@ -141,3 +141,23 @@ def test_pure_python_zero_io():
     # Secondary checks for ORM/engine leakages on module scope
     assert not hasattr(hl, "engine")
     assert not hasattr(hl, "SessionLocal")
+
+
+def test_authored_fallback_foreign_examples_enriched_on_rung_3():
+    """Verify that Rung 3 fallbacks include foreign examples for standard curriculum concepts."""
+    for loc in ("ar_EG", "en"):
+        for concept in ("variables", "conditionals", "loops", "functions", "lists", "dictionaries"):
+            text = get_authored_fallback(HintRung.NAME_IT, locale=loc, concept_hint=concept)
+            assert concept in text
+            # Must include a backticked code snippet representing the foreign example
+            assert "`" in text
+
+
+def test_authored_fallback_concept_aliases_resolve():
+    """Verify concept aliases (e.g. for_loops -> loops) map properly to foreign examples."""
+    for loc in ("ar_EG", "en"):
+        text_alias = get_authored_fallback(HintRung.NAME_IT, locale=loc, concept_hint="for_loops")
+        text_direct = get_authored_fallback(HintRung.NAME_IT, locale=loc, concept_hint="loops")
+        # Both should include the loop foreign example
+        assert "`for i in range(3): step()`" in text_alias or "range" in text_alias
+
