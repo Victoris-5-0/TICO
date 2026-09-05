@@ -11,18 +11,38 @@ from datetime import datetime
 
 from pydantic import Field
 
-from app.schemas.common import HintRung, ORMSchema, ScaffoldLevel, Schema
+from app.schemas.common import HintRung, LastResult, ORMSchema, ScaffoldLevel, Schema
 
 
 class HintRequest(Schema):
+    """Fields follow `docs/06`: "mission/session IDs, code excerpt, last result, locale".
+
+    Serialised camelCase — `sessionId`, `missionId`, `codeExcerpt`, `lastResult` — which
+    is what `client/src/lib/ai/client.ts` has always sent.
+    """
+
     session_id: str
-    code: str = Field(
+    mission_id: str = Field(
+        description="The exercise the student is on. `Exercise` is the row; 'mission' is "
+        "what it is called everywhere the student can see, and the contract uses the "
+        "student-facing word. Needed to load test cases and to key the hint cache."
+    )
+    code_excerpt: str = Field(
         max_length=20_000, description="The student's current code, exactly as typed."
     )
+    last_result: LastResult | None = Field(
+        default=None,
+        description="Outcome of the most recent run, from the engine. The AI service "
+        "never executes code.",
+    )
+    locale: str = Field(default="ar-EG")
+
+    # --- optional sharpeners; the client may omit both ------------------------------
     error_text: str | None = Field(
         default=None,
         max_length=8_000,
-        description="Runtime error or failing expectation, from the engine. The AI service never executes code.",
+        description="The actual failing message. `lastResult` says *that* it failed; this "
+        "says how, which is what separates a useful hint from a generic one.",
     )
     error_tag: str | None = Field(
         default=None,
@@ -34,7 +54,7 @@ class HintRequest(Schema):
 
 class HintResponse(Schema):
     rung: HintRung = Field(description="Which rung this is. Decided in Python, not by a model.")
-    text: str = Field(description="TICO's words. Egyptian Arabic prose, English identifiers.")
+    hint: str = Field(description="TICO's words. Egyptian Arabic prose, English identifiers.")
     is_final: bool = Field(
         description="True on rung 4. The client should then offer the mini-practice, not an answer."
     )

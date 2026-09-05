@@ -20,6 +20,29 @@ All contributors and AI agents must keep these boundaries clear. Do not place Ne
 
 > **Mandatory AI-backend rule:** Before inspecting, editing, generating, or reviewing any code or configuration under `ai-backend/`, an agent must read `ai-backend/AGENTS.md` completely. The same requirement applies before changing a shared API, database contract, authentication flow, or other cross-service behavior consumed by the AI backend. The nested instructions apply in addition to this root file and take precedence for files inside `ai-backend/`.
 
+> **Mandatory client rule (the reciprocal):** Before editing anything under `client/src/lib/ai/`, `client/src/services/`, or `client/prisma/`, an agent must read `client/AGENTS.md` completely. A cross-service contract has two sides and both are binding. For a year this file required backend agents to read the client's rules but placed no matching requirement on client agents, and the contract drifted on exactly that undefended side.
+
+## Cross-Service Contracts: What Is Actually Authoritative
+
+Three artifacts decide what is true. All three are **executable** — a machine can check
+them, which is the only kind of contract that has held up here.
+
+| Question | Authority | Enforced by |
+| --- | --- | --- |
+| What tables and columns exist? | `client/prisma/schema.prisma` + its migrations | `ai-backend/tests/test_model_mapping.py` |
+| What does the AI service accept and return? | the service's `/openapi.json` | `ai-backend/tests/test_contract.py` |
+| What TypeScript types describe that? | generated: `python ai-backend/scripts/gen_client_types.py` | the generator's `--check` mode |
+
+Prose documents in `docs/` explain **why** the contract is shaped as it is. They are
+binding on intent and invariants. They are **not** the definition of any field name,
+table name, or endpoint shape — where a document and one of the three artifacts above
+disagree, the artifact wins and the document is a bug to be fixed.
+
+`docs/06-data-model-and-contracts.md` is the clearest case: its HTTP envelope section is
+binding and correct, while its entity table still names eleven tables that do not exist.
+Read it for the envelope, the error shape, and the endpoint intents. Do not read it for
+schema.
+
 ## Required Reading Before Work
 
 Every agent must read [the documentation map](docs/README.md) and then the documents for its work lane before editing code. At minimum:
@@ -76,9 +99,10 @@ TICO/
 - `client/prisma/schema.prisma` is the single source of truth for every application and AI table.
 - All tables currently live in the shared PostgreSQL `public` schema. There is no separate AI-owned database schema.
 - Prisma owns all migrations. The Python service maps these tables with SQLAlchemy for reads and writes but never creates or migrates them; do not add Alembic.
-- After schema changes, from `client/` run `pnpm db:generate` and create/apply the appropriate migration.
+- After schema changes, from `client/` run `pnpm db:generate` and create the migration **in the same commit**. A schema change without a migration is not a partial change, it is a broken one: the schema and the database then disagree with nothing to flag it. This has already happened once — thirteen models were added with no migration, and it went unnoticed until someone tried to apply the database from scratch.
 - Never manually alter production tables without matching Prisma migrations in `client/prisma/migrations/`.
-- Use explicit snake-case table and column mappings so Prisma and SQLAlchemy stay aligned.
+- Use explicit `@@map` snake_case **table** names, and explicit `@map` snake_case **column** names on every new model. Prisma maps table names but leaves field names alone, so a column without `@map` is created camelCase.
+- Be aware the schema is currently **mixed**: the seven original tables (`users`, `tracks`, `lessons`, `exercises`, `submissions`, `user_progress`, `companion_chats`) have camelCase columns (`avatarUrl`, `starterCode`); everything added since is snake_case. Do not "fix" the old ones — renaming a live column breaks both Prisma and the SQLAlchemy models. New models follow the snake_case rule; old ones are mapped explicitly in `ai-backend/app/models_tables/`, and `test_model_mapping.py` checks every mapping against the real migration SQL.
 - Never run `prisma migrate reset` against the shared database.
 
 ### Prisma Configuration

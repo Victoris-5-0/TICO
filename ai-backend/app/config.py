@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from functools import lru_cache
 
-from pydantic import ValidationError
+from pydantic import ValidationError, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -60,10 +60,16 @@ class Settings(BaseSettings):
 
     @property
     def jwks_url(self) -> str:
-        """Supabase publishes the public keys here. Empty when not configured."""
+        """Supabase publishes the public keys here. Empty when not configured.
+
+        The path is the RFC 8615 well-known one. `/auth/v1/jwks` looks plausible and is
+        what this returned at first, but it 404s — which is silent, because a failed
+        fetch just falls through to the HS256 branch and every request then 401s with no
+        clue why. Verified against a live project before changing.
+        """
         if not self.supabase_url:
             return ""
-        return self.supabase_url.rstrip("/") + "/auth/v1/jwks"
+        return self.supabase_url.rstrip("/") + "/auth/v1/.well-known/jwks.json"
 
     @property
     def auth_configured(self) -> bool:
@@ -80,6 +86,14 @@ class Settings(BaseSettings):
     @property
     def cors_origin_list(self) -> list[str]:
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]
+
+    @model_validator(mode="after")
+    def validate_production_keys(self) -> Settings:
+        if self.is_production and not self.google_api_key.strip():
+            raise ValueError(
+                "Missing required environment variable: GOOGLE_API_KEY is required in production."
+            )
+        return self
 
 
 _MISSING_ENV_HELP = """
@@ -105,6 +119,8 @@ def get_settings() -> Settings:
         problems = "\n  ".join(
             f"{'.'.join(str(p) for p in e['loc'])}: {e['msg']}" for e in exc.errors()
         )
+        if any("production" in str(e).lower() or "google_api_key" in str(e).lower() for e in exc.errors()):
+            raise ValueError(f"Missing required environment variable: GOOGLE_API_KEY.\n{problems}") from exc
         raise SystemExit(_MISSING_ENV_HELP.format(problems=problems)) from None
 
 

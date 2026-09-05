@@ -11,7 +11,13 @@ from app.api.v1 import _fixtures as fx
 from app.api.v1._stub import mark
 from app.core.auth import CurrentUser, get_current_user
 from app.schemas.common import ErrorResponse, Phase, SessionOutcome
-from app.schemas.sessions import SessionClose, SessionCreate, SessionOut, SessionPhaseUpdate
+from app.schemas.sessions import (
+    SessionClose,
+    SessionCreate,
+    SessionDebriefResponse,
+    SessionOut,
+    SessionPhaseUpdate,
+)
 
 router = APIRouter(prefix="/sessions", tags=["sessions"])
 
@@ -90,3 +96,41 @@ def close_session(
     data["time_spent_ms"] = body.time_spent_ms
     data["ended_at"] = fx.NOW
     return SessionOut(**data)
+
+
+@router.post(
+    "/{session_id}/debrief",
+    response_model=SessionDebriefResponse,
+    responses=RESPONSES,
+    summary="End-of-mission debrief",
+    description=(
+        "STUB. What the student actually did, ready for the results screen.\n\n"
+        "Every number here is **counted in Python** from `submissions` and `hint_events`. "
+        "The model contributes one field, `ticoFeedback`, and is never asked for a count — "
+        "it would guess, and a wrong attempt count in front of a child is worse than no "
+        "debrief at all.\n\n"
+        "`errorsOvercome` is the interesting one: tags that showed up and then stopped. "
+        "That is the thing a student can feel proud of."
+    ),
+)
+def session_debrief(
+    session_id: str,
+    response: Response,
+    user: CurrentUser = Depends(get_current_user),
+) -> SessionDebriefResponse:
+    mark(response)
+
+    return SessionDebriefResponse(
+        session_id=session_id,
+        outcome=SessionOutcome.SOLVED,
+        total_attempts=4,
+        hints_used=2,
+        errors_overcome=["assignment_vs_comparison", "missing_colon"],
+        time_spent_ms=412_000,
+        concepts_mastered=["conditionals"],
+        tico_feedback=(
+            "برافو! غلطت في = و == مرتين وبعدين مسكتها لوحدك. "
+            "دي بالظبط الحاجة اللي بتفرق بين اللي بيحفظ واللي بيفهم."
+        ),
+        stars_earned=3,
+    )

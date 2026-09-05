@@ -5,11 +5,13 @@ is "degraded" — that is the correct answer, and asserting it proves the check 
 rather than a hardcoded 200.
 """
 
+from tests.conftest import data
+
 
 def test_health_reports_status(client):
     r = client.get("/v1/health")
     assert r.status_code == 200
-    body = r.json()
+    body = data(r)
     assert body["status"] in {"ok", "degraded"}
     assert body["database"] in {"ok", "unreachable"}
     assert body["environment"]

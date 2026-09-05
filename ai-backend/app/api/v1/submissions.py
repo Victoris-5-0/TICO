@@ -47,8 +47,8 @@ def analyze(
     if not looks_like_assignment_in_condition:
         data = {
             **data,
-            "family": ErrorFamily.UNKNOWN,
-            "tag": "unrecognised_pattern",
+            "error_family": ErrorFamily.UNKNOWN,
+            "error_tag": "unrecognised_pattern",
             "misconception": "The stub could not classify this yet.",
             "confidence": 0.31,
             "is_new_tag": True,
