@@ -73,3 +73,21 @@ This log tracks autonomous session tasks in `ai-backend/` following the pre-appr
   - Low confidence threshold for escalation is 0.6.
   - Sane deterministic heuristics handle offline provider states without crashing the API contract.
 - **Open questions for review**: None.
+
+---
+
+### Task 5: `rules/composer.py` + unit tests (M4, P0)
+
+- **CSV Notes verbatim**: `scaffold plan, difficulty, reps, advance-or-hold. Not blocked per CSV.`
+- **Status**: DONE
+- **Files touched**:
+  - `ai-backend/app/rules/composer.py`
+  - `ai-backend/app/rules/__init__.py`
+  - `ai-backend/tests/test_composer.py`
+- **Test count**: 144 -> 153 passed (+9 tests)
+- **Plain-language summary**:
+  Implemented pure Python adaptive composer rule determining scaffolding (`NONE`, `PARTIAL`, `FULL`), difficulty band (1..10), rep number, and advance-or-hold gate decisions with zero framework or database I/O. Enforced the sanity invariant: weak carried concepts (< 0.4 mastery) are never assigned `FULL` scaffolding. In challenge arena mode, scaffolding is strictly `NONE` with elevated difficulty. Implemented conflict detection on contradictory student evidence (e.g. high mastery with 3+ hints, moderate mastery on first attempt with 0 hints, high mastery requiring 3+ attempts) to flag cases for escalation review.
+- **Assumptions made**:
+  - Mastery thresholds: strong >= 0.7 (`FULL`), moderate 0.4..0.7 (`PARTIAL`), weak < 0.4 (`NONE`).
+  - Arena mode disables scaffolding completely and sets difficulty band >= 7.
+- **Open questions for review**: None.
