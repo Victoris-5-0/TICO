@@ -195,8 +195,8 @@ def session(session_id: str = DEMO_SESSION_ID) -> dict:
 # ------------------------------------------------------------------------ analysis
 def analysis() -> dict:
     return {
-        "family": ErrorFamily.LOGIC,
-        "tag": "assignment_vs_comparison",
+        "error_family": ErrorFamily.LOGIC,
+        "error_tag": "assignment_vs_comparison",
         "misconception": "The student believes a single `=` compares two values.",
         "confidence": 0.93,
         "is_new_tag": False,

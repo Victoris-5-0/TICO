@@ -60,10 +60,16 @@ class Settings(BaseSettings):
 
     @property
     def jwks_url(self) -> str:
-        """Supabase publishes the public keys here. Empty when not configured."""
+        """Supabase publishes the public keys here. Empty when not configured.
+
+        The path is the RFC 8615 well-known one. `/auth/v1/jwks` looks plausible and is
+        what this returned at first, but it 404s — which is silent, because a failed
+        fetch just falls through to the HS256 branch and every request then 401s with no
+        clue why. Verified against a live project before changing.
+        """
         if not self.supabase_url:
             return ""
-        return self.supabase_url.rstrip("/") + "/auth/v1/jwks"
+        return self.supabase_url.rstrip("/") + "/auth/v1/.well-known/jwks.json"
 
     @property
     def auth_configured(self) -> bool:

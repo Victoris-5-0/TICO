@@ -16,7 +16,6 @@ export async function POST(req: NextRequest) {
     // 1. Try AI challenge arena
     try {
       const challenge = await aiClient.getNextChallenge(token, {
-        profileId: user.id,
         worldSlug: body.worldSlug,
       });
       return NextResponse.json({ data: challenge });

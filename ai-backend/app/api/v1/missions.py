@@ -19,6 +19,8 @@ from app.schemas.common import ErrorResponse
 from app.schemas.missions import (
     ChallengeRequest,
     GeneratedMissionOut,
+    GenerateMissionRequest,
+    GenerateMissionResponse,
     NextMissionRequest,
 )
 
@@ -82,3 +84,43 @@ def next_challenge(
     data["scaffold_plan"] = {"scaffold": {}, "difficulty_band": 7, "rep_number": 1}
     data["brief"] = "تحدي: افتح البوابة بس لو الرصيف زحمة والقطر جاي في نفس الوقت."
     return GeneratedMissionOut(**data)
+
+
+@router.post(
+    "/missions/generate",
+    response_model=GenerateMissionResponse,
+    responses=RESPONSES,
+    summary="Generate one mission explicitly",
+    description=(
+        "STUB. Composes a scenario from a mission template and the world manifest.\n\n"
+        "Distinct from `/missions/next`: that one **decides** what this student should "
+        "play now, this one **builds** a mission when the caller already knows what they "
+        "want. Used for authoring and for pre-warming a lesson.\n\n"
+        "Every request field is optional — with an empty body the server derives the "
+        "lesson, concept and scaffold from the student's plan. Anything supplied is "
+        "still bounded against the manifest before generation runs, so a client cannot "
+        "generate a mission with a prop or verb the world does not define."
+    ),
+)
+def generate_mission(
+    body: GenerateMissionRequest,
+    response: Response,
+    user: CurrentUser = Depends(get_current_user),
+) -> GenerateMissionResponse:
+    mark(response)
+
+    return GenerateMissionResponse(
+        mission_id=fx.DEMO_EXERCISE_ID,
+        title="البوابة الشرطية",
+        instructions="الرصيف زحمة. افتح البوابة التانية لو عدد المستنيين أكتر من 30.",
+        starter_code=fx.STARTER_CODE,
+        test_cases=[
+            {"input": t["call"], "expectedOutput": t["expected"], "isHidden": False}
+            for t in fx.MISSION_TESTS
+        ],
+        hints=[fx.HINT_LADDER[r] for r in sorted(fx.HINT_LADDER)],
+        concepts={"primary": "conditionals", "carried": ["variables"]},
+        scaffold_plan=fx.SCAFFOLD_PLAN,
+        validated=True,
+        engine_version="stub-0",
+    )

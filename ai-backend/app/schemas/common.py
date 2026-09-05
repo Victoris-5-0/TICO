@@ -15,40 +15,86 @@ from datetime import datetime
 from enum import Enum
 
 from pydantic import BaseModel, ConfigDict, Field
+from pydantic.alias_generators import to_camel
 
 
 class Schema(BaseModel):
-    """Base for request/response bodies."""
+    """Base for request/response bodies.
 
-    model_config = ConfigDict(extra="forbid")
+    **The wire is camelCase; Python stays snake_case.** `session_id` here is `sessionId`
+    on the wire, in the OpenAPI schema, and in the generated TypeScript. This is not a
+    style preference — `docs/06-data-model-and-contracts.md` is the cross-service
+    contract authority and the client implemented it in camelCase months ago. Two
+    conventions meeting at an HTTP boundary is normal; the boundary just has to be
+    declared in exactly one place, and this is that place.
+
+    `populate_by_name` keeps the snake_case name working too, so Python callers and
+    existing tests construct these models unchanged.
+    """
+
+    model_config = ConfigDict(
+        extra="forbid",
+        alias_generator=to_camel,
+        populate_by_name=True,
+        serialize_by_alias=True,
+    )
 
 
 class ORMSchema(BaseModel):
-    """Base for anything read out of SQLAlchemy."""
+    """Base for anything read out of SQLAlchemy.
 
-    model_config = ConfigDict(from_attributes=True, extra="ignore")
+    Same camelCase wire rule as `Schema`. `from_attributes` reads the snake_case Python
+    attribute off the model; the alias only affects what goes out over HTTP.
+    """
+
+    model_config = ConfigDict(
+        from_attributes=True,
+        extra="ignore",
+        alias_generator=to_camel,
+        populate_by_name=True,
+        serialize_by_alias=True,
+    )
 
 
 # --------------------------------------------------------------------------- enums
+#
+# Values are UPPERCASE to match the Postgres enum labels Prisma creates. The same token
+# then flows unchanged through Python, JSON, TypeScript and the database, with no case
+# conversion anywhere. Lowercase values here would look tidier in JSON and would fail on
+# every insert.
 
 
 class Phase(str, Enum):
     """The seven-phase mission loop from the proposal."""
 
-    ENCOUNTER = "encounter"
-    EXPLORE = "explore"
-    DISCOVER = "discover"
-    UNDERSTAND = "understand"
-    GUIDED_CODING = "guided_coding"
-    ADAPT_REMIX = "adapt_remix"
-    INDEPENDENT = "independent"
+    ENCOUNTER = "ENCOUNTER"
+    EXPLORE = "EXPLORE"
+    DISCOVER = "DISCOVER"
+    UNDERSTAND = "UNDERSTAND"
+    GUIDED_CODING = "GUIDED_CODING"
+    ADAPT_REMIX = "ADAPT_REMIX"
+    INDEPENDENT = "INDEPENDENT"
+
+
+class LastResult(str, Enum):
+    """Outcome of the student's most recent run, as the engine reports it.
+
+    Screaming case because that is what `client/src/lib/ai/types.ts` already sends and
+    what `SubmissionStatus` uses in Prisma. Keeping one spelling across the three
+    languages is worth more than matching the lowercase style of the enums below.
+    """
+
+    PASSED = "PASSED"
+    FAILED = "FAILED"
+    ERROR = "ERROR"
+    TIMEOUT = "TIMEOUT"
 
 
 class SessionOutcome(str, Enum):
-    IN_PROGRESS = "in_progress"
-    SOLVED = "solved"
-    ABANDONED = "abandoned"
-    TIMED_OUT = "timed_out"
+    IN_PROGRESS = "IN_PROGRESS"
+    SOLVED = "SOLVED"
+    ABANDONED = "ABANDONED"
+    TIMED_OUT = "TIMED_OUT"
 
 
 class HintRung(int, Enum):
@@ -72,41 +118,41 @@ class ErrorFamily(str, Enum):
     in the open `tag` on AnalyzeResponse, which grows from real students.
     """
 
-    SYNTAX = "syntax"          # will not parse: indentation, missing colon, typo
-    NAME = "name"              # undefined or misspelled variable / function
-    TYPE = "type"              # str where int expected, etc.
-    LOGIC = "logic"            # runs, wrong answer: bad condition, off-by-one
-    INCOMPLETE = "incomplete"  # missing return, empty body, unchanged starter
-    RUNTIME = "runtime"        # infinite loop, index error, crash
-    UNKNOWN = "unknown"
+    SYNTAX = "SYNTAX"          # will not parse: indentation, missing colon, typo
+    NAME = "NAME"              # undefined or misspelled variable / function
+    TYPE = "TYPE"              # str where int expected, etc.
+    LOGIC = "LOGIC"            # runs, wrong answer: bad condition, off-by-one
+    INCOMPLETE = "INCOMPLETE"  # missing return, empty body, unchanged starter
+    RUNTIME = "RUNTIME"        # infinite loop, index error, crash
+    UNKNOWN = "UNKNOWN"
 
 
 class ScaffoldLevel(str, Enum):
     """How much of a carried concept is pre-filled in the starter code."""
 
-    NONE = "none"  # the student writes it themselves
-    PARTIAL = "partial"  # skeleton given, they complete it
-    FULL = "full"  # pre-written, not the point of this lesson
+    NONE = "NONE"  # the student writes it themselves
+    PARTIAL = "PARTIAL"  # skeleton given, they complete it
+    FULL = "FULL"  # pre-written, not the point of this lesson
 
 
 class LessonRequirement(str, Enum):
-    REQUIRED = "required"
-    OPTIONAL = "optional"
-    DONE = "done"
-    SKIPPED = "skipped"
+    REQUIRED = "REQUIRED"
+    OPTIONAL = "OPTIONAL"
+    DONE = "DONE"
+    SKIPPED = "SKIPPED"
 
 
 class DecidedBy(str, Enum):
     """Rules propose, the model reviews. Always recorded so a decision can be explained."""
 
-    RULE = "rule"
-    MODEL = "model"
+    RULE = "RULE"
+    MODEL = "MODEL"
 
 
 class SkillBand(str, Enum):
-    STRUGGLING = "struggling"
-    ON_LEVEL = "on_level"
-    READY_TO_STRETCH = "ready_to_stretch"
+    STRUGGLING = "STRUGGLING"
+    ON_LEVEL = "ON_LEVEL"
+    READY_TO_STRETCH = "READY_TO_STRETCH"
 
 
 # --------------------------------------------------------------------------- shared
@@ -117,11 +163,46 @@ class ConceptRef(Schema):
     name: str | None = None
 
 
+class ErrorBody(Schema):
+    """The error object from `docs/06-data-model-and-contracts.md`.
+
+    Its field names are snake_case **on the wire as well** — deliberately. docs/06 spells
+    them `request_id` and `retryable` inside this object, and it is the authority. An
+    inconsistency the contract states explicitly beats a tidier one nobody agreed to.
+    """
+
+    model_config = ConfigDict(extra="forbid")  # no alias generator: see docstring
+
+    code: str = Field(description="Stable machine-readable code, e.g. 'manifest_reference_invalid'.")
+    message: str = Field(description="Safe to show a student. Never a stack trace or a solution.")
+    request_id: str = Field(description="Echoes X-Request-ID. This is how a bug report becomes a log query.")
+    retryable: bool = Field(description="Whether the client may retry the identical call.")
+    details: dict = Field(default_factory=dict)
+
+
 class ErrorResponse(Schema):
     """What every 4xx/5xx returns. A child mid-mission never sees a raw stack trace."""
 
-    detail: str = Field(description="Human-readable, safe to show a student.")
-    code: str | None = Field(default=None, description="Stable machine-readable code.")
+    error: ErrorBody
+
+
+class ResponseMeta(Schema):
+    """The `meta` half of every success body."""
+
+    request_id: str
+    stub: bool = Field(default=False, description="True while this endpoint is still fake.")
+    cached: bool = Field(default=False)
+
+
+class Envelope(Schema):
+    """`{ data, meta }` — the success shape docs/06 mandates for every /v1 response.
+
+    The client's `fetchAi` already unwraps with `data.data || data`, so adopting this
+    costs the client nothing and gives every response somewhere to carry `request_id`.
+    """
+
+    data: object
+    meta: ResponseMeta
 
 
 class Meta(ORMSchema):

@@ -21,6 +21,36 @@ Before changing this service, read:
 
 If a document conflicts with this file's database migration rules, stop and update the document: Prisma is the sole schema and migration authority.
 
+### How to read docs/06 (it is half stale)
+
+`../docs/06-data-model-and-contracts.md` is the cross-service contract authority, and it
+is split down the middle:
+
+- **Binding and correct** — the HTTP envelope (`{data, meta}`), the error object
+  (`{error: {code, message, request_id, retryable, details}}`), `X-Request-ID`,
+  `Idempotency-Key`, and the endpoint table's *intents*. The client implemented all of
+  this. So does this service, as of the contract alignment.
+- **Stale, do not follow** — its entity table. It names `World`, `Mission`,
+  `MissionVersion`, `MissionSession`, `CodeSubmission`, `LevelConcept`,
+  `CompanionThread`, `Message`, `Asset`, `MissionAsset` and `ContentReview`. Of the
+  fourteen entities it lists, **three exist**. The real names are `Track`, `Exercise`,
+  `PracticeSession`, `Submission`, `ExerciseConcept` and `CompanionChat`.
+
+For anything about tables or columns, read `client/prisma/schema.prisma`. It is the only
+schema authority, and `tests/test_model_mapping.py` checks our SQLAlchemy models against
+the migration SQL it produced.
+
+### The wire is camelCase
+
+`session_id` in Python is `sessionId` on the wire. The boundary is declared once, in
+`app/schemas/common.py`, by an alias generator on the `Schema` base class — never
+per-field, and never by renaming a Python attribute. Two consequences:
+
+- Every DTO **must** inherit from `Schema` or `ORMSchema`. `test_contract.py` fails the
+  build if snake_case reaches the public schema.
+- `client/src/lib/ai/types.ts` is generated from `/openapi.json`. After changing any DTO,
+  run `python scripts/gen_client_types.py` and commit the result with your change.
+
 ## What this service is
 
 - **One** FastAPI app with **six** AI capability modules. Not nine deployables.
@@ -229,10 +259,19 @@ Per-student variation lives in `student_lesson_plan` instead.
 
 ## Ownership
 
-- **Ahmed owns the AI models in `client/prisma/schema.prisma`.** He writes them and runs
-  the migration; the AI teammate never touches the schema.
+- **Ahmed owns the AI models in `client/prisma/schema.prisma`.** He writes them and the
+  migration **in the same commit**; the AI teammate never touches the schema.
 - **Ahmed owns `schemas/`.** He writes the Pydantic DTOs; the AI teammate builds against
-  whatever they say. Write them first, before either lane starts — they are the contract.
+  whatever they say. Write them first, before either lane starts.
+
+  They are the contract **for this service**, and they are bound by
+  `../docs/06-data-model-and-contracts.md`, which is the cross-service authority. An
+  earlier version of this line said the DTOs simply "are the contract" full stop. They
+  are not: the client had already implemented docs/06, this file was never read by anyone
+  working in `client/`, and the two definitions drifted until a live request failed on
+  five fields at once. When a DTO and docs/06 disagree about a field name or an endpoint
+  shape, **docs/06 wins** and the DTO is the bug — unless docs/06 is describing schema, in
+  which case see the caveat below.
 - **AI teammate owns `rules/` and `ai/`** — hint ladder, mastery, plan, composer, chains,
   graphs, prompts, guards, evals. All testable with no DB and no API key.
 

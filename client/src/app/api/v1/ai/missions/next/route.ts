@@ -20,7 +20,6 @@ export async function POST(req: NextRequest) {
     // Try AI generation
     try {
       const aiResponse = await aiClient.getNextMission(token, {
-        profileId: user.id,
         lessonId: body.lessonId,
         worldManifestVersion: body.worldManifestVersion || '1.0.0',
       });

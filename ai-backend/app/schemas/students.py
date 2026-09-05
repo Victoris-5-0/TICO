@@ -52,6 +52,23 @@ class StudentProfileOut(ORMSchema):
     model_version: str | None = None
 
 
+class RefreshRequest(Schema):
+    """docs/06 calls the input to this endpoint an "evidence watermark".
+
+    It is the id of the newest submission the caller already knows about. The recompute
+    reads only evidence newer than it, which makes the call idempotent: firing it twice
+    after the same session is a no-op rather than double-counting a student's attempts
+    into their mastery score.
+
+    Optional — with no watermark the server recomputes from the last stored one.
+    """
+
+    watermark: str | None = Field(
+        default=None,
+        description="Newest submission or progress id the caller has already accounted for.",
+    )
+
+
 class RefreshResponse(Schema):
     profile: StudentProfileOut
     concepts: list[MasteryOut]

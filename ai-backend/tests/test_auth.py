@@ -168,5 +168,12 @@ def test_supabase_url_alone_is_enough_to_leave_dev_mode(monkeypatch):
 
 
 def test_jwks_url_is_derived_correctly(monkeypatch):
+    """The well-known path, verified against a live Supabase project.
+
+    This test previously asserted `/auth/v1/jwks`, which is wrong — it 404s. Because a
+    failed JWKS fetch silently falls through to the HS256 branch, the only symptom is
+    every authenticated request returning 401 with nothing in the logs to explain it. The
+    test agreed with the code, so both were wrong together and neither could catch it.
+    """
     monkeypatch.setattr(auth.settings, "supabase_url", "https://abc.supabase.co/", raising=False)
-    assert auth.settings.jwks_url == "https://abc.supabase.co/auth/v1/jwks"
+    assert auth.settings.jwks_url == "https://abc.supabase.co/auth/v1/.well-known/jwks.json"

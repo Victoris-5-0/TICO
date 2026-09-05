@@ -1,0 +1,159 @@
+name: CI
+
+# Every guard in this file exists because the corresponding failure already happened
+# once, silently, and was only found by hand. The point of CI here is not general tidiness
+# — it is that a contract with two sides cannot be defended by remembering to check it.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Does the migration history actually build the schema it claims to?
+  #
+  # This is the check that would have caught 13 models being added with no
+  # migration. It runs against a real Postgres, from empty, exactly as a new
+  # environment would.
+  # ---------------------------------------------------------------------------
+  database:
+    name: Migrations build the schema
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: tico_ci
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/tico_ci
+      DIRECT_URL: postgresql://postgres:postgres@localhost:5432/tico_ci
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.28.2
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Schema is valid
+        working-directory: client
+        run: pnpm exec prisma validate
+
+      - name: Apply every migration to an empty database
+        working-directory: client
+        run: pnpm exec prisma migrate deploy
+
+      - name: Migrations and schema.prisma agree
+        working-directory: client
+        # The failure this catches: someone edits schema.prisma and does not create the
+        # migration. Everything still works on their machine, because their database was
+        # changed by `db push` or by hand — and nothing works on a fresh one.
+        run: |
+          pnpm exec prisma migrate diff \
+            --from-schema-datamodel prisma/schema.prisma \
+            --to-schema-datasource prisma/schema.prisma \
+            --exit-code
+
+      - name: SQLAlchemy models match the migrated database
+        # The reverse direction: a column that exists but no Python model maps is data the
+        # AI service silently cannot see. That is how `submissions.error_family` — a column
+        # this service is supposed to WRITE — went unmapped.
+        run: |
+          python -m pip install --quiet -r ai-backend/requirements.txt
+          python ai-backend/scripts/check_models_against_db.py
+        env:
+          # SQLAlchemy needs the driver in the scheme; Prisma must not see it.
+          DATABASE_URL: postgresql+psycopg2://postgres:postgres@localhost:5432/tico_ci
+
+  # ---------------------------------------------------------------------------
+  # The Python service. No database and no API key: every test here is offline.
+  # ---------------------------------------------------------------------------
+  ai-backend:
+    name: AI backend
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ai-backend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: ai-backend/requirements.txt
+
+      - run: pip install -r requirements.txt
+
+      - name: Tests
+        run: python -m pytest tests -q
+
+      - name: Generated TypeScript is not stale
+        # `client/src/lib/ai/types.ts` is generated from /openapi.json. Hand-editing it,
+        # or changing a DTO without regenerating, is what let the two sides drift for
+        # weeks with nothing failing.
+        run: python scripts/gen_client_types.py --check
+
+  # ---------------------------------------------------------------------------
+  # The Next.js client.
+  # ---------------------------------------------------------------------------
+  client:
+    name: Client
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: client
+
+    env:
+      # prisma generate reads these; they are never connected to.
+      DATABASE_URL: postgresql://user:pass@localhost:5432/placeholder
+      DIRECT_URL: postgresql://user:pass@localhost:5432/placeholder
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.28.2
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - run: pnpm install --frozen-lockfile
+        working-directory: .
+
+      - name: Typecheck
+        # Found 8 real contract breaks the first time it was run, including three call
+        # sites passing a client-chosen student id into a request body.
+        run: pnpm typecheck
+
+      - name: Lint
+        run: pnpm lint

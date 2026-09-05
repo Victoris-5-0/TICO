@@ -6,12 +6,13 @@ import { db } from '@/lib/db';
 
 export async function getNextMissionAction(data: { lessonId: string }) {
   try {
-    const user = await requireUser();
+    // Still the auth guard — it throws when there is no session. The id itself is not
+    // passed on: the AI service derives the student from the verified JWT.
+    await requireUser();
     const token = await getAuthToken();
 
     try {
       const nextMission = await aiClient.getNextMission(token, {
-        profileId: user.id,
         lessonId: data.lessonId,
         worldManifestVersion: '1.0.0'
       });

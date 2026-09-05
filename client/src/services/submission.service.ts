@@ -101,12 +101,11 @@ export class SubmissionService {
           sessionId,
           attemptNumber,
           code,
-          errorOutput: runnerResult.output,
+          errorText: runnerResult.output,
         });
-        const validFamilies = ['SYNTAX', 'NAME', 'TYPE', 'LOGIC', 'INCOMPLETE', 'RUNTIME', 'UNKNOWN'];
-        errorFamily = validFamilies.includes(analysis.errorFamily?.toUpperCase())
-          ? (analysis.errorFamily.toUpperCase() as ErrorFamily)
-          : 'UNKNOWN';
+        // The AI service and Prisma share one enum, spelled identically, so this
+        // needs no case conversion or whitelist.
+        errorFamily = analysis.errorFamily;
         errorTag = analysis.errorTag;
       } catch {
         const fallback = this.fallbackClassifyError(runnerResult.output);

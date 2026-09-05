@@ -62,8 +62,23 @@ class GeneratedMissionOut(Schema):
 
 
 class NextMissionRequest(Schema):
-    """The student comes from the verified JWT, never from the body."""
+    """docs/06 endpoint 5: "learner profile, lesson, world manifest version".
 
+    The *learner* half is deliberately absent. The student comes from the verified JWT,
+    never from the body — a client that could name the student could ask for another
+    child's next mission. Same reason `worldId` is not here: the roadmap fixes it.
+    """
+
+    lesson_id: str | None = Field(
+        default=None,
+        description="Which lesson to compose for. Omit and the server takes the next one "
+        "from the student's LessonPlan, which is the normal path.",
+    )
+    world_manifest_version: str | None = Field(
+        default=None,
+        description="Pin generation to a manifest version. Omit for current. The server "
+        "still validates every prop and verb against that manifest.",
+    )
     force_regenerate: bool = Field(
         default=False, description="Skip reuse and compose a fresh scenario. Costs a model call."
     )
@@ -74,6 +89,60 @@ class ChallengeRequest(Schema):
     ladder, concepts mixed and weighted toward the weakest — a challenge should stretch,
     not flatter."""
 
+    world_slug: str | None = Field(
+        default=None,
+        description="Restrict the arena to one world, e.g. 'cairo_metro'. Omit to mix "
+        "across everything the student has unlocked.",
+    )
     exclude_level_ids: list[str] = Field(
         default_factory=list, description="Recently played, to avoid repeats."
     )
+
+
+class GenerateMissionRequest(Schema):
+    """Explicit generation, as opposed to `/missions/next` which *decides* what is next.
+
+    Every field is optional: with an empty body the server derives all of it from the
+    student's plan and mastery. That is the "server narrows, the model chooses" rule —
+    anything the client may pass here is a hint, and the server still bounds it against
+    the world manifest before generation runs.
+    """
+
+    lesson_id: str | None = None
+    concept: str | None = Field(default=None, description="Concept slug, e.g. 'loops'.")
+    world_manifest_version: str | None = None
+    scaffold_level: ScaffoldLevel | None = Field(
+        default=None, description="Override the composer. Ignored unless the caller is a teacher."
+    )
+    locale: str = Field(default="ar-EG")
+
+
+class GenerateMissionResponse(Schema):
+    """Exercise-shaped, because this is what gets written to an `exercises` row.
+
+    Deliberately flatter than `GeneratedMissionOut`: that one describes a mission chosen
+    *for a student* and carries the per-student scaffold reasoning, this one describes the
+    authored artefact.
+    """
+
+    mission_id: str
+    title: str
+    instructions: str
+    starter_code: str
+    test_cases: list[dict] = Field(
+        default_factory=list,
+        description="[{input, expectedOutput, isHidden?}] — the `exercises.testCases` shape.",
+    )
+    hints: list[str] = Field(
+        default_factory=list,
+        description="Authored fallback, one per rung. Used when the model is unavailable "
+        "or the answer-leak assertion rejects its output.",
+    )
+    concepts: dict = Field(
+        default_factory=dict, description='{"primary": slug, "carried": [slug, ...]}'
+    )
+    scaffold_plan: dict = Field(default_factory=dict)
+    validated: bool = Field(
+        description="Set by the Python validator, never by the model. False is never shipped to a student."
+    )
+    engine_version: str

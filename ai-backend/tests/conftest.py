@@ -27,3 +27,21 @@ from app.main import app
 @pytest.fixture
 def client() -> TestClient:
     return TestClient(app)
+
+
+def data(response):
+    """Unwrap the `{data, meta}` envelope.
+
+    Deliberately the same `data.data || data` fallback the client's `fetchAi` uses, so
+    the tests exercise the response exactly as the client sees it. If the envelope ever
+    regresses, these tests fail in the same way the client would break.
+    """
+    payload = response.json()
+    if isinstance(payload, dict) and "data" in payload and "meta" in payload:
+        return payload["data"]
+    return payload
+
+
+def meta(response) -> dict:
+    payload = response.json()
+    return payload.get("meta", {}) if isinstance(payload, dict) else {}
