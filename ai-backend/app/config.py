@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from functools import lru_cache
 
-from pydantic import ValidationError
+from pydantic import ValidationError, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -81,6 +81,14 @@ class Settings(BaseSettings):
     def cors_origin_list(self) -> list[str]:
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]
 
+    @model_validator(mode="after")
+    def validate_production_keys(self) -> Settings:
+        if self.is_production and not self.google_api_key.strip():
+            raise ValueError(
+                "Missing required environment variable: GOOGLE_API_KEY is required in production."
+            )
+        return self
+
 
 _MISSING_ENV_HELP = """
 tico-ai could not start: required settings are missing.
@@ -105,6 +113,8 @@ def get_settings() -> Settings:
         problems = "\n  ".join(
             f"{'.'.join(str(p) for p in e['loc'])}: {e['msg']}" for e in exc.errors()
         )
+        if any("production" in str(e).lower() or "google_api_key" in str(e).lower() for e in exc.errors()):
+            raise ValueError(f"Missing required environment variable: GOOGLE_API_KEY.\n{problems}") from exc
         raise SystemExit(_MISSING_ENV_HELP.format(problems=problems)) from None
 
 
