@@ -54,3 +54,22 @@ This log tracks autonomous session tasks in `ai-backend/` following the pre-appr
   - Foreign examples on Rung 3 must strictly avoid identifiers or target values from any launch mission.
   - Rungs 1 and 2 must remain purely concept-agnostic to protect progressive disclosure.
 - **Open questions for review**: None.
+
+---
+
+### Task 4: `ai/chains/classify_error.py` — family + tag (M3, P1)
+
+- **CSV Notes verbatim**: `Blocked by nobody`
+- **Status**: DONE
+- **Files touched**:
+  - `ai-backend/app/ai/prompts/error_analysis.py`
+  - `ai-backend/app/ai/chains/classify_error.py`
+  - `ai-backend/app/ai/chains/__init__.py`
+  - `ai-backend/tests/test_classify_error.py`
+- **Test count**: 137 -> 144 passed (+7 tests)
+- **Plain-language summary**:
+  Implemented error analysis chain using structured output from `gemini-3.5-flash-lite` via `AICapability.CLASSIFY`. Classifies code execution failures into the 7-value closed `ErrorFamily` enum and an open snake_case `tag` (conforming to `^[a-z][a-z0-9_]*$`). Added automatic escalation to `gemini-3.5-flash` (`AICapability.REVIEW`) when classification confidence drops below 0.6 or family is UNKNOWN. Built deterministic AST and keyword fallbacks ensuring safe recovery on provider outages, PII stripping, tag normalization, and scaffold tampering detection.
+- **Assumptions made**:
+  - Low confidence threshold for escalation is 0.6.
+  - Sane deterministic heuristics handle offline provider states without crashing the API contract.
+- **Open questions for review**: None.
