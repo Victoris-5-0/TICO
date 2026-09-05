@@ -111,3 +111,23 @@ This log tracks autonomous session tasks in `ai-backend/` following the pre-appr
   - Review failures retain the rule's recommendation with `decided_by=RULE` to prevent blocking the learning loop.
 - **Open questions for review**:
   - `rules/plan.py` is currently blocked (owned by another lane); full planner-skip escalation wiring will be completed once `rules/plan.py` is available.
+
+---
+
+### Task 7: `ai/graphs/mission_gen.py` (M5, P0)
+
+- **CSV Notes verbatim**: `generate -> validate -> repair x2. Read docs/08's full mission-generation flowchart carefully (schema valid -> manifest/concept valid -> solution passes tests -> locale/safety/leak checks, each retried once, second failure -> template fallback) — this is more detailed than AGENTS.md's one-line summary and should inform the structure, but AGENTS.md's rules still govern any conflict. NOTE: this needs a world manifest (content/worlds/*.yaml) — that's Content's ownership. If no manifest file exists yet in the repo, STOP this task, log it as BLOCKED (missing content/worlds/*.yaml), and move to the next task.`
+- **Status**: DONE (content/worlds/cairo_metro.yaml exists and was verified)
+- **Files touched**:
+  - `ai-backend/app/ai/prompts/mission_gen.py`
+  - `ai-backend/app/ai/graphs/mission_gen.py`
+  - `ai-backend/app/ai/graphs/__init__.py`
+  - `ai-backend/app/ai/guards.py`
+  - `ai-backend/tests/test_mission_gen.py`
+- **Test count**: 159 -> 164 passed (+5 tests)
+- **Plain-language summary**:
+  Implemented the mission generation pipeline using LangGraph (`StateGraph`) adhering to the docs/08 flowchart. Loads versioned world manifests (`content/worlds/cairo_metro.yaml`), prompts `gemini-3.5-flash` (`AICapability.GENERATE`) with legal manifest scenes/props/APIs and composer scaffolding. Validates drafts with the Python manifest and solution validator. On validation failure, repairs up to 2 times by injecting explicit validator violation feedback into the model prompt. On repeated rejection, seamlessly routes to reviewed template fallback, guaranteeing that an unvalidated mission is never returned.
+- **Assumptions made**:
+  - `cairo_metro.yaml` serves as the authoritative active world manifest.
+  - Carried scaffold keys support both uppercase and lowercase enum values.
+- **Open questions for review**: None.

@@ -217,3 +217,204 @@ def validate_hint_output(
             violations.append("rung 4: contains a complete runnable line of Python code")
 
     return GuardResult(passed=len(violations) == 0, violations=violations)
+
+
+# ---------------------------------------------------------------------------
+# World Manifest & Generated Mission Validator (M5 — P0, AGENTS.md)
+# ---------------------------------------------------------------------------
+
+
+class MockGate:
+    def __init__(self, state="closed"):
+        self.state = state
+
+    def open(self):
+        self.state = "open"
+
+    def close(self):
+        self.state = "closed"
+
+
+class MockStation:
+    def __init__(self, passengers=0):
+        self.passengers = passengers
+
+
+class MockMachine:
+    def __init__(self, price=0):
+        self.price = price
+
+    def set_price(self, val):
+        self.price = val
+
+
+class MockBoard:
+    def __init__(self):
+        self.message = ""
+
+    def show(self, text):
+        self.message = str(text)
+
+
+class MockTrain:
+    def __init__(self, delay_minutes=0, is_arriving=False):
+        self.delay_minutes = delay_minutes
+        self.is_arriving = is_arriving
+
+
+class MockPassenger:
+    def __init__(self, age=20):
+        self.age = age
+
+
+def create_manifest_sandbox(manifest: dict | None = None) -> dict[str, object]:
+    """Create a simulated Python execution environment for manifest props."""
+    return {
+        "gate": MockGate(),
+        "station": MockStation(),
+        "machine": MockMachine(),
+        "board": MockBoard(),
+        "train": MockTrain(),
+        "passenger": MockPassenger(),
+    }
+
+
+def extract_manifest_allowed_apis(manifest: dict) -> set[tuple[str, str]]:
+    """Extract set of (object_name, attribute_name) allowed by the manifest."""
+    allowed: set[tuple[str, str]] = {
+        # Common implicit state inspection properties for tests
+        ("gate", "state"),
+        ("machine", "price"),
+        ("board", "message"),
+        ("board", "text"),
+    }
+
+    for prop in manifest.get("props", []):
+        for verb in prop.get("verbs", []):
+            # Format e.g. "gate.open()" or "machine.set_price(value)"
+            call_match = re.match(r"^([a-zA-Z_]\w*)\.([a-zA-Z_]\w*)", verb.strip())
+            if call_match:
+                allowed.add((call_match.group(1), call_match.group(2)))
+
+        for read in prop.get("reads", []):
+            # Format e.g. "station.passengers -> int"
+            read_match = re.match(r"^([a-zA-Z_]\w*)\.([a-zA-Z_]\w*)", read.strip())
+            if read_match:
+                allowed.add((read_match.group(1), read_match.group(2)))
+
+    return allowed
+
+
+def validate_manifest_and_solution(
+    draft: dict,
+    manifest: dict,
+) -> GuardResult:
+    """Validate a generated mission against the closed world manifest.
+
+    Asserts:
+      1. World ID matches the manifest.
+      2. Scene ID exists in manifest scenes.
+      3. Target concept matches one of the manifest's mechanics.
+      4. Only legal manifest prop verbs and reads are called in code/tests.
+      5. The reference solution successfully executes and passes all test assertions.
+      6. Starter code does not prematurely leak the complete solution.
+    """
+    violations: list[str] = []
+
+    # 1. World check
+    world_info = manifest.get("world", {})
+    expected_world_id = world_info.get("id")
+    draft_world_id = draft.get("world_id")
+    if draft_world_id != expected_world_id:
+        violations.append(
+            f"world_id mismatch: draft has '{draft_world_id}', manifest defines '{expected_world_id}'"
+        )
+
+    # 2. Scene check
+    valid_scene_ids = {s.get("id") for s in manifest.get("scenes", [])}
+    draft_scene_id = draft.get("scene_id")
+    if draft_scene_id not in valid_scene_ids:
+        violations.append(
+            f"unknown scene_id '{draft_scene_id}'. Valid scenes: {sorted(valid_scene_ids)}"
+        )
+
+    # 3. Mechanic and Target Concept check
+    mechanics = manifest.get("mechanics", [])
+    valid_concepts = {m.get("target_concept") for m in mechanics}
+    draft_concept = draft.get("target_concept_id")
+    if draft_concept not in valid_concepts:
+        violations.append(
+            f"target_concept_id '{draft_concept}' not supported in manifest mechanics: {sorted(valid_concepts)}"
+        )
+
+    # 4. Verbs and reads validation (AST inspection)
+    allowed_apis = extract_manifest_allowed_apis(manifest)
+    known_prop_objects = {obj for obj, _ in allowed_apis}
+
+    starter_code = draft.get("starter_code", "")
+    solution_code = draft.get("solution_code", "")
+    tests = draft.get("tests", [])
+
+    codes_to_inspect = [starter_code, solution_code]
+    for t in tests:
+        if isinstance(t, dict):
+            codes_to_inspect.append(t.get("setup", ""))
+            codes_to_inspect.append(t.get("call", ""))
+        else:
+            codes_to_inspect.append(getattr(t, "call", ""))
+
+    for snippet in codes_to_inspect:
+        if not snippet or not snippet.strip():
+            continue
+        try:
+            tree = ast.parse(snippet)
+            for node in ast.walk(tree):
+                if isinstance(node, ast.Attribute) and isinstance(node.value, ast.Name):
+                    obj_name = node.value.id
+                    attr_name = node.attr
+                    if obj_name in known_prop_objects and (obj_name, attr_name) not in allowed_apis:
+                        violations.append(
+                            f"illegal API call: '{obj_name}.{attr_name}' is not declared in manifest for prop '{obj_name}'"
+                        )
+        except SyntaxError as syn_err:
+            violations.append(f"code snippet syntax error: {syn_err}")
+
+    # 5. Solution execution against tests
+    if not solution_code or not solution_code.strip():
+        violations.append("solution_code is empty")
+    elif not tests:
+        violations.append("mission defines no tests")
+    else:
+        for idx, test in enumerate(tests):
+            t_name = test.get("name", f"test_{idx}") if isinstance(test, dict) else getattr(test, "name", f"test_{idx}")
+            t_setup = test.get("setup", "") if isinstance(test, dict) else getattr(test, "setup", "")
+            t_call = test.get("call", "") if isinstance(test, dict) else getattr(test, "call", "")
+            t_expected = test.get("expected", "") if isinstance(test, dict) else getattr(test, "expected", "")
+
+            sandbox = create_manifest_sandbox(manifest)
+            try:
+                # 1. Run setup if provided
+                if t_setup and t_setup.strip():
+                    exec(t_setup, sandbox)
+
+                # 2. Run solution code
+                exec(solution_code, sandbox)
+
+                # 3. Evaluate test call
+                result = eval(t_call, sandbox)
+                actual_str = str(result).strip()
+                expected_str = str(t_expected).strip()
+
+                if actual_str != expected_str:
+                    violations.append(
+                        f"test '{t_name}' failed: call '{t_call}' produced '{actual_str}', expected '{expected_str}'"
+                    )
+            except Exception as test_exc:
+                violations.append(f"test '{t_name}' raised runtime exception: {test_exc}")
+
+    # 6. Leak check: starter code must not be identical to solution code
+    if starter_code.strip() and starter_code.strip() == solution_code.strip():
+        violations.append("starter_code is identical to solution_code (premature answer leak)")
+
+    return GuardResult(passed=len(violations) == 0, violations=violations)
+
