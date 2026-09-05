@@ -4,6 +4,9 @@
 import "dotenv/config";
 import { defineConfig, env } from "prisma/config";
 
+const isGenerateCommand = process.argv.includes("generate");
+const generateOnlyUrl = "postgresql://generated:generated@127.0.0.1:5432/generated";
+
 export default defineConfig({
   schema: "prisma/schema.prisma",
   migrations: {
@@ -12,6 +15,8 @@ export default defineConfig({
   },
   engine: "classic",
   datasource: {
-    url: env("DATABASE_URL"),
+    url: isGenerateCommand
+      ? process.env.DATABASE_URL ?? generateOnlyUrl
+      : env("DATABASE_URL"),
   },
 });
