@@ -7,7 +7,8 @@ Single-shot runnable integrating:
     3. app.ai.router.get_model(AICapability.HINT) (Gemini routing)
     4. PII stripping (docs/08 Conversation Boundaries)
     5. Under-13 static hint rule (docs/08)
-    6. Authored fallback upon model failure or rate-limit
+    6. app.ai.guards.validate_hint_output (pedagogical leak guards + retry once with feedback)
+    7. Authored fallback upon model failure, rate-limit, or repeated validation failure
 """
 
 from __future__ import annotations
@@ -19,6 +20,7 @@ from typing import Any, Final
 
 from langchain_core.messages import HumanMessage, SystemMessage
 
+from app.ai.guards import validate_hint_output
 from app.ai.prompts.tico_persona import get_hint_prompt
 from app.ai.router import AICapability, get_model, get_model_name
 from app.rules.hint_ladder import (
@@ -86,11 +88,14 @@ def generate_tico_hint(
     oauth_id: str | None = None,
     chat_history: list[Any] | None = None,
     session_id: str | None = None,
+    # Optional leak guard context from mission metadata
+    solution_identifiers: list[str] | None = None,
+    target_values: list[str] | None = None,
 ) -> TicoHintResult:
     """Generate or retrieve a hint for a student on their current mission.
 
     Data flow:
-        prior_count -> rung -> prompt -> model call -> raw text -> (eventually guards.py) -> result
+        prior_count -> rung -> prompt -> model call -> raw text -> guards.py (retry with feedback) -> result
 
     PII PRIVACY & CONVERSATION BOUNDARIES (docs/08):
         The primary PII protection is that identity fields (`student_name`, `student_email`,
@@ -120,6 +125,8 @@ def generate_tico_hint(
         oauth_id: Discarded before model call (PII).
         chat_history: Discarded before model call (PII).
         session_id: Internal pseudonymous session correlation identifier.
+        solution_identifiers: Optional identifiers from mission solution for leak checks.
+        target_values: Optional target values from mission solution for leak checks.
 
     Returns:
         TicoHintResult containing the rung, hint prose, finality status, and source.
@@ -180,30 +187,73 @@ def generate_tico_hint(
         model = get_model(AICapability.HINT)
         model_name = get_model_name(AICapability.HINT)
 
-        messages = [
+        initial_messages = [
             SystemMessage(content=system_prompt),
             HumanMessage(content=user_prompt),
         ]
-        response = model.invoke(messages)
-        raw_text = response.content if hasattr(response, "content") else str(response)
 
-        if isinstance(raw_text, list):
-            # Handle potential multi-part text blocks
-            raw_text = "".join(
-                part if isinstance(part, str) else str(part.get("text", ""))
-                for part in raw_text
+        def _invoke_and_extract(msgs: list[Any]) -> str:
+            response = model.invoke(msgs)
+            raw_text = response.content if hasattr(response, "content") else str(response)
+            if isinstance(raw_text, list):
+                raw_text = "".join(
+                    part if isinstance(part, str) else str(part.get("text", ""))
+                    for part in raw_text
+                )
+            return str(raw_text).strip()
+
+        hint_text = _invoke_and_extract(initial_messages)
+
+        # Guard validation: validate output against rung leak constraints
+        guard_result = validate_hint_output(
+            rung=rung,
+            hint_text=hint_text,
+            solution_identifiers=solution_identifiers,
+            target_values=target_values,
+        )
+
+        if not guard_result.passed:
+            logger.warning(
+                "TICO hint guard validation failed on initial attempt (rung=%s): %s. Retrying once.",
+                int(rung),
+                guard_result.violations,
+            )
+            # FIX C: Retry includes specific violation feedback rather than repeating identical prompt
+            feedback_content = (
+                f"الرد اللي فات فيه مشكلة: {', '.join(guard_result.violations)}. "
+                f"اكتب رد تاني يراعي القاعدة دي ومايكررش نفس المشكلة."
+            )
+            retry_messages = [
+                SystemMessage(content=system_prompt),
+                HumanMessage(content=user_prompt),
+                HumanMessage(content=feedback_content),
+            ]
+
+            hint_text = _invoke_and_extract(retry_messages)
+            guard_result = validate_hint_output(
+                rung=rung,
+                hint_text=hint_text,
+                solution_identifiers=solution_identifiers,
+                target_values=target_values,
             )
 
-        hint_text = str(raw_text).strip()
-        is_model_generated = True
-
-        # TODO (M2 - ai/guards.py): Once app.ai.guards is implemented (the next task in M2),
-        # validate `hint_text` against the pedagogical rung assertions:
-        #   - Rungs 1-2: Assert no solution identifiers and no code blocks.
-        #   - Rung 3: Assert no target values / mission identifiers.
-        #   - Rung 4: Assert no complete runnable line.
-        # If guard validation fails, retry once with the model; if it fails again,
-        # fall back to get_authored_fallback(rung, locale, target_concept) and log a prompt regression.
+            if not guard_result.passed:
+                logger.warning(
+                    "TICO hint prompt regression: guard validation failed on retry (rung=%s): %s. Falling back to authored hint.",
+                    int(rung),
+                    guard_result.violations,
+                )
+                hint_text = get_authored_fallback(
+                    rung=rung,
+                    locale=locale,
+                    concept_hint=target_concept,
+                )
+                is_model_generated = False
+                model_name = None
+            else:
+                is_model_generated = True
+        else:
+            is_model_generated = True
 
         # TODO (M0/M2 - queries/ai_interaction.py): Once the database queries layer is ready,
         # log every model call to the `ai_interaction` table:

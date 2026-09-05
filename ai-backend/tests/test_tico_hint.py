@@ -44,6 +44,7 @@ def test_tico_hint_normal_flow_all_four_rungs():
             assert result.is_model_generated is True
             assert result.model_name == expected_model_name
             assert result.hint_text == "تلميح توجيهي مشجع من طيكو"
+            assert mock_model.invoke.call_count == prior_count + 1
 
 
 def test_under_13_static_fallback_never_calls_model():
@@ -127,10 +128,69 @@ def test_model_failure_emits_warning_log(caplog):
     assert "API quota exceeded" in record.message
 
 
+def test_guard_validation_failure_retries_with_feedback_message(caplog):
+    """Verify that on guard failure, retry appends violation feedback to the message list."""
+    mock_model = MagicMock()
+    # First fails rung 1 check (fenced code); second succeeds with clean prose
+    mock_model.invoke.side_effect = [
+        AIMessage(content="```python\nx = 1\n```"),
+        AIMessage(content="بص كويس على السطور اللي كتبتها يا بطل"),
+    ]
+
+    with patch("app.ai.chains.tico_hint.get_model", return_value=mock_model):
+        with caplog.at_level(logging.WARNING, logger="app.ai.chains.tico_hint"):
+            result = generate_tico_hint(
+                prior_count=0,  # Rung 1: ORIENT
+                code="waiting = 30",
+                solution_identifiers=["gate", "open"],
+            )
+
+        assert mock_model.invoke.call_count == 2
+        assert result.is_model_generated is True
+        assert result.hint_text == "بص كويس على السطور اللي كتبتها يا بطل"
+
+        # Check second call's messages: must contain feedback with violation text
+        retry_call_args = mock_model.invoke.call_args_list[1][0][0]
+        assert len(retry_call_args) == 3
+        feedback_msg = retry_call_args[2]
+        assert "الرد اللي فات فيه مشكلة" in feedback_msg.content
+        assert "fenced code block" in feedback_msg.content
+
+
+def test_guard_validation_repeated_failure_falls_back_to_authored_hint(caplog):
+    """Verify that when both initial and retry responses fail, chain falls back to authored hint."""
+    mock_model = MagicMock()
+    # Both responses contain fenced code blocks on rung 1
+    mock_model.invoke.side_effect = [
+        AIMessage(content="```python\nx = 1\n```"),
+        AIMessage(content="```python\nx = 2\n```"),
+    ]
+
+    with patch("app.ai.chains.tico_hint.get_model", return_value=mock_model):
+        with caplog.at_level(logging.WARNING, logger="app.ai.chains.tico_hint"):
+            result = generate_tico_hint(
+                prior_count=0,  # Rung 1: ORIENT
+                code="waiting = 30",
+                target_concept="variables",
+                locale="ar_EG",
+                solution_identifiers=["gate", "open"],
+            )
+
+        assert mock_model.invoke.call_count == 2
+        assert result.is_model_generated is False
+        assert result.model_name is None
+        expected_fallback = get_authored_fallback(HintRung.ORIENT, locale="ar_EG", concept_hint="variables")
+        assert result.hint_text == expected_fallback
+
+        # Verify prompt regression warning was logged
+        warning_messages = [r.message for r in caplog.records if r.levelname == "WARNING"]
+        assert any("prompt regression" in m for m in warning_messages)
+
+
 def test_pii_stripping_excludes_forbidden_fields():
     """Verify that student personal data is strictly excluded from the prompt sent to the LLM."""
     mock_model = MagicMock()
-    mock_model.invoke.return_value = AIMessage(content="Generated hint")
+    mock_model.invoke.return_value = AIMessage(content="Generated hint long enough")
 
     with patch("app.ai.chains.tico_hint.get_model", return_value=mock_model):
         generate_tico_hint(
@@ -175,7 +235,8 @@ def test_strip_pii_from_text_utility():
 def test_consistency_with_hint_ladder_module_of_truth():
     """Verify that tico_hint's rung and transitions are 100% consistent with evaluate_ladder."""
     mock_model = MagicMock()
-    mock_model.invoke.return_value = AIMessage(content="ok")
+    # Updated from "ok" (< 10 chars) to valid, safe Arabic hint prose to pass the minimum length guard
+    mock_model.invoke.return_value = AIMessage(content="فكر كويس في المتغيرات والشروط يا بطل")
 
     with patch("app.ai.chains.tico_hint.get_model", return_value=mock_model):
         for count in range(7):
