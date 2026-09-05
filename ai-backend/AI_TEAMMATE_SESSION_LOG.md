@@ -91,3 +91,23 @@ This log tracks autonomous session tasks in `ai-backend/` following the pre-appr
   - Mastery thresholds: strong >= 0.7 (`FULL`), moderate 0.4..0.7 (`PARTIAL`), weak < 0.4 (`NONE`).
   - Arena mode disables scaffolding completely and sets difficulty band >= 7.
 - **Open questions for review**: None.
+
+---
+
+### Task 6: Escalation review chain (M4, P0)
+
+- **CSV Notes verbatim**: `gemini-3.5-flash reviews every proposed skip and every conflicting composer call, logs decided_by + reason. This depends on composer.py (task 5) and conceptually on rules/plan.py, but rules/plan.py itself IS blocked (see below) — build the escalation review chain generically against composer.py's conflict cases only for now, and log clearly that the planner-skip half of escalation review cannot be fully wired/tested until rules/plan.py unblocks.`
+- **Status**: DONE (Composer conflict review fully implemented & tested; planner-skip review built with generic contract awaiting rules/plan.py unblocking)
+- **Files touched**:
+  - `ai-backend/app/ai/prompts/escalation_review.py`
+  - `ai-backend/app/ai/chains/escalation_review.py`
+  - `ai-backend/app/ai/chains/__init__.py`
+  - `ai-backend/tests/test_escalation_review.py`
+- **Test count**: 153 -> 159 passed (+6 tests)
+- **Plain-language summary**:
+  Implemented the escalation review chain using `gemini-3.5-flash` (`AICapability.REVIEW`) with Pydantic structured output. Adheres to "Rules propose, the model reviews": clear-cut rule cases (`has_conflict=False`) bypass the model entirely. When contradictory performance evidence is detected by `rules/composer.py`, the supervisor model evaluates the full profile, decides whether to advance or hold, and logs `decided_by=MODEL` and a reasoned pedagogical explanation. Built the generic review interface for path planner skips (`review_planner_skip`) respecting `is_skippable` invariants, with explicit architectural logging that full end-to-end planner skip wiring awaits `rules/plan.py`.
+- **Assumptions made**:
+  - Clear-cut cases never incur model latency or cost.
+  - Review failures retain the rule's recommendation with `decided_by=RULE` to prevent blocking the learning loop.
+- **Open questions for review**:
+  - `rules/plan.py` is currently blocked (owned by another lane); full planner-skip escalation wiring will be completed once `rules/plan.py` is available.
