@@ -2,6 +2,7 @@
 import { motion } from "motion/react";
 import { asset, bakeryScene as scene, type ActorAsset } from "@/lib/bakery/scene-manifest";
 import { phaseProgress, type BakeryState, type CustomerId, type Loaf } from "@/lib/bakery/simulation";
+import { NeighborhoodDetails, OvenFire } from "./neighborhood-details";
 
 const mix = (a: number, b: number, p: number) => a + (b - a) * p;
 function Sprite({ actor, frame, size = 310, flip = false }: { actor: ActorAsset; frame: number; size?: number; flip?: boolean }) {
@@ -38,8 +39,9 @@ export function BakeryScene({ state, reducedMotion, counterView, label }: { stat
   return <svg className="bakery-scene" viewBox={counterView ? "145 300 690 485" : "0 0 1600 900"} role="img" aria-label={label} data-phase={state.phase} data-elapsed={Math.round(state.elapsed)}>
     <Prop name="environment" x={0} y={0} width={1600} height={900} />
     <Prop name="awning" x={130} y={143} width={602} height={224} />
+    <NeighborhoodDetails />
     <Prop name="oven" x={202} y={349} width={195} height={346} />
-    <Prop name="glow" x={258} y={475} width={86} height={69} opacity={baking ? reducedMotion ? .75 : .75 + Math.sin(p * Math.PI * 2) * .1 : .18} />
+    <OvenFire elapsed={state.elapsed} baking={baking} reducedMotion={reducedMotion} />
     <g data-layer="plants">
       <Prop name="olive" x={6} y={432} width={104} height={290} />
       <Prop name="aloe" x={1483} y={640} width={100} height={127} />

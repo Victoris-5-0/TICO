@@ -26,6 +26,8 @@ Playfields must expose wide readable routes, unambiguous collision edges, intera
 
 Follow [layered bakery production](13-bakery-layered-production.md) and its [exact generation prompt log](bakery-v2-prompts.json) for the side-on visual preview. The fixed environment must contain no people or bread. Oven, awning, counter front/worktop, trays, loaves, tools, bags and actors are independent raster layers. Masters: `client/assets/source/bakery-v2/`. Runtime: `client/public/assets/bakery-v2/`. These are client-only visual assets, not a shared AI manifest change.
 
+The [Egyptian detail prompts](bakery-egypt-details-prompts.json) add Farid's Sa‘idi outfit, a shelf radio, tied flour sack and four-frame oven fire. [Key-background corrections](bakery-egypt-keying-prompts.json) preserve the generator's follow-up edits. The bakery's Arabic signs are browser-rendered text over blank art; both plant pots remain behind walking characters. See document 13 for placements, frame preparation and motion behavior.
+
 ### Earlier top-down prototype (superseded for bakery gameplay)
 
 - Master board: `client/assets/source/worlds/bakery/playfield-topdown-v1.png`

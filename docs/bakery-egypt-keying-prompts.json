@@ -1,0 +1,7 @@
+{
+  "mode": "built-in imagegen",
+  "corrections": {
+    "radio": "Use case: background-extraction. Edit the attached single radio only. The gray/white checkerboard in the attachment is PAINTED RGB pixels, not transparency. Replace EVERY checkerboard background pixel with one absolutely flat solid saturated magenta #FF00FF. Preserve the illustrated object including the full antenna, handle and internal empty gaps exactly. No checkerboard anywhere. No white matte. No additional props or words. Keep the image dimensions. Flat magenta everywhere outside the radio silhouette, including negative-space gaps.",
+    "oven-fire": "Use case: background-extraction. Edit the attached four-frame oven fire atlas only. The gray/white checkerboard in the attachment is PAINTED RGB pixels, not transparency. Replace EVERY checkerboard background pixel with one absolutely flat solid saturated magenta #FF00FF. Preserve the illustrated objects and all four positions, cell boundaries, ember baselines, flame colors, scale and layout exactly. No checkerboard anywhere. No white matte. No additional props or words. Keep the image dimensions. Flat magenta everywhere outside the flames and embers, including negative-space gaps."
+  }
+}

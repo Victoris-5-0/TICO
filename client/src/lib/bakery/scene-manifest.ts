@@ -25,11 +25,11 @@ export const bakeryScene: BakerySceneManifest = {
     mariam: customer("mariam", { x: -73, y: -162 }),
     nour: customer("nour", { x: -66, y: -153 }), amina: customer("amina"), omar: customer("omar"),
     dina: customer("dina", { x: -64, y: -153 }), youssef: customer("youssef"),
-    hoda: customer("hoda"), farid: customer("farid"),
+    hoda: customer("hoda"), farid: customer("farid-saidi", { x: -78, y: -150 }),
     salma: { ...customer("salma"), columns: 2, rows: 1 },
   },
 };
-export const fixtureNames = ["environment", "oven", "counter", "worktop", "awning", "olive", "aloe", "loaf", "dough", "tray", "peel", "bag", "glow"];
+export const fixtureNames = ["environment", "oven", "counter", "worktop", "awning", "olive", "aloe", "loaf", "dough", "tray", "peel", "bag", "oven-fire", "radio", "flour-sack"];
 export function sceneAssetUrls() {
   return [...fixtureNames.map(asset), ...Object.values(bakeryScene.actors).map((actor) => actor.src)];
 }
