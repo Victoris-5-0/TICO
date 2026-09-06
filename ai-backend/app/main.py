@@ -30,8 +30,25 @@ app = FastAPI(
         "`POST /v1/tico/messages`, which streams SSE and is never wrapped."
     ),
     version="0.1.0",
-    docs_url=None if settings.is_production else "/docs",
-    redoc_url=None,
+    # Docs are ON in production, deliberately. Decided 6 September 2026.
+    #
+    # They were off, but only half off: `/docs` 404'd while `/openapi.json` still served
+    # the whole 39 KB schema, and `/docs` is nothing more than a renderer for that file.
+    # Anyone could paste the URL into a Swagger viewer and get the same UI back, so the
+    # protection looked real and was not.
+    #
+    # Given the choice between closing both and opening both, we opened both: the client
+    # team gets browsable docs, and there is nothing here worth hiding. The schema
+    # describes shapes, not secrets — no keys, no prompts, no solutions.
+    #
+    # What this does NOT expose: every endpoint still requires a valid Supabase JWT, so
+    # "Try it out" returns 401 without one. Reading the contract is not the same as
+    # calling it.
+    #
+    # Revisit if this ever serves real students: the field descriptions explain how the
+    # hint ladder withholds answers, which is a readable guide to gaming it.
+    docs_url="/docs",
+    redoc_url="/redoc",
 )
 
 # Outermost, so it also wraps errors raised inside CORS or auth.
