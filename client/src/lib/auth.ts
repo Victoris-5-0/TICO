@@ -1,6 +1,7 @@
 import { headers } from 'next/headers';
 import { createClient } from './supabase/server';
 import { db } from './db';
+import { User } from '@prisma/client';
 
 /**
  * Extracts Bearer token from incoming request headers if present.
@@ -115,18 +116,19 @@ export async function getCurrentUser() {
       // In-memory dev user when database is offline or unmigrated
     }
 
-    return {
+    const fallbackDevUser: User = {
       id: 'dev-student-id-01',
       email: 'student@tico.dev',
       role: 'STUDENT',
       name: 'Adham (Dev Explorer)',
-      xp: 450,
-      level: 3,
-      streak: 5,
+      bio: null,
       avatarUrl: '/assets/characters/tico/tico-neutral.webp',
+      xp: 450,
+      streak: 5,
       createdAt: new Date(),
       updatedAt: new Date(),
-    } as any;
+    };
+    return fallbackDevUser;
   }
   
   return null;

@@ -144,8 +144,10 @@ export class MissionService {
         throw new Error(`No fallback exercise available for lesson: ${lesson.title}`);
       }
 
-      const rawCases = Array.isArray(fallbackExercise.testCases) ? fallbackExercise.testCases : [];
-      const tests = rawCases.map((tc: any, i: number) => ({
+      const rawCases = Array.isArray(fallbackExercise.testCases)
+        ? (fallbackExercise.testCases as Array<{ input?: string; expectedOutput?: string }>)
+        : [];
+      const tests = rawCases.map((tc, i) => ({
         name: `Test ${i + 1}`,
         call: tc.input ?? '',
         expected: tc.expectedOutput ?? '',

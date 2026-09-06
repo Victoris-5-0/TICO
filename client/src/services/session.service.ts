@@ -1,6 +1,7 @@
 import { db } from '@/lib/db';
 import { aiClient } from '@/lib/ai/client';
 import { Phase, SessionOutcome, SessionKind } from '@prisma/client';
+import { Phase as AiPhase, SessionOutcome as AiOutcome } from '@/lib/ai/types';
 
 export interface StartSessionParams {
   userId: string;
@@ -195,7 +196,7 @@ export class SessionService {
     // Call AI service if token is available
     if (token) {
       try {
-        await aiClient.updateSessionPhase(token, sessionId, { phase: phase as any });
+        await aiClient.updateSessionPhase(token, sessionId, { phase: phase as AiPhase });
       } catch (err) {
         console.warn('AI updateSessionPhase skipped or offline:', err instanceof Error ? err.message : err);
       }
@@ -232,7 +233,7 @@ export class SessionService {
     if (token && outcome !== 'IN_PROGRESS') {
       try {
         await aiClient.closeSession(token, sessionId, {
-          outcome: outcome as any,
+          outcome: outcome as AiOutcome,
           timeSpentMs,
         });
       } catch (err) {

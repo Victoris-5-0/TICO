@@ -3,7 +3,7 @@
 import { z } from 'zod';
 import { requireUser, getAuthToken } from '@/lib/auth';
 import { sessionService } from '@/services/session.service';
-import { Phase, SessionOutcome } from '@prisma/client';
+import { Phase } from '@prisma/client';
 
 const StartPracticeSchema = z.object({
   exerciseId: z.string().optional().nullable(),
