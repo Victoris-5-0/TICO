@@ -91,7 +91,8 @@ This log tracks autonomous session tasks in `ai-backend/` following the pre-appr
 - **Assumptions made**:
   - Mastery thresholds: strong >= 0.7 (`FULL`), moderate 0.4..0.7 (`PARTIAL`), weak < 0.4 (`NONE`).
   - Arena mode disables scaffolding completely and sets difficulty band >= 7.
-- **Open questions for review**: None.
+- **Open questions for review**:
+  - NEEDS DECISION: Mastery thresholds (GATE=0.7, STRONG=0.7, WEAK=0.4) and evidence_confidence default (0.8) are implementation defaults mapped from qualitative documentation tiers ("Strong" / "Shaky"), not derived from empirical calibration or explicit curriculum spec. Recommend calibrating against student performance telemetry once available.
 
 ---
 
@@ -169,7 +170,8 @@ This log tracks autonomous session tasks in `ai-backend/` following the pre-appr
 - **Total Blocked Tasks**: 0
   - World manifest dependency (`content/worlds/cairo_metro.yaml`) was present and verified, allowing Tasks 7 and 8 to complete without blocking.
   - Path planner skip escalation review was built with a generic contract against `gemini-3.5-flash`, with integration ready for when `rules/plan.py` unblocks.
-- **Total Open Questions Across All Tasks**: 2
+- **Total Open Questions Across All Tasks**: 3
+  - Task 5: Mastery thresholds (GATE=0.7, STRONG=0.7, WEAK=0.4) are implementation defaults awaiting empirical calibration.
   - Task 6: `rules/plan.py` is owned by another lane; full end-to-end planner-skip escalation review will be connected once `rules/plan.py` is completed.
   - Task 8: `contains_dunder_reference` applies to `starter_code` (low-priority tech debt), and process-level runner isolation for server validator needs architectural decision before high-volume production.
 - **Test Suite Results**:

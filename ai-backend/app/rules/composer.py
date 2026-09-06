@@ -24,12 +24,24 @@ from typing import Final
 from app.schemas.common import DecidedBy, ScaffoldLevel, SkillBand
 from app.schemas.missions import ScaffoldPlan
 
+# NEEDS DECISION: Threshold values (0.7 / 0.4) are implementation defaults mapped
+# from qualitative documentation tiers ("Strong" / "Shaky"). They are not currently
+# grounded in empirical mastery data or curriculum specification.
+# See docs/06-data-model-and-contracts.md and docs/08-ai-generation-and-companion.md.
 GATE_MASTERY_THRESHOLD: Final[float] = 0.7
 STRONG_MASTERY_THRESHOLD: Final[float] = 0.7
 WEAK_MASTERY_THRESHOLD: Final[float] = 0.4
 
 MIN_DIFFICULTY: Final[int] = 1
 MAX_DIFFICULTY: Final[int] = 10
+
+
+class ComposerInvariantError(RuntimeError):
+    """Raised when an internal composer invariant is violated (e.g. weak carried concept given FULL scaffolding).
+
+    This exception signals a structural bug in composer logic or invalid threshold configuration,
+    not a caller input error.
+    """
 
 
 @dataclass(frozen=True, slots=True)
@@ -109,6 +121,25 @@ def compute_difficulty_band(
     return max(MIN_DIFFICULTY, min(MAX_DIFFICULTY, base))
 
 
+def _assert_no_weak_full_scaffold(
+    scaffold_map: dict[str, ScaffoldLevel], masteries: dict[str, float]
+) -> None:
+    """Assert sanity invariant: weak carried concepts (< WEAK_MASTERY_THRESHOLD) must never be assigned FULL scaffolding.
+
+    This invariant is structurally guaranteed by compute_scaffold_level() as long as
+    STRONG_MASTERY_THRESHOLD >= WEAK_MASTERY_THRESHOLD. This check provides defense-in-depth
+    against future configuration errors or threshold drift.
+    """
+    for cid, level in scaffold_map.items():
+        if masteries.get(cid, 0.5) < WEAK_MASTERY_THRESHOLD and level == ScaffoldLevel.FULL:
+            raise ComposerInvariantError(
+                f"Weak carried concept '{cid}' (mastery={masteries.get(cid)}) was "
+                f"assigned FULL scaffolding — this should be structurally "
+                f"impossible given current thresholds; check "
+                f"STRONG_MASTERY_THRESHOLD/WEAK_MASTERY_THRESHOLD configuration."
+            )
+
+
 def compose(
     *,
     target_concept_id: str,
@@ -133,6 +164,17 @@ def compose(
     Returns:
         ComposerPlanResult with ScaffoldPlan, confidence score, and conflict metadata.
     """
+    if carried_concept_ids and target_concept_id in carried_concept_ids:
+        raise ValueError(
+            f"target_concept_id '{target_concept_id}' cannot also be in carried_concept_ids: "
+            f"target concepts are newly taught and must not be treated as carried scaffolding."
+        )
+    if carried_concept_masteries and target_concept_id in carried_concept_masteries:
+        raise ValueError(
+            f"target_concept_id '{target_concept_id}' cannot also be in carried_concept_masteries: "
+            f"pass target concept mastery via target_concept_mastery."
+        )
+
     carried_ids = carried_concept_ids or []
     masteries = carried_concept_masteries or {}
 
@@ -143,12 +185,7 @@ def compose(
 
     # Sanity invariant assertion (docs/roadmap.html, ai-architecture.html):
     # A weak carried concept must NEVER be scaffolded away entirely (FULL)
-    for cid, level in scaffold_map.items():
-        if masteries.get(cid, 0.5) < WEAK_MASTERY_THRESHOLD:
-            assert level != ScaffoldLevel.FULL, (
-                f"Composer sanity violation: weak carried concept '{cid}' "
-                f"with mastery {masteries.get(cid)} was assigned FULL scaffolding."
-            )
+    _assert_no_weak_full_scaffold(scaffold_map, masteries)
 
     difficulty = compute_difficulty_band(
         skill_band=skill_band,
@@ -192,6 +229,8 @@ def compose(
     )
 
 
+# NEEDS DECISION: evidence_confidence default (0.8) is an uncalibrated heuristic
+# baseline representing assumed confidence in the underlying telemetry signals.
 def advance_or_hold(
     *,
     target_mastery: float,

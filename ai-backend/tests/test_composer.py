@@ -7,6 +7,7 @@ import pytest
 import app.rules.composer as composer_module
 from app.rules.composer import (
     AdvanceOrHoldDecision,
+    ComposerInvariantError,
     ComposerPlanResult,
     advance_or_hold,
     compose,
@@ -220,3 +221,34 @@ def test_composer_pure_python_zero_io():
             if node.module:
                 for f in forbidden:
                     assert not node.module.startswith(f), f"Forbidden import: {node.module}"
+
+
+def test_composer_invariant_error_on_weak_carried_full_scaffold():
+    """Verify _assert_no_weak_full_scaffold raises ComposerInvariantError if invariant breached."""
+    from app.rules.composer import _assert_no_weak_full_scaffold
+
+    # Violating invariant: weak concept (< 0.4) assigned FULL scaffolding
+    bad_scaffold = {"variables": ScaffoldLevel.FULL}
+    bad_masteries = {"variables": 0.2}
+
+    with pytest.raises(ComposerInvariantError, match="Weak carried concept 'variables'"):
+        _assert_no_weak_full_scaffold(bad_scaffold, bad_masteries)
+
+
+def test_compose_rejects_target_concept_in_carried_concepts():
+    """Verify compose raises ValueError if target_concept_id appears in carried concepts or masteries."""
+    # Present in carried_concept_ids
+    with pytest.raises(ValueError, match="target_concept_id 'loops' cannot also be in carried_concept_ids"):
+        compose(
+            target_concept_id="loops",
+            carried_concept_ids=["variables", "loops"],
+        )
+
+    # Present in carried_concept_masteries
+    with pytest.raises(ValueError, match="target_concept_id 'loops' cannot also be in carried_concept_masteries"):
+        compose(
+            target_concept_id="loops",
+            carried_concept_ids=["variables"],
+            carried_concept_masteries={"variables": 0.8, "loops": 0.5},
+        )
+
