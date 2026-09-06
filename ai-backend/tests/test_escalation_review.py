@@ -1,5 +1,6 @@
 """Unit tests for escalation review chain (app.ai.chains.escalation_review)."""
 
+import logging
 from unittest.mock import MagicMock, patch
 import pytest
 
@@ -74,7 +75,7 @@ def test_composer_conflict_model_review_confirms_advance():
         assert result.decided_by == DecidedBy.MODEL
         assert result.confidence == 0.85
         assert result.has_conflict is False
-        assert "[Model Review]" in result.reason
+        assert "[Model Review - CONFIRMED RULE]" in result.reason
         assert "Student solved the problem" in result.reason
 
 
@@ -112,6 +113,7 @@ def test_composer_conflict_model_review_overrides_to_hold():
         assert result.decided_by == DecidedBy.MODEL
         assert result.confidence == 0.89
         assert result.has_conflict is False
+        assert "[Model Review - OVERRODE RULE]" in result.reason
         assert "Heavy reliance" in result.reason
 
 
@@ -172,3 +174,80 @@ def test_planner_skip_review_model_call():
         assert res.allow_skip is True
         assert res.confidence == 0.92
         assert "diagnostic" in res.reason
+
+
+def test_composer_conflict_model_inconsistent_override_self_report(caplog):
+    """When model claims overrode_rule=True but decision matches rule, warn and use computed truth."""
+    conflict_decision = advance_or_hold(
+        target_mastery=0.80,
+        hints_used=3,
+        attempt_number=1,
+    )
+    assert conflict_decision.advanced is True
+
+    mock_runnable = MagicMock()
+    mock_runnable.invoke.return_value = ComposerReviewStructuredOutput(
+        advance=True,  # Matches rule proposal!
+        reason="Student demonstrated mastery despite hints.",
+        confidence=0.88,
+        overrode_rule=True,  # Inconsistent false claim of override
+    )
+
+    mock_model = MagicMock()
+    mock_model.with_structured_output.return_value = mock_runnable
+
+    with patch("app.ai.chains.escalation_review.get_model", return_value=mock_model):
+        with caplog.at_level(logging.WARNING):
+            result = review_composer_decision(
+                rule_decision=conflict_decision,
+                target_concept_id="conditionals",
+                target_mastery=0.80,
+                hints_used=3,
+                attempt_number=1,
+            )
+
+        assert (
+            "Model claimed overrode_rule=True but actual decision comparison shows False — using actual computed value"
+            in caplog.text
+        )
+        assert result.advanced is True
+        assert "[Model Review - CONFIRMED RULE]" in result.reason
+        assert "[Model Review - OVERRODE RULE]" not in result.reason
+
+
+def test_composer_conflict_model_consistent_override_no_warning(caplog):
+    """When model overrode_rule claim matches computed actual override, log no warning and record OVERRODE RULE."""
+    # Case 2 in advance_or_hold: moderate mastery clean pass -> rule proposes HOLD (advanced=False)
+    conflict_decision = advance_or_hold(
+        target_mastery=0.60,
+        hints_used=0,
+        attempt_number=1,
+    )
+    assert conflict_decision.advanced is False
+    assert conflict_decision.has_conflict is True
+
+    mock_runnable = MagicMock()
+    mock_runnable.invoke.return_value = ComposerReviewStructuredOutput(
+        advance=True,  # Reverses rule from HOLD to ADVANCE!
+        reason="Student solved cleanly on attempt 1 without hints; ready to stretch.",
+        confidence=0.90,
+        overrode_rule=True,  # Consistent claim
+    )
+
+    mock_model = MagicMock()
+    mock_model.with_structured_output.return_value = mock_runnable
+
+    with patch("app.ai.chains.escalation_review.get_model", return_value=mock_model):
+        with caplog.at_level(logging.WARNING):
+            result = review_composer_decision(
+                rule_decision=conflict_decision,
+                target_concept_id="variables",
+                target_mastery=0.60,
+                hints_used=0,
+                attempt_number=1,
+            )
+
+        assert "Model claimed overrode_rule" not in caplog.text
+        assert result.advanced is True
+        assert "[Model Review - OVERRODE RULE]" in result.reason
+

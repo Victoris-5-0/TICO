@@ -14,18 +14,17 @@ Hard rules (AGENTS.md):
 from __future__ import annotations
 
 import logging
-from typing import Any, Final
+from typing import Any
 
 from langchain_core.messages import HumanMessage, SystemMessage
 from pydantic import BaseModel, Field
 
-from app.ai.chains.tico_hint import strip_pii_from_text
 from app.ai.prompts.escalation_review import (
     COMPOSER_REVIEW_SYSTEM_PROMPT,
     ESCALATION_REVIEW_PROMPT_VERSION,
     PLANNER_SKIP_SYSTEM_PROMPT,
 )
-from app.ai.router import AICapability, get_model, get_model_name
+from app.ai.router import AICapability, get_model
 from app.rules.composer import AdvanceOrHoldDecision
 from app.schemas.common import DecidedBy, SkillBand
 
@@ -152,12 +151,26 @@ def review_composer_decision(
         else:
             raise ValueError(f"Unexpected output type from review model: {type(result)}")
 
+        actual_override = review_out.advance != rule_decision.advanced
+        if review_out.overrode_rule != actual_override:
+            logger.warning(
+                "Model claimed overrode_rule=%s but actual decision comparison shows %s — using actual computed value",
+                review_out.overrode_rule,
+                actual_override,
+            )
+
+        # TODO (M0/M2 - queries/ai_interaction.py): Once the database queries layer is ready,
+        # log every model call to the `ai_interaction` table:
+        # capability="review", model=AICapability.REVIEW (gemini-3.5-flash), tokens, cost, latency_ms,
+        # prompt_version=ESCALATION_REVIEW_PROMPT_VERSION, session/student identifiers as applicable,
+        # decided_by=DecidedBy.MODEL, conflict_type=rule_decision.conflict_type, and override outcome (actual_override).
+
         return AdvanceOrHoldDecision(
             advanced=review_out.advance,
             decided_by=DecidedBy.MODEL,
             confidence=review_out.confidence,
             has_conflict=False,  # Conflict resolved by supervisor review
-            reason=f"[Model Review]: {review_out.reason}",
+            reason=f"[Model Review{' - OVERRODE RULE' if actual_override else ' - CONFIRMED RULE'}]: {review_out.reason}",
             conflict_type=rule_decision.conflict_type,
         )
 
@@ -226,10 +239,19 @@ def review_planner_skip(
         runnable = model.with_structured_output(PlannerSkipStructuredOutput)
         result: Any = runnable.invoke(messages)
         if isinstance(result, PlannerSkipStructuredOutput):
-            return result
-        if isinstance(result, dict):
-            return PlannerSkipStructuredOutput(**result)
-        raise ValueError(f"Unexpected output type: {type(result)}")
+            skip_out = result
+        elif isinstance(result, dict):
+            skip_out = PlannerSkipStructuredOutput(**result)
+        else:
+            raise ValueError(f"Unexpected output type: {type(result)}")
+
+        # TODO (M0/M2 - queries/ai_interaction.py): Once the database queries layer is ready,
+        # log every model call to the `ai_interaction` table:
+        # capability="review", model=AICapability.REVIEW (gemini-3.5-flash), tokens, cost, latency_ms,
+        # prompt_version=ESCALATION_REVIEW_PROMPT_VERSION, session/student identifiers as applicable,
+        # decided_by=DecidedBy.MODEL, and skip outcome (allow_skip).
+
+        return skip_out
     except Exception as exc:
         logger.warning("Planner skip review model call failed: %s. Defaulting to safe hold.", exc)
         return PlannerSkipStructuredOutput(
