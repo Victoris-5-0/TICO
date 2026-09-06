@@ -9,8 +9,10 @@ import {
   NextMissionRequest,
   PlanRequest, PlanResponse,
   RefreshRequest, RefreshResponse,
+  SessionClose,
   SessionCreate, SessionOut,
   SessionDebriefResponse,
+  SessionPhaseUpdate,
 } from './types';
 
 /**
@@ -41,7 +43,7 @@ export class AiClient {
   private baseUrl: string;
 
   constructor() {
-    this.baseUrl = process.env.AI_SERVICE_URL || process.env.AI_BACKEND_URL || 'http://localhost:8000';
+    this.baseUrl = process.env.AI_SERVICE_URL || process.env.AI_BACKEND_URL || 'https://54-75-53-43.sslip.io';
   }
 
   /**
@@ -52,9 +54,9 @@ export class AiClient {
    * back as `AiServiceError` carrying the code and request id rather than a bare
    * status number.
    */
-  private async fetchAi<T>(path: string, token: string, body: unknown, requestId = newRequestId()): Promise<T> {
+  private async fetchAi<T>(path: string, token: string, body: unknown, requestId = newRequestId(), method: 'POST' | 'PATCH' = 'POST'): Promise<T> {
     const response = await fetch(`${this.baseUrl}${path}`, {
-      method: 'POST',
+      method,
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`,
@@ -109,6 +111,14 @@ export class AiClient {
 
   async createSession(token: string, req: SessionCreate): Promise<SessionOut> {
     return this.fetchAi<SessionOut>('/v1/sessions', token, req);
+  }
+
+  async updateSessionPhase(token: string, sessionId: string, req: SessionPhaseUpdate): Promise<SessionOut> {
+    return this.fetchAi<SessionOut>(`/v1/sessions/${sessionId}/phase`, token, req, newRequestId(), 'PATCH');
+  }
+
+  async closeSession(token: string, sessionId: string, req: SessionClose): Promise<SessionOut> {
+    return this.fetchAi<SessionOut>(`/v1/sessions/${sessionId}/close`, token, req);
   }
 
   /** Builds a mission when you already know what you want. Contrast `getNextMission`. */

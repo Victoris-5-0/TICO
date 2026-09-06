@@ -1,11 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { requireUser } from '@/lib/auth';
+import { requireUser, getAuthToken } from '@/lib/auth';
 import { sessionService } from '@/services/session.service';
-import { SessionOutcome } from '@prisma/client';
+import { SessionOutcome, Phase } from '@prisma/client';
 
 const UpdateSessionSchema = z.object({
-  outcome: z.enum(['IN_PROGRESS', 'SOLVED', 'ABANDONED', 'TIMED_OUT']),
+  outcome: z.enum(['IN_PROGRESS', 'SOLVED', 'ABANDONED', 'TIMED_OUT']).optional(),
+  phase: z.enum(['ENCOUNTER', 'EXPLORE', 'DISCOVER', 'UNDERSTAND', 'GUIDED_CODING', 'ADAPT_REMIX', 'INDEPENDENT']).optional(),
+}).refine((data) => data.outcome !== undefined || data.phase !== undefined, {
+  message: 'Must provide either outcome or phase to update',
 });
 
 export async function GET(
@@ -41,6 +44,7 @@ export async function PATCH(
   try {
     const { id } = await params;
     const user = await requireUser();
+    const token = await getAuthToken();
     const body = await req.json();
 
     const parseResult = UpdateSessionSchema.safeParse(body);
@@ -51,14 +55,28 @@ export async function PATCH(
       );
     }
 
-    const updated = await sessionService.updateSessionState(
-      id,
-      user.id,
-      parseResult.data.outcome as SessionOutcome
-    );
+    let updatedSession = null;
+
+    if (parseResult.data.phase) {
+      updatedSession = await sessionService.updateSessionPhase(
+        id,
+        user.id,
+        parseResult.data.phase as Phase,
+        token
+      );
+    }
+
+    if (parseResult.data.outcome) {
+      updatedSession = await sessionService.updateSessionState(
+        id,
+        user.id,
+        parseResult.data.outcome as SessionOutcome,
+        token
+      );
+    }
 
     return NextResponse.json({
-      data: updated,
+      data: updatedSession,
     });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Internal Server Error';

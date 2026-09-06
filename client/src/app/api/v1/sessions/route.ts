@@ -1,15 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { requireUser } from '@/lib/auth';
+import { requireUser, getAuthToken } from '@/lib/auth';
 import { sessionService } from '@/services/session.service';
 
 const CreateSessionSchema = z.object({
-  exerciseId: z.string().min(1, 'exerciseId is required'),
+  exerciseId: z.string().optional().nullable(),
+  generatedMissionId: z.string().optional().nullable(),
+  lessonId: z.string().optional().nullable(),
+}).refine((data) => data.exerciseId || data.generatedMissionId || data.lessonId, {
+  message: 'At least one of exerciseId, generatedMissionId, or lessonId must be provided',
 });
 
 export async function POST(req: NextRequest) {
   try {
     const user = await requireUser();
+    const token = await getAuthToken();
     const body = await req.json();
 
     const parseResult = CreateSessionSchema.safeParse(body);
@@ -20,10 +25,13 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const session = await sessionService.startOrGetActiveSession(
-      user.id,
-      parseResult.data.exerciseId
-    );
+    const session = await sessionService.startOrGetActiveSession({
+      userId: user.id,
+      exerciseId: parseResult.data.exerciseId,
+      generatedMissionId: parseResult.data.generatedMissionId,
+      lessonId: parseResult.data.lessonId,
+      token,
+    });
 
     return NextResponse.json({
       data: session,

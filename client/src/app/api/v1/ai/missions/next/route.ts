@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser, getAuthToken } from '@/lib/auth';
-import { aiClient } from '@/lib/ai/client';
-import { db } from '@/lib/db';
+import { missionService } from '@/services/mission.service';
 
 export async function POST(req: NextRequest) {
   try {
@@ -17,30 +16,55 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: { message: 'lessonId is required' } }, { status: 400 });
     }
 
-    // Try AI generation
-    try {
-      const aiResponse = await aiClient.getNextMission(token, {
-        lessonId: body.lessonId,
-        worldManifestVersion: body.worldManifestVersion || '1.0.0',
-      });
-      return NextResponse.json({ data: aiResponse });
-    } catch {
-      // Fallback: Return first uncompleted or template exercise from DB for this lesson
-      const exercise = await db.exercise.findFirst({
-        where: { lessonId: body.lessonId },
-        orderBy: { order: 'asc' },
-      });
+    const mission = await missionService.getNextMission(
+      user.id,
+      body.lessonId,
+      token,
+      {
+        forceRegenerate: body.forceRegenerate,
+        worldManifestVersion: body.worldManifestVersion,
+      }
+    );
 
-      return NextResponse.json({
-        data: {
-          missionId: exercise?.id ?? '',
-          isTemplateFallback: true,
-          manifestVersion: '1.0.0',
-        }
-      });
-    }
+    return NextResponse.json({ data: mission });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Internal Server Error';
     return NextResponse.json({ error: { message } }, { status: 500 });
   }
 }
+
+export async function GET(req: NextRequest) {
+  try {
+    const user = await getCurrentUser();
+    if (!user) {
+      return NextResponse.json({ error: { message: 'Unauthorized' } }, { status: 401 });
+    }
+
+    const token = await getAuthToken();
+    const { searchParams } = new URL(req.url);
+    const lessonId = searchParams.get('lessonId');
+
+    if (!lessonId) {
+      return NextResponse.json({ error: { message: 'lessonId is required' } }, { status: 400 });
+    }
+
+    const forceRegenerate = searchParams.get('forceRegenerate') === 'true';
+    const worldManifestVersion = searchParams.get('worldManifestVersion') || undefined;
+
+    const mission = await missionService.getNextMission(
+      user.id,
+      lessonId,
+      token,
+      {
+        forceRegenerate,
+        worldManifestVersion,
+      }
+    );
+
+    return NextResponse.json({ data: mission });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Internal Server Error';
+    return NextResponse.json({ error: { message } }, { status: 500 });
+  }
+}
+

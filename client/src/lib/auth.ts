@@ -1,5 +1,23 @@
+import { headers } from 'next/headers';
 import { createClient } from './supabase/server';
 import { db } from './db';
+import { User } from '@prisma/client';
+
+/**
+ * Extracts Bearer token from incoming request headers if present.
+ */
+async function getBearerTokenFromHeader(): Promise<string | null> {
+  try {
+    const headerList = await headers();
+    const authHeader = headerList.get('authorization');
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      return authHeader.substring(7).trim();
+    }
+  } catch {
+    // headers() might not be available in non-request contexts
+  }
+  return null;
+}
 
 /**
  * Retrieves the currently authenticated user session from Supabase.
@@ -30,6 +48,11 @@ export async function getSession() {
  * In development, provides a fallback dev token if no session is active.
  */
 export async function getAuthToken(): Promise<string> {
+  const headerToken = await getBearerTokenFromHeader();
+  if (headerToken) {
+    return headerToken;
+  }
+
   const session = await getSession();
   if (session?.access_token) {
     return session.access_token;
@@ -38,31 +61,74 @@ export async function getAuthToken(): Promise<string> {
 }
 
 /**
- * Retrieves the fully populated user object from the database using the Supabase auth token.
- * In local development, falls back to the seeded student user if no session is active.
+ * Retrieves the fully populated user object from the database.
+ * Supports Supabase session, HTTP Bearer tokens, or local dev mock explorer.
  */
 export async function getCurrentUser() {
+  const bearerToken = await getBearerTokenFromHeader();
   const session = await getSession();
   
-  if (session?.user?.id) {
-    const user = await db.user.findFirst({
-      where: {
-        OR: [
-          { id: session.user.id },
-          { email: session.user.email ?? '' }
-        ]
-      }
-    });
-    if (user) return user;
+  const tokenUserId = session?.user?.id;
+  const tokenEmail = session?.user?.email;
+
+  if (tokenUserId || tokenEmail) {
+    try {
+      const user = await db.user.findFirst({
+        where: {
+          OR: [
+            ...(tokenUserId ? [{ id: tokenUserId }] : []),
+            ...(tokenEmail ? [{ email: tokenEmail }] : [])
+          ]
+        }
+      });
+      if (user) return user;
+    } catch (e) {
+      console.warn('Database error while finding user by session:', e);
+    }
+  }
+
+  // If a bearer token was provided in header, check if it maps to a user ID or email
+  if (bearerToken && bearerToken !== 'dev-bearer-token-tico-platform') {
+    try {
+      const user = await db.user.findFirst({
+        where: {
+          OR: [
+            { id: bearerToken },
+            { email: bearerToken }
+          ]
+        }
+      });
+      if (user) return user;
+    } catch {
+      // Database offline or query failed
+    }
   }
 
   // Fallback for local development or prototype testing
   if (process.env.NODE_ENV !== 'production') {
-    const fallbackUser = await db.user.findFirst({
-      where: { role: 'STUDENT' },
-      orderBy: { createdAt: 'asc' }
-    });
-    return fallbackUser;
+    try {
+      const fallbackUser = await db.user.findFirst({
+        where: { role: 'STUDENT' },
+        orderBy: { createdAt: 'asc' }
+      });
+      if (fallbackUser) return fallbackUser;
+    } catch {
+      // In-memory dev user when database is offline or unmigrated
+    }
+
+    const fallbackDevUser: User = {
+      id: 'dev-student-id-01',
+      email: 'student@tico.dev',
+      role: 'STUDENT',
+      name: 'Adham (Dev Explorer)',
+      bio: null,
+      avatarUrl: '/assets/characters/tico/tico-neutral.webp',
+      xp: 450,
+      streak: 5,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    return fallbackDevUser;
   }
   
   return null;
