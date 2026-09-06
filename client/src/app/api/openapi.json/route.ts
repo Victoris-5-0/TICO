@@ -27,13 +27,18 @@ TICO is a purpose-built educational platform combining authentic Egyptian narrat
         description: 'Local Next.js Development Server',
       },
     ],
+    security: [
+      {
+        bearerAuth: [],
+      },
+    ],
     components: {
       securitySchemes: {
         bearerAuth: {
           type: 'http',
           scheme: 'bearer',
           bearerFormat: 'JWT',
-          description: 'Supabase access token (optional in local dev).',
+          description: 'Bearer token. In local dev, you can enter `dev-bearer-token-tico-platform` or any token (or leave empty to auto-authenticate as student@tico.dev).',
         },
       },
       schemas: {
