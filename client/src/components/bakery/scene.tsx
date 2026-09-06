@@ -40,6 +40,10 @@ export function BakeryScene({ state, reducedMotion, counterView, label }: { stat
     <Prop name="awning" x={130} y={143} width={602} height={224} />
     <Prop name="oven" x={202} y={349} width={195} height={346} />
     <Prop name="glow" x={258} y={475} width={86} height={69} opacity={baking ? reducedMotion ? .75 : .75 + Math.sin(p * Math.PI * 2) * .1 : .18} />
+    <g data-layer="plants">
+      <Prop name="olive" x={6} y={432} width={104} height={290} />
+      <Prop name="aloe" x={1483} y={640} width={100} height={127} />
+    </g>
     <motion.g transform={`translate(${bakerX} ${scene.baker.y})`} data-actor="hassan">
       <ellipse cy={-2} rx={42} ry={8} fill="#382820" opacity=".18" />
       {scene.actors.hassan && <Sprite actor={scene.actors.hassan} frame={bakerFrame} flip={state.phase === "loading" || state.phase === "baking" || state.phase === "retrieving"} />}
@@ -93,11 +97,9 @@ export function BakeryScene({ state, reducedMotion, counterView, label }: { stat
       const y = p < .5 ? mix(574, hand.y, lift) : mix(hand.y, destination.y, give);
       return <Prop key={loaf.id} loaf={loaf} name="loaf" x={reducedMotion ? destination.x : x} y={reducedMotion ? destination.y : y} width={32} height={15} />;
     })}
-    <Prop name="olive" x={6} y={432} width={104} height={290} />
     {scene.actors.salma && <motion.g transform="translate(158 825)" data-actor="salma">
       <ellipse cy={-2} rx={37} ry={8} fill="#382820" opacity=".2" />
       <Sprite actor={scene.actors.salma} frame={state.phase === "advancing" ? 1 : 0} size={288} />
     </motion.g>}
-    <Prop name="aloe" x={1483} y={640} width={100} height={127} />
   </svg>;
 }
