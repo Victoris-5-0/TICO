@@ -12,6 +12,14 @@ from app.rules.hint_ladder import (
     get_authored_fallback,
     next_rung,
 )
+from app.rules.mastery import (
+    ConceptMasteryUpdate,
+    MasteryProfileUpdateResult,
+    calculate_concept_confidence,
+    compute_outcome_score,
+    compute_single_concept_mastery,
+    update_mastery_profile,
+)
 
 __all__ = [
     "AdvanceOrHoldDecision",
@@ -24,4 +32,11 @@ __all__ = [
     "evaluate_ladder",
     "get_authored_fallback",
     "next_rung",
+    "ConceptMasteryUpdate",
+    "MasteryProfileUpdateResult",
+    "calculate_concept_confidence",
+    "compute_outcome_score",
+    "compute_single_concept_mastery",
+    "update_mastery_profile",
 ]
+
