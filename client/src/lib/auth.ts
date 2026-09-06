@@ -82,8 +82,26 @@ export async function getCurrentUser() {
         }
       });
       if (user) return user;
+
+      // First-time sign-in Just-In-Time (JIT) provisioning
+      if (tokenEmail) {
+        const metadata = (session?.user as { user_metadata?: Record<string, string> })?.user_metadata || {};
+        const newUser = await db.user.create({
+          data: {
+            id: tokenUserId || undefined,
+            email: tokenEmail,
+            name: metadata.full_name || metadata.name || tokenEmail.split('@')[0],
+            avatarUrl: metadata.avatar_url || '/assets/characters/tico/tico-neutral.webp',
+            role: 'STUDENT',
+            bio: null,
+            xp: 0,
+            streak: 0,
+          }
+        });
+        return newUser;
+      }
     } catch (e) {
-      console.warn('Database error while finding user by session:', e);
+      console.warn('Database error while finding/provisioning user by session:', e);
     }
   }
 
