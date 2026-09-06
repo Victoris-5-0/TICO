@@ -22,7 +22,11 @@ Establishing plates support cards, maps, and story moments. They are not gamepla
 
 Playfields must expose wide readable routes, unambiguous collision edges, interaction destinations, and empty actor-scale positions. Decorative detail stays outside walkable lanes. A reviewed client-side coordinate graph defines movement; the app never tries to recover navigation geometry from generated pixels.
 
-### Accepted bakery gameplay prototype
+### Bakery v2 — current production direction
+
+Follow [layered bakery production](13-bakery-layered-production.md) and its [exact generation prompt log](bakery-v2-prompts.json) for the side-on visual preview. The fixed environment must contain no people or bread. Oven, awning, counter front/worktop, trays, loaves, tools, bags and actors are independent raster layers. Masters: `client/assets/source/bakery-v2/`. Runtime: `client/public/assets/bakery-v2/`. These are client-only visual assets, not a shared AI manifest change.
+
+### Earlier top-down prototype (superseded for bakery gameplay)
 
 - Master board: `client/assets/source/worlds/bakery/playfield-topdown-v1.png`
 - Runtime boards: `client/public/assets/worlds/bakery/gameplay/playfield-topdown-v1.webp` and `playfield-topdown-v1-mobile.webp`

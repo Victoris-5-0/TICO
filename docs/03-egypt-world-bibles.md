@@ -27,7 +27,7 @@ Characters are `bakery.hassan` (experienced baker), `bakery.salma` (practical qu
 | `bakery.card_reader` | `requested_loaves`, `allowed_loaves` | `approve()`, `adjust()` | conditional rules; wholly fictional UI |
 | `bakery.flour_sack` | `kilograms` | `use()` | extension calculations |
 
-Represent baladi bread as familiar round flat loaves. Do not claim current subsidy rules, entitlement amounts, prices, or eligibility; all mission data is explicitly fictional. Interactive bakery missions use a separate top-down 2D playfield with fixed queue positions and independent character sprites. Completion shows the character movement, a changed queue state, and stocked trays.
+Represent baladi bread as familiar round flat loaves. Do not claim current subsidy rules, entitlement amounts, prices, or eligibility; all mission data is explicitly fictional. The bakery visual preview uses a side-on 2D cutaway with fixed queue positions, independent character animation frames, and separate oven/counter/bread layers. See [layered bakery production](13-bakery-layered-production.md). Its extra crowd designs are client-only visual roles, not additions to the shared AI manifest. The preview does not complete a lesson or award progress.
 
 ## World 2 — El Mahatta: Egyptian railway station
 

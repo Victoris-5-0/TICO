@@ -17,6 +17,7 @@ These documents are the implementation contract. Product changes must update the
 | [10 — Safety, privacy, security](10-safety-privacy-and-security.md) | Minor safety, data minimization, auth, threat model, moderation |
 | [11 — Testing and operations](11-testing-and-operations.md) | Test pyramid, observability, release gates, incident operations |
 | [12 — Roadmap and agent playbook](12-roadmap-and-agent-playbook.md) | Delivery slices, work ownership, definition of done |
+| [13 — Layered bakery production](13-bakery-layered-production.md) | Side-on scene layers, sprite pipeline, preview simulation and browser verification |
 | [ADR 0001 — MVP baseline](decisions/0001-mvp-baseline.md) | Settled launch decisions and consequences |
 | [ADR 0002 — TICO robot mascot](decisions/0002-tico-robot-mascot.md) | Supersedes the earlier hoopoe mascot and establishes the supplied robot sheets as canonical |
 

@@ -11,14 +11,14 @@ export function MissionBriefing({ locale }: { locale: Locale }) {
     <div className="briefing-page">
       <header className="briefing-header shell">
         <SiteLogo href={`/${locale}`} />
-        <div className="briefing-progress" aria-label={isArabic ? "المهمة ١ من ٦" : "Mission 1 of 6"}><span /><i /><i /><i /><i /><i /></div>
+        <span className="briefing-preview-label">{isArabic ? "معاينة الفرن" : "Bakery preview"}</span>
         <Link className="briefing-close" href={`/${locale}/worlds/el-forn`} aria-label={isArabic ? "إغلاق المهمة" : "Close mission"}>×</Link>
       </header>
 
       <main className="briefing-main shell">
         <header className="briefing-title">
-          <div><p className="eyebrow">{isArabic ? "العالم ٠١ · المهمة ٠١" : "WORLD 01 · MISSION 01"}</p><h1>{isArabic ? "طابور الفرن" : "The Bakery Queue"}</h1></div>
-          <p>{isArabic ? "حرّك نور للمكان الصح، وبعدها ضيفه للطابور باستخدام أوامر بايثون." : "Move Nour to the right place, then add him to the queue with Python commands."}</p>
+          <div><p className="eyebrow">{isArabic ? "العالم ٠١ · الفرن" : "WORLD 01 · EL FORN"}</p><h1>{isArabic ? "صباح في الفرن" : "A morning at the bakery"}</h1></div>
+          <p>{isArabic ? "اخبز العيش، قدّم للي عليه الدور، وشوف الطابور بيتحرّك." : "Bake the bread, serve your neighbours, and watch the queue come to life."}</p>
         </header>
         <BakeryWorldDemo locale={locale} />
       </main>

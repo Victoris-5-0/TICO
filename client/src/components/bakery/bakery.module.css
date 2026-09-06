@@ -1,0 +1,43 @@
+.preview { overflow: hidden; border: 1px solid #E5DDD5; border-radius: 24px; background: #FFFDF9; box-shadow: 0 16px 48px #3828200a; }
+.topbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 10px 24px; }
+.location { color: #716A72; font-size: 12px; font-weight: 750; letter-spacing: .08em; }
+.location > span { color: #267977; margin-inline-end: 8px; }
+.views { display: flex; gap: 4px; }
+.preview button { min-block-size: 44px; padding: 10px 16px; border: 1px solid #E5DDD5; border-radius: 12px; background: #FFFDF9; color: #1F1820; font: inherit; font-size: 14px; font-weight: 700; cursor: pointer; }
+.preview button:focus-visible { outline: 3px solid #267977; outline-offset: 3px; }
+.preview button:disabled { color: #716A72; background: #F4EFE9; cursor: not-allowed; }
+.views button { border-color: transparent; font-size: 12px; }
+.views button[aria-pressed="true"] { background: #DDF1F0; color: #245E5C; }
+.stage { position: relative; overflow: hidden; background: #ddc298; aspect-ratio: 16 / 9; }
+.stage > svg { display: block; inline-size: 100%; block-size: 100%; }
+.counterView { aspect-ratio: 16 / 9; }
+.loading { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 20px; padding: 24px; background: #FBF8F3ed; color: #1F1820; text-align: center; }
+.paused { position: absolute; inset-inline-start: 20px; inset-block-start: 20px; padding: 10px 20px; background: #FFFDF9f5; color: #1F1820; border-radius: 12px; font-weight: 700; }
+.desk { padding: 24px; display: grid; grid-template-columns: 1.4fr 1fr; gap: 24px; }
+.companion { display: flex; align-items: center; gap: 20px; min-inline-size: 0; }
+.companion img { width: 52px; height: auto; object-fit: contain; flex-shrink: 0; }
+.companion strong { font-size: 14px; }
+.companion p { margin: 8px 0 0; color: #716A72; line-height: 1.65; font-size: 14px; min-block-size: 46px; }
+.stats { display: grid; grid-template-columns: repeat(3, 1fr); align-self: center; margin: 0; border: 1px solid #E5DDD5; border-radius: 16px; overflow: hidden; }
+.stats > div { padding: 14px; text-align: center; }
+.stats > div + div { border-inline-start: 1px solid #E5DDD5; }
+.stats dt { color: #716A72; font-size: 12px; }
+.stats dd { margin: 6px 0 0; font-size: 28px; font-weight: 750; font-variant-numeric: tabular-nums; }
+.stats dd small { color: #716A72; font-size: 14px; font-weight: 500; }
+.controls { display: grid; grid-template-columns: 1fr 1fr 1.2fr .7fr .7fr; gap: 12px; grid-column: 1 / -1; }
+.controls button { min-block-size: 64px; }
+.controls button.primary { background: #DB5B31; border-color: #DB5B31; color: #1F1820; }
+.controls small { display: block; font-size: 11px; margin-block-start: 4px; font-weight: 500; }
+.note { margin: 0; padding: 0 24px 20px; color: #716A72; font-size: 12px; line-height: 1.7; }
+@media (max-width: 760px) {
+  .topbar { padding: 8px 12px; gap: 8px; }
+  .location { font-size: 10px; max-inline-size: 120px; line-height: 1.6; }
+  .views button { padding: 8px; font-size: 11px; }
+  .desk { grid-template-columns: 1fr; padding: 16px; gap: 16px; }
+  .companion img { width: 38px; }
+  .controls { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .controls button:nth-child(3) { grid-column: 1 / -1; grid-row: 2; }
+  .controls button { padding-inline: 8px; }
+  .counterView { aspect-ratio: 1.25; }
+  .note { padding-inline: 16px; }
+}

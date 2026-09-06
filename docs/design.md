@@ -244,7 +244,7 @@ Every playable scene has independent layers:
 
 Learner code changes semantic scene state; React maps the validated result to actor movement, queue changes, object state, or counters. Motion explains the causal sequence and never determines correctness. Characters must remain legible at their smallest runtime size, cannot cover interaction targets, and receive a visible non-motion state change when reduced motion is enabled.
 
-The bakery prototype under `client/public/assets/worlds/bakery/gameplay/` is the first camera and composition reference. The supplied WhatsApp screenshots are spatial inspiration only and are not a style, layout, or asset source to reproduce.
+The bakery v2 preview uses a side-on cutaway with independently rendered oven, counter, bread and actor layers in one 1600×900 SVG coordinate system. Follow [layered bakery production](13-bakery-layered-production.md). The earlier top-down prototype under `client/public/assets/worlds/bakery/gameplay/` is retained only as historical artwork, not the current gameplay camera. The supplied WhatsApp screenshots are spatial inspiration only and are not a style, layout, or asset source to reproduce.
 
 ## 8. Application shells
 
@@ -538,7 +538,7 @@ The lock fades/scales down, the node border changes, and the accessible label up
 
 ### Continuous motion
 
-Avoid it. Permitted exceptions are a short loading activity indicator and a very subtle TICO idle loop that stops after two cycles, when offscreen, when the tab is hidden, and under reduced motion. No autoplay parallax in learning screens.
+Avoid decorative loops. Permitted exceptions are a short loading activity indicator and a very subtle TICO idle loop that stops after two cycles, when offscreen, when the tab is hidden, and under reduced motion. User-started gameplay simulations may run controlled walk, oven and handoff cycles while playback is active. One pausable clock drives them; pause, reset, hidden tabs and unmount stop progression. Under reduced motion, replace travel and frame cycling with static phase changes and equivalent captions. The bakery demo stops when the queue is served; it never autoplays on page load. No autoplay parallax in learning screens.
 
 ### Motion performance
 
