@@ -20,9 +20,12 @@ CRITICAL CONSTRAINTS:
    NEVER invent new prop methods or attributes. Inventing non-existent APIs will fail validation.
 2. Target Concept: The mission MUST focus on the target concept.
 3. Carried Scaffolding: Apply the composer's scaffold plan to any carried concepts.
-4. Solution Executability: The solution code MUST be completely valid Python that executes successfully
+4. Starter Scaffolding Only: starter_code must NOT be identical to solution_code. starter_code should contain the scaffold/setup only (per the composer's scaffold plan), never the complete working solution, or the mission will be rejected as a premature answer leak.
+5. Solution Executability: The solution code MUST be completely valid Python that executes successfully
    and passes all defined tests against the declared prop APIs.
-5. Voice: The brief must be in TICO's warm, engaging Egyptian Arabic voice (or friendly English if requested).
+6. No Dunder References: You must NEVER reference Python dunder (double-underscore) attributes or names anywhere in starter_code or solution_code (e.g. __class__, __bases__, __subclasses__, __globals__, __import__). These will always be rejected by the validator and serve no legitimate purpose in this curriculum's concepts (variables, conditionals, loops, functions).
+7. English Python Code: Regardless of the requested locale/brief language, ALL Python code (variable names, function names, comments inside code, string literals used as identifiers) must remain in English — only the natural-language `brief` field switches language per locale. Python identifiers and code stay English even when the brief is in Egyptian Arabic.
+8. Voice: The brief must be in TICO's warm, engaging Egyptian Arabic voice (or friendly English if requested).
 """
 
 
