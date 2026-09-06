@@ -8,13 +8,20 @@ Column names are camelCase because Prisma leaves field names alone — see `base
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 
-from sqlalchemy import Boolean, ForeignKey, Integer, Text
+from sqlalchemy import Boolean, ForeignKey, Integer, Text, func
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models_tables.base import Base
+from app.models_tables.ids import new_id
+
+
+def _utcnow() -> datetime:
+    """Prisma's @updatedAt runs in the Prisma client, so it never fires for a
+    write from this service. Naive UTC to match the TIMESTAMP(3) columns."""
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 from app.models_tables.enums import (
     DIFFICULTY,
     ERROR_FAMILY,
@@ -30,7 +37,7 @@ from app.models_tables.enums import (
 class User(Base):
     __tablename__ = "users"
 
-    id: Mapped[str] = mapped_column(Text, primary_key=True)
+    id: Mapped[str] = mapped_column(Text, primary_key=True, default=new_id)
     email: Mapped[str] = mapped_column(Text, unique=True)
     name: Mapped[str | None] = mapped_column(Text)
     avatar_url: Mapped[str | None] = mapped_column("avatarUrl", Text)
@@ -38,8 +45,8 @@ class User(Base):
     bio: Mapped[str | None] = mapped_column(Text)
     xp: Mapped[int] = mapped_column(Integer, default=0)
     streak: Mapped[int] = mapped_column(Integer, default=0)
-    created_at: Mapped[datetime] = mapped_column("createdAt")
-    updated_at: Mapped[datetime] = mapped_column("updatedAt")
+    created_at: Mapped[datetime] = mapped_column("createdAt", server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column("updatedAt", default=_utcnow, onupdate=_utcnow)
 
     submissions: Mapped[list["Submission"]] = relationship(back_populates="user")
     progress: Mapped[list["UserProgress"]] = relationship(back_populates="user")
@@ -57,7 +64,7 @@ class Track(Base):
 
     __tablename__ = "tracks"
 
-    id: Mapped[str] = mapped_column(Text, primary_key=True)
+    id: Mapped[str] = mapped_column(Text, primary_key=True, default=new_id)
     title: Mapped[str] = mapped_column(Text)
     slug: Mapped[str] = mapped_column(Text, unique=True)
     description: Mapped[str] = mapped_column(Text)
@@ -65,8 +72,8 @@ class Track(Base):
     language: Mapped[str] = mapped_column(Text)
     published: Mapped[bool] = mapped_column(Boolean, default=False)
     order: Mapped[int] = mapped_column(Integer, default=0)
-    created_at: Mapped[datetime] = mapped_column("createdAt")
-    updated_at: Mapped[datetime] = mapped_column("updatedAt")
+    created_at: Mapped[datetime] = mapped_column("createdAt", server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column("updatedAt", default=_utcnow, onupdate=_utcnow)
 
     lessons: Mapped[list["Lesson"]] = relationship(back_populates="track")
     mission_templates: Mapped[list["MissionTemplate"]] = relationship(back_populates="track")  # noqa: F821
@@ -78,7 +85,7 @@ class Track(Base):
 class Lesson(Base):
     __tablename__ = "lessons"
 
-    id: Mapped[str] = mapped_column(Text, primary_key=True)
+    id: Mapped[str] = mapped_column(Text, primary_key=True, default=new_id)
     track_id: Mapped[str] = mapped_column(
         "trackId", Text, ForeignKey("tracks.id", ondelete="CASCADE")
     )
@@ -87,8 +94,8 @@ class Lesson(Base):
     description: Mapped[str | None] = mapped_column(Text)
     content: Mapped[str] = mapped_column(Text)
     order: Mapped[int] = mapped_column(Integer, default=0)
-    created_at: Mapped[datetime] = mapped_column("createdAt")
-    updated_at: Mapped[datetime] = mapped_column("updatedAt")
+    created_at: Mapped[datetime] = mapped_column("createdAt", server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column("updatedAt", default=_utcnow, onupdate=_utcnow)
 
     track: Mapped[Track] = relationship(back_populates="lessons")
     exercises: Mapped[list["Exercise"]] = relationship(back_populates="lesson")
@@ -103,7 +110,7 @@ class Exercise(Base):
 
     __tablename__ = "exercises"
 
-    id: Mapped[str] = mapped_column(Text, primary_key=True)
+    id: Mapped[str] = mapped_column(Text, primary_key=True, default=new_id)
     lesson_id: Mapped[str] = mapped_column(
         "lessonId", Text, ForeignKey("lessons.id", ondelete="CASCADE")
     )
@@ -119,8 +126,8 @@ class Exercise(Base):
     hints: Mapped[list[str] | None] = mapped_column(ARRAY(Text))
     difficulty: Mapped[Difficulty] = mapped_column(DIFFICULTY, default=Difficulty.BEGINNER)
     order: Mapped[int] = mapped_column(Integer, default=0)
-    created_at: Mapped[datetime] = mapped_column("createdAt")
-    updated_at: Mapped[datetime] = mapped_column("updatedAt")
+    created_at: Mapped[datetime] = mapped_column("createdAt", server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column("updatedAt", default=_utcnow, onupdate=_utcnow)
 
     lesson: Mapped[Lesson] = relationship(back_populates="exercises")
     submissions: Mapped[list["Submission"]] = relationship(back_populates="exercise")
@@ -146,7 +153,7 @@ class Submission(Base):
 
     __tablename__ = "submissions"
 
-    id: Mapped[str] = mapped_column(Text, primary_key=True)
+    id: Mapped[str] = mapped_column(Text, primary_key=True, default=new_id)
     user_id: Mapped[str] = mapped_column(
         "userId", Text, ForeignKey("users.id", ondelete="CASCADE")
     )
@@ -159,7 +166,7 @@ class Submission(Base):
     )
     output: Mapped[str | None] = mapped_column(Text)
     execution_time_ms: Mapped[int | None] = mapped_column("executionTimeMs", Integer)
-    created_at: Mapped[datetime] = mapped_column("createdAt")
+    created_at: Mapped[datetime] = mapped_column("createdAt", server_default=func.now())
 
     # --- added by the AI migration; snake_case ---------------------------------------
     session_id: Mapped[str | None] = mapped_column(
@@ -184,7 +191,7 @@ class Submission(Base):
 class UserProgress(Base):
     __tablename__ = "user_progress"
 
-    id: Mapped[str] = mapped_column(Text, primary_key=True)
+    id: Mapped[str] = mapped_column(Text, primary_key=True, default=new_id)
     user_id: Mapped[str] = mapped_column(
         "userId", Text, ForeignKey("users.id", ondelete="CASCADE")
     )
@@ -193,8 +200,8 @@ class UserProgress(Base):
     )
     completed: Mapped[bool] = mapped_column(Boolean, default=False)
     completed_at: Mapped[datetime | None] = mapped_column("completedAt")
-    created_at: Mapped[datetime] = mapped_column("createdAt")
-    updated_at: Mapped[datetime] = mapped_column("updatedAt")
+    created_at: Mapped[datetime] = mapped_column("createdAt", server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column("updatedAt", default=_utcnow, onupdate=_utcnow)
 
     user: Mapped[User] = relationship(back_populates="progress")
 
@@ -207,7 +214,7 @@ class CompanionChat(Base):
 
     __tablename__ = "companion_chats"
 
-    id: Mapped[str] = mapped_column(Text, primary_key=True)
+    id: Mapped[str] = mapped_column(Text, primary_key=True, default=new_id)
     user_id: Mapped[str] = mapped_column(
         "userId", Text, ForeignKey("users.id", ondelete="CASCADE")
     )
@@ -215,8 +222,8 @@ class CompanionChat(Base):
         "lessonId", Text, ForeignKey("lessons.id", ondelete="SET NULL")
     )
     messages: Mapped[dict | list] = mapped_column(JSONB)
-    created_at: Mapped[datetime] = mapped_column("createdAt")
-    updated_at: Mapped[datetime] = mapped_column("updatedAt")
+    created_at: Mapped[datetime] = mapped_column("createdAt", server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column("updatedAt", default=_utcnow, onupdate=_utcnow)
 
     def __repr__(self) -> str:
         return f"<CompanionChat {self.id}>"

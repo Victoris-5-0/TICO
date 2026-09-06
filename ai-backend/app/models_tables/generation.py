@@ -7,13 +7,20 @@ an enforceable property rather than a hope.
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 
-from sqlalchemy import Boolean, ForeignKey, Integer, Text
+from sqlalchemy import Boolean, ForeignKey, Integer, Text, func
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models_tables.base import Base
+from app.models_tables.ids import new_id
+
+
+def _utcnow() -> datetime:
+    """Prisma's @updatedAt runs in the Prisma client, so it never fires for a
+    write from this service. Naive UTC to match the TIMESTAMP(3) columns."""
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 from app.models_tables.enums import ERROR_FAMILY, SCAFFOLD_LEVEL, ErrorFamily, ScaffoldLevel
 
 
@@ -27,7 +34,7 @@ class MissionTemplate(Base):
 
     __tablename__ = "mission_templates"
 
-    id: Mapped[str] = mapped_column(Text, primary_key=True)
+    id: Mapped[str] = mapped_column(Text, primary_key=True, default=new_id)
     track_id: Mapped[str] = mapped_column(
         Text, ForeignKey("tracks.id", ondelete="CASCADE")
     )
@@ -40,7 +47,7 @@ class MissionTemplate(Base):
     param_schema: Mapped[dict] = mapped_column(JSONB)
     difficulty_band: Mapped[int] = mapped_column(Integer, default=5)
     manifest_version: Mapped[str | None] = mapped_column(Text)
-    created_at: Mapped[datetime]
+    created_at: Mapped[datetime] = mapped_column(server_default=func.now())
 
     track: Mapped["Track"] = relationship(back_populates="mission_templates")  # noqa: F821
     generated: Mapped[list["GeneratedMission"]] = relationship(back_populates="template")
@@ -59,7 +66,7 @@ class GeneratedMission(Base):
 
     __tablename__ = "generated_missions"
 
-    id: Mapped[str] = mapped_column(Text, primary_key=True)
+    id: Mapped[str] = mapped_column(Text, primary_key=True, default=new_id)
     template_id: Mapped[str] = mapped_column(
         Text, ForeignKey("mission_templates.id", ondelete="CASCADE")
     )
@@ -75,7 +82,7 @@ class GeneratedMission(Base):
     validated: Mapped[bool] = mapped_column(Boolean, default=False)
     engine_version: Mapped[str | None] = mapped_column(Text)
     manifest_version: Mapped[str | None] = mapped_column(Text)
-    created_at: Mapped[datetime]
+    created_at: Mapped[datetime] = mapped_column(server_default=func.now())
 
     template: Mapped[MissionTemplate] = relationship(back_populates="generated")
     sessions: Mapped[list["PracticeSession"]] = relationship(  # noqa: F821
@@ -103,8 +110,8 @@ class ErrorTag(Base):
     family: Mapped[ErrorFamily] = mapped_column(ERROR_FAMILY)
     description: Mapped[str | None] = mapped_column(Text)
     count: Mapped[int] = mapped_column(Integer, default=0)
-    first_seen_at: Mapped[datetime]
-    last_seen_at: Mapped[datetime]
+    first_seen_at: Mapped[datetime] = mapped_column(server_default=func.now())
+    last_seen_at: Mapped[datetime] = mapped_column(default=_utcnow, onupdate=_utcnow)
 
     def __repr__(self) -> str:
         return f"<ErrorTag {self.tag} {self.family} x{self.count}>"
@@ -124,7 +131,7 @@ class HintCache(Base):
 
     __tablename__ = "hint_cache"
 
-    id: Mapped[str] = mapped_column(Text, primary_key=True)
+    id: Mapped[str] = mapped_column(Text, primary_key=True, default=new_id)
     exercise_id: Mapped[str] = mapped_column(Text)
     hint_level: Mapped[int] = mapped_column(Integer)
     error_tag: Mapped[str | None] = mapped_column(Text)
@@ -133,7 +140,7 @@ class HintCache(Base):
     text: Mapped[str] = mapped_column(Text)
     model: Mapped[str | None] = mapped_column(Text)
     hits: Mapped[int] = mapped_column(Integer, default=0)
-    created_at: Mapped[datetime]
+    created_at: Mapped[datetime] = mapped_column(server_default=func.now())
 
     def __repr__(self) -> str:
         return f"<HintCache {self.exercise_id} rung={self.hint_level} hits={self.hits}>"

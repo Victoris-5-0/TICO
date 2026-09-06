@@ -10,10 +10,11 @@ from __future__ import annotations
 from datetime import datetime
 from decimal import Decimal
 
-from sqlalchemy import Boolean, ForeignKey, Integer, Numeric, Text
+from sqlalchemy import Boolean, ForeignKey, Integer, Numeric, Text, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models_tables.base import Base
+from app.models_tables.ids import new_id
 from app.models_tables.enums import (
     PHASE,
     SCAFFOLD_LEVEL,
@@ -39,7 +40,7 @@ class PracticeSession(Base):
 
     __tablename__ = "practice_sessions"
 
-    id: Mapped[str] = mapped_column(Text, primary_key=True)
+    id: Mapped[str] = mapped_column(Text, primary_key=True, default=new_id)
     user_id: Mapped[str] = mapped_column(
         Text, ForeignKey("users.id", ondelete="CASCADE")
     )
@@ -56,7 +57,7 @@ class PracticeSession(Base):
     )
     hints_used: Mapped[int] = mapped_column(Integer, default=0)
     time_spent_ms: Mapped[int] = mapped_column(Integer, default=0)
-    started_at: Mapped[datetime]
+    started_at: Mapped[datetime] = mapped_column(server_default=func.now())
     ended_at: Mapped[datetime | None]
 
     user: Mapped["User"] = relationship(back_populates="practice_sessions")  # noqa: F821
@@ -86,7 +87,7 @@ class HintEvent(Base):
 
     __tablename__ = "hint_events"
 
-    id: Mapped[str] = mapped_column(Text, primary_key=True)
+    id: Mapped[str] = mapped_column(Text, primary_key=True, default=new_id)
     session_id: Mapped[str] = mapped_column(
         Text, ForeignKey("practice_sessions.id", ondelete="CASCADE")
     )
@@ -102,7 +103,7 @@ class HintEvent(Base):
     #: False when the hint was shown but the student solved it another way.
     was_used: Mapped[bool] = mapped_column(Boolean, default=False)
     scaffold_state: Mapped[ScaffoldLevel | None] = mapped_column(SCAFFOLD_LEVEL)
-    created_at: Mapped[datetime]
+    created_at: Mapped[datetime] = mapped_column(server_default=func.now())
 
     session: Mapped[PracticeSession] = relationship(back_populates="hint_events")
 
@@ -120,7 +121,7 @@ class AiInteraction(Base):
 
     __tablename__ = "ai_interactions"
 
-    id: Mapped[str] = mapped_column(Text, primary_key=True)
+    id: Mapped[str] = mapped_column(Text, primary_key=True, default=new_id)
     user_id: Mapped[str | None] = mapped_column(
         Text, ForeignKey("users.id", ondelete="CASCADE")
     )
@@ -139,7 +140,7 @@ class AiInteraction(Base):
     latency_ms: Mapped[int | None] = mapped_column(Integer)
     status: Mapped[str | None] = mapped_column(Text)
     moderation_flag: Mapped[str | None] = mapped_column(Text)
-    created_at: Mapped[datetime]
+    created_at: Mapped[datetime] = mapped_column(server_default=func.now())
 
     session: Mapped[PracticeSession | None] = relationship(back_populates="ai_interactions")
 
