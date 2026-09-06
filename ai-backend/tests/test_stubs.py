@@ -8,47 +8,60 @@ should still pass, because the shapes do not change.
 import json
 
 from app.api.v1._stub import STUB_HEADER
+from tests.conftest import data
 
 SESSION = {"level_id": "demo-exercise-conditional-gate"}
+
+
+def hint_body(session_id: str, **over) -> dict:
+    """A hint request in the shape docs/06 specifies and the client actually sends."""
+    return {
+        "sessionId": session_id,
+        "missionId": "demo-exercise-conditional-gate",
+        "codeExcerpt": "x = 1",
+        "lastResult": "FAILED",
+        "locale": "ar-EG",
+        **over,
+    }
 
 
 def test_open_session(client):
     r = client.post("/v1/sessions", json=SESSION)
     assert r.status_code == 201
     assert r.headers[STUB_HEADER] == "1"
-    body = r.json()
-    assert body["phase"] == "encounter"
-    assert body["outcome"] == "in_progress"
-    assert body["hints_used"] == 0
+    body = data(r)
+    assert body["phase"] == "ENCOUNTER"
+    assert body["outcome"] == "IN_PROGRESS"
+    assert body["hintsUsed"] == 0
 
 
 def test_close_session(client):
     r = client.post(
-        "/v1/sessions/s1/close", json={"outcome": "solved", "time_spent_ms": 254000}
+        "/v1/sessions/s1/close", json={"outcome": "SOLVED", "time_spent_ms": 254000}
     )
     assert r.status_code == 200
-    assert r.json()["outcome"] == "solved"
-    assert r.json()["ended_at"] is not None
+    assert data(r)["outcome"] == "SOLVED"
+    assert data(r)["endedAt"] is not None
 
 
 def test_hint_ladder_escalates_and_never_exceeds_four(client):
     seen = []
     for _ in range(6):
-        r = client.post("/v1/hints", json={"session_id": "ladder-test", "code": "x = 1"})
+        r = client.post("/v1/hints", json=hint_body("ladder-test"))
         assert r.status_code == 200
-        seen.append(r.json()["rung"])
+        seen.append(data(r)["rung"])
     assert seen == [1, 2, 3, 4, 4, 4], seen
 
 
 def test_final_rung_offers_practice_not_the_answer(client):
     for _ in range(4):
-        r = client.post("/v1/hints", json={"session_id": "final-test", "code": "x = 1"})
-    body = r.json()
+        r = client.post("/v1/hints", json=hint_body("final-test"))
+    body = data(r)
     assert body["rung"] == 4
-    assert body["is_final"] is True
-    assert body["next_step"] == "mini_practice"
+    assert body["isFinal"] is True
+    assert body["nextStep"] == "mini_practice"
     # the safety property: no rung hands over runnable solution code
-    assert "gate.open()" not in body["text"]
+    assert "gate.open()" not in body["hint"]
 
 
 def test_analyze_recognises_the_classic_mistake(client):
@@ -57,23 +70,23 @@ def test_analyze_recognises_the_classic_mistake(client):
         json={"session_id": "s1", "code": "if station.passengers = 30:\n    gate.open()"},
     )
     assert r.status_code == 200
-    body = r.json()
-    assert body["family"] == "logic"
-    assert body["tag"] == "assignment_vs_comparison"
+    body = data(r)
+    assert body["errorFamily"] == "LOGIC"
+    assert body["errorTag"] == "assignment_vs_comparison"
 
 
 def test_analyze_falls_back_for_anything_else(client):
     r = client.post("/v1/submissions/analyze", json={"session_id": "s1", "code": "pass"})
-    body = r.json()
-    assert body["family"] == "unknown"
-    assert body["is_new_tag"] is True
+    body = data(r)
+    assert body["errorFamily"] == "UNKNOWN"
+    assert body["isNewTag"] is True
 
 
 def test_refresh_reports_who_decided(client):
     r = client.post("/v1/students/demo-student-1/refresh")
     assert r.status_code == 200
-    body = r.json()
-    assert body["decided_by"] in {"rule", "model"}
+    body = data(r)
+    assert body["decidedBy"] in {"RULE", "MODEL"}
     assert body["reason"]
     assert len(body["concepts"]) == 4
 
@@ -81,9 +94,9 @@ def test_refresh_reports_who_decided(client):
 def test_beginner_plan_requires_everything(client):
     r = client.post("/v1/students/demo-student-1/plan", json={"is_beginner": True})
     assert r.status_code == 200
-    body = r.json()
-    assert body["skipped_count"] == 0
-    assert all(l["requirement"] == "required" for l in body["lessons"])
+    body = data(r)
+    assert body["skippedCount"] == 0
+    assert all(l["requirement"] == "REQUIRED" for l in body["lessons"])
 
 
 def test_experienced_plan_skips_and_explains_every_skip(client):
@@ -91,38 +104,38 @@ def test_experienced_plan_skips_and_explains_every_skip(client):
         "/v1/students/demo-student-1/plan",
         json={"is_beginner": False, "diagnostic_session_id": "d1"},
     )
-    body = r.json()
-    assert body["skipped_count"] == 3
+    body = data(r)
+    assert body["skippedCount"] == 3
     for lesson in body["lessons"]:
-        if lesson["requirement"] == "optional":
+        if lesson["requirement"] == "OPTIONAL":
             assert lesson["reason"], "every skip must carry a reason"
-            assert lesson["decided_by"] == "model", "every skip is model-reviewed"
+            assert lesson["decidedBy"] == "MODEL", "every skip is model-reviewed"
 
 
 def test_next_mission_is_validated_and_bounded(client):
     r = client.post("/v1/missions/next", json={"force_regenerate": False})
     assert r.status_code == 200
-    body = r.json()
+    body = data(r)
     assert body["validated"] is True
-    assert body["world_id"] == "cairo_metro"
-    assert body["target_concept_id"] == "conditionals"
-    assert body["scene_id"] in {"platform_day", "ticket_hall", "control_room"}
+    assert body["worldId"] == "cairo_metro"
+    assert body["targetConceptId"] == "conditionals"
+    assert body["sceneId"] in {"platform_day", "ticket_hall", "control_room"}
 
 
 def test_force_regenerate_changes_the_scenario_not_the_concept(client):
-    a = client.post("/v1/missions/next", json={"force_regenerate": False}).json()
-    b = client.post("/v1/missions/next", json={"force_regenerate": True}).json()
-    assert a["scene_id"] != b["scene_id"]
-    assert a["target_concept_id"] == b["target_concept_id"]
-    assert a["world_id"] == b["world_id"]
+    a = data(client.post("/v1/missions/next", json={"force_regenerate": False}))
+    b = data(client.post("/v1/missions/next", json={"force_regenerate": True}))
+    assert a["sceneId"] != b["sceneId"]
+    assert a["targetConceptId"] == b["targetConceptId"]
+    assert a["worldId"] == b["worldId"]
 
 
 def test_challenge_has_no_scaffolding(client):
     r = client.post("/v1/challenges/next", json={"exclude_level_ids": []})
     assert r.status_code == 200
-    body = r.json()
-    assert body["scaffold_plan"]["scaffold"] == {}
-    assert body["scaffold_plan"]["difficulty_band"] >= 6
+    body = data(r)
+    assert body["scaffoldPlan"]["scaffold"] == {}
+    assert body["scaffoldPlan"]["difficultyBand"] >= 6
 
 
 def _sse_frames(text: str) -> list[dict]:
@@ -146,7 +159,7 @@ def test_tico_streams_sse_not_json(client):
 def test_tico_refuses_to_hand_over_the_answer(client):
     r = client.post("/v1/tico/messages", json={"session_id": "s1", "message": "عايز الحل"})
     frames = _sse_frames(r.text)
-    assert frames[0]["offered_hint_rung"] == 3
+    assert frames[0]["offeredHintRung"] == 3
     assert "gate.open()" not in "".join(f["delta"] for f in frames)
 
 
@@ -157,7 +170,7 @@ def test_moderation_blocks_before_any_model_call(client):
 
 
 def test_unknown_field_is_rejected(client):
-    r = client.post("/v1/hints", json={"session_id": "s1", "code": "x", "oops": 1})
+    r = client.post("/v1/hints", json={**hint_body("s1"), "oops": 1})
     assert r.status_code == 422, "extra=forbid should reject unknown fields"
 
 

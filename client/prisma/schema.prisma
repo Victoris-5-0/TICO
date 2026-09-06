@@ -6,8 +6,9 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 enum Role {
@@ -29,38 +30,115 @@ enum SubmissionStatus {
   ERROR
 }
 
-model User {
-  id             String          @id @default(cuid())
-  email          String          @unique
-  name           String?
-  avatarUrl      String?
-  role           Role            @default(STUDENT)
-  bio            String?
-  xp             Int             @default(0)
-  streak         Int             @default(0)
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
+enum SessionKind {
+  LESSON
+  DIAGNOSTIC
+  CHALLENGE
+}
 
-  progress       UserProgress[]
-  submissions    Submission[]
-  companionChats CompanionChat[]
+enum Phase {
+  ENCOUNTER
+  EXPLORE
+  DISCOVER
+  UNDERSTAND
+  GUIDED_CODING
+  ADAPT_REMIX
+  INDEPENDENT
+}
+
+enum SessionOutcome {
+  IN_PROGRESS
+  SOLVED
+  ABANDONED
+  TIMED_OUT
+}
+
+enum ScaffoldLevel {
+  NONE
+  PARTIAL
+  FULL
+}
+
+enum ErrorFamily {
+  SYNTAX
+  NAME
+  TYPE
+  LOGIC
+  INCOMPLETE
+  RUNTIME
+  UNKNOWN
+}
+
+enum XpSource {
+  EXERCISE_SOLVED
+  LESSON_COMPLETED
+  ACHIEVEMENT
+  CHALLENGE
+  STREAK_BONUS
+  MANUAL
+}
+
+enum ItemType {
+  COSMETIC
+  POWER_UP
+  BADGE
+  CURRENCY
+}
+
+enum ClassroomRole {
+  STUDENT
+  ASSISTANT
+}
+
+model User {
+  id               String            @id @default(cuid())
+  email            String            @unique
+  name             String?
+  avatarUrl        String?
+  role             Role              @default(STUDENT)
+  bio              String?
+  xp               Int               @default(0)
+  streak           Int               @default(0)
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  progress         UserProgress[]
+  submissions      Submission[]
+  companionChats   CompanionChat[]
+  sessions         PracticeSession[]
+  aiInteractions   AiInteraction[]
+  xpEvents         XpEvent[]
+  dailyActivities  DailyActivity[]
+  heroes           UserHero[]
+  items            UserItem[]
+  achievements     UserAchievement[]
+  taughtClassrooms Classroom[]       @relation("TeacherClassrooms")
+  classroomMembers ClassroomMember[]
+  conceptMastery    ConceptMastery[]
+  studentProfile    StudentProfile?
+  lessonPlans       LessonPlan[]
+  generatedMissions GeneratedMission[]
+
 
   @@map("users")
 }
 
 model Track {
-  id          String   @id @default(cuid())
+  id          String      @id @default(cuid())
   title       String
-  slug        String   @unique
+  slug        String      @unique
   description String
   icon        String?
-  language    String   // e.g. "typescript", "python", "javascript", "rust"
-  published   Boolean  @default(false)
-  order       Int      @default(0)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  language    String      // e.g. "typescript", "python", "javascript", "rust"
+  published   Boolean     @default(false)
+  order       Int         @default(0)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
 
   lessons     Lesson[]
+  classrooms  Classroom[]
+  missionTemplates MissionTemplate[]
+
 
   @@map("tracks")
 }
@@ -82,6 +160,8 @@ model Lesson {
   companionChats CompanionChat[]
 
   @@unique([trackId, slug])
+  lessonPlans LessonPlan[]
+
   @@map("lessons")
 }
 
@@ -101,6 +181,9 @@ model Exercise {
   updatedAt    DateTime     @updatedAt
 
   submissions  Submission[]
+  sessions     PracticeSession[]
+  concepts ExerciseConcept[]
+
 
   @@map("exercises")
 }
@@ -111,11 +194,19 @@ model Submission {
   user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   exerciseId      String
   exercise        Exercise         @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
+  sessionId       String?          @map("session_id")
+  session         PracticeSession? @relation(fields: [sessionId], references: [id], onDelete: SetNull)
   code            String           @db.Text
   status          SubmissionStatus @default(PENDING)
+  attemptNumber   Int              @default(1) @map("attempt_number")
+  hintsUsedBefore Int              @default(0) @map("hints_used_before")
+  errorFamily     ErrorFamily?     @map("error_family")
+  errorTag        String?          @map("error_tag")
   output          String?          @db.Text
   executionTimeMs Int?
   createdAt       DateTime         @default(now())
+
+  hintEvents      HintEvent[]
 
   @@map("submissions")
 }
@@ -146,4 +237,416 @@ model CompanionChat {
   updatedAt DateTime @updatedAt
 
   @@map("companion_chats")
+}
+
+model PracticeSession {
+  id                 String          @id @default(cuid())
+  userId             String          @map("user_id")
+  user               User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  exerciseId         String?         @map("exercise_id")
+  exercise           Exercise?       @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
+  generatedMissionId String?         @map("generated_mission_id")
+  generatedMission   GeneratedMission? @relation(fields: [generatedMissionId], references: [id], onDelete: SetNull)
+  kind               SessionKind     @default(LESSON)
+  phase              Phase?          @default(EXPLORE)
+  outcome            SessionOutcome  @default(IN_PROGRESS)
+  hintsUsed          Int             @default(0) @map("hints_used")
+  timeSpentMs        Int             @default(0) @map("time_spent_ms")
+  startedAt          DateTime        @default(now()) @map("started_at")
+  endedAt            DateTime?       @map("ended_at")
+
+  submissions        Submission[]
+  hintEvents         HintEvent[]
+  aiInteractions     AiInteraction[]
+  xpEvents           XpEvent[]
+
+  @@map("practice_sessions")
+}
+
+model HintEvent {
+  id            String          @id @default(cuid())
+  sessionId     String          @map("session_id")
+  session       PracticeSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  submissionId  String?         @map("submission_id")
+  submission    Submission?     @relation(fields: [submissionId], references: [id], onDelete: SetNull)
+  conceptId     String?         @map("concept_id")
+  concept       Concept?        @relation(fields: [conceptId], references: [id], onDelete: SetNull)
+  hintLevel     Int             @default(1) @map("hint_level")
+  text          String?         @db.Text
+  model         String?
+  wasUsed       Boolean         @default(false) @map("was_used")
+  scaffoldState ScaffoldLevel?  @map("scaffold_state")
+  createdAt     DateTime        @default(now()) @map("created_at")
+
+  @@map("hint_events")
+}
+
+model AiInteraction {
+  id             String           @id @default(cuid())
+  userId         String?          @map("user_id")
+  user           User?            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sessionId      String?          @map("session_id")
+  session        PracticeSession? @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+  capability     String
+  model          String?
+  promptVersion  String?          @map("prompt_version")
+  input          String?          @db.Text
+  output         String?          @db.Text
+  tokensIn       Int?             @map("tokens_in")
+  tokensOut      Int?             @map("tokens_out")
+  costUsd        Decimal?         @map("cost_usd") @db.Decimal(10, 6)
+  latencyMs      Int?             @map("latency_ms")
+  status         String?
+  moderationFlag String?          @map("moderation_flag")
+  createdAt      DateTime         @default(now()) @map("created_at")
+
+  @@map("ai_interactions")
+}
+
+model XpEvent {
+  id        String           @id @default(cuid())
+  userId    String           @map("user_id")
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sessionId String?          @map("session_id")
+  session   PracticeSession? @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+  amount    Int
+  source    XpSource
+  reason    String?
+  createdAt DateTime         @default(now()) @map("created_at")
+
+  @@map("xp_events")
+}
+
+model DailyActivity {
+  userId            String   @map("user_id")
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  day               DateTime @db.Date
+  xpEarned          Int      @default(0) @map("xp_earned")
+  sessionsCompleted Int      @default(0) @map("sessions_completed")
+  minutesActive     Int      @default(0) @map("minutes_active")
+
+  @@id([userId, day])
+  @@map("daily_activity")
+}
+
+model Hero {
+  id          String     @id @default(cuid())
+  slug        String     @unique
+  name        String
+  nameAr      String?    @map("name_ar")
+  description String?
+  spriteUrl   String?    @map("sprite_url")
+  unlockRule  Json?      @map("unlock_rule")
+  createdAt   DateTime   @default(now())
+
+  users       UserHero[]
+
+  @@map("heroes")
+}
+
+model UserHero {
+  userId     String   @map("user_id")
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  heroId     String   @map("hero_id")
+  hero       Hero     @relation(fields: [heroId], references: [id], onDelete: Cascade)
+  isActive   Boolean  @default(false) @map("is_active")
+  acquiredAt DateTime @default(now()) @map("acquired_at")
+
+  @@id([userId, heroId])
+  @@map("user_heroes")
+}
+
+model Item {
+  id          String     @id @default(cuid())
+  slug        String     @unique
+  name        String
+  nameAr      String?    @map("name_ar")
+  description String?
+  type        ItemType   @default(COSMETIC)
+  spriteUrl   String?    @map("sprite_url")
+  cost        Int        @default(0)
+  createdAt   DateTime   @default(now())
+
+  users       UserItem[]
+
+  @@map("items")
+}
+
+model UserItem {
+  userId     String   @map("user_id")
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  itemId     String   @map("item_id")
+  item       Item     @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  quantity   Int      @default(1)
+  acquiredAt DateTime @default(now()) @map("acquired_at")
+
+  @@id([userId, itemId])
+  @@map("user_items")
+}
+
+model Achievement {
+  id          String            @id @default(cuid())
+  slug        String            @unique
+  name        String
+  nameAr      String?           @map("name_ar")
+  description String?
+  iconUrl     String?           @map("icon_url")
+  criteria    Json?
+  xpReward    Int               @default(50) @map("xp_reward")
+  createdAt   DateTime          @default(now())
+
+  users       UserAchievement[]
+
+  @@map("achievements")
+}
+
+model UserAchievement {
+  userId        String      @map("user_id")
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  achievementId String      @map("achievement_id")
+  achievement   Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+  unlockedAt    DateTime    @default(now()) @map("unlocked_at")
+
+  @@id([userId, achievementId])
+  @@map("user_achievements")
+}
+
+model Classroom {
+  id        String            @id @default(cuid())
+  name      String
+  joinCode  String            @unique @map("join_code")
+  teacherId String            @map("teacher_id")
+  teacher   User              @relation("TeacherClassrooms", fields: [teacherId], references: [id], onDelete: Cascade)
+  trackId   String?           @map("track_id")
+  track     Track?            @relation(fields: [trackId], references: [id], onDelete: SetNull)
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+
+  members   ClassroomMember[]
+
+  @@map("classrooms")
+}
+
+model ClassroomMember {
+  classroomId String        @map("classroom_id")
+  classroom   Classroom     @relation(fields: [classroomId], references: [id], onDelete: Cascade)
+  userId      String        @map("user_id")
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role        ClassroomRole @default(STUDENT)
+  joinedAt    DateTime      @default(now()) @map("joined_at")
+
+  @@id([classroomId, userId])
+  @@map("classroom_members")
+}
+
+enum LessonRequirement {
+  REQUIRED
+  OPTIONAL
+  DONE
+  SKIPPED
+}
+
+/// Rules propose, the model reviews. Recorded so any decision about a student
+/// can be explained to a teacher or a judge.
+enum DecidedBy {
+  RULE
+  MODEL
+}
+
+enum SkillBand {
+  STRUGGLING
+  ON_LEVEL
+  READY_TO_STRETCH
+}
+
+
+// =============================================================================
+// THE ADAPTIVE SPINE
+// Without these there is no axis to measure a student along, so nothing in the
+// AI design can adapt: no mastery, no scaffolding, no skipping, no generation.
+// =============================================================================
+
+/// variables -> conditionals -> loops -> functions. The order is FIXED and linear;
+/// `sequenceOrder` IS that order. There is no prerequisite graph - a linear roadmap
+/// is a sort column, not a DAG. Per-student variation lives in LessonPlan.
+model Concept {
+  id            String   @id @default(cuid())
+  slug          String   @unique
+  name          String
+  nameAr        String?  @map("name_ar")
+  description   String?
+  sequenceOrder Int      @unique @map("sequence_order")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  exercises  ExerciseConcept[]
+  mastery    ConceptMastery[]
+  hintEvents HintEvent[]
+
+  @@map("concepts")
+}
+
+/// THE MOST LOAD-BEARING JOIN IN THE SCHEMA.
+/// Learning is cumulative: a loops exercise still uses variables and conditionals.
+/// Each exercise has ONE primary (target) concept and several carried ones. A result
+/// moves the target's mastery at full weight and each carried concept at its own -
+/// which is how early concepts stay alive without a single extra exercise.
+model ExerciseConcept {
+  exerciseId String   @map("exercise_id")
+  exercise   Exercise @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
+  conceptId  String   @map("concept_id")
+  concept    Concept  @relation(fields: [conceptId], references: [id], onDelete: Cascade)
+
+  /// Exactly one row per exercise should have isPrimary = true.
+  isPrimary Boolean @default(false) @map("is_primary")
+  /// 1.0 for the target concept; 0.2-0.4 is sensible for carried ones.
+  weight    Float   @default(1.0)
+
+  @@id([exerciseId, conceptId])
+  @@map("exercise_concepts")
+}
+
+/// Per student, per concept: how well do they actually know it.
+/// Computed in Python from attempts, hints and time. NEVER produced by a model.
+model ConceptMastery {
+  userId    String  @map("user_id")
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  conceptId String  @map("concept_id")
+  concept   Concept @relation(fields: [conceptId], references: [id], onDelete: Cascade)
+
+  mastery       Float     @default(0)
+  confidence    Float     @default(0)
+  evidenceCount Int       @default(0) @map("evidence_count")
+  lastSeenAt    DateTime? @map("last_seen_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  @@id([userId, conceptId])
+  @@map("concept_mastery")
+}
+
+/// A cache of the evidence tables, but it is what every prompt loads. Recomputed in
+/// the background after a session closes, never in the request path.
+model StudentProfile {
+  userId String @id @map("user_id")
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  selfReportedLevel String?   @map("self_reported_level")
+  skillBand         SkillBand @default(ON_LEVEL) @map("skill_band")
+  hintDependency    Float     @default(0) @map("hint_dependency")
+  /// 0 = errors are mostly syntax, 1 = mostly logic.
+  syntaxVsLogic     Float     @default(0.5) @map("syntax_vs_logic")
+  pace              Float?
+  locale            String    @default("ar-EG")
+  lastComputedAt    DateTime? @map("last_computed_at")
+  modelVersion      String?   @map("model_version")
+
+  @@map("student_profiles")
+}
+
+/// The student's PERSONAL PATH through the fixed lesson order. The order never
+/// changes; which lessons are in the path does. `reason` and `decidedBy` make every
+/// skip auditable, and a skipped lesson stays replayable - skipping is a suggestion,
+/// never a lock-out.
+model LessonPlan {
+  userId   String @map("user_id")
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lessonId String @map("lesson_id")
+  lesson   Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  requirement LessonRequirement @default(REQUIRED)
+  reason      String?           @db.Text
+  decidedBy   DecidedBy         @default(RULE) @map("decided_by")
+  confidence  Float             @default(1.0)
+  decidedAt   DateTime          @default(now()) @map("decided_at")
+
+  @@id([userId, lessonId])
+  @@map("lesson_plans")
+}
+
+// =============================================================================
+// RUNTIME MISSION GENERATION
+// =============================================================================
+
+/// Authored bounds for generation, projected from content/worlds/*.yaml.
+/// This is what makes "AI fills in variations, never invents mechanics" enforceable.
+model MissionTemplate {
+  id                String   @id @default(cuid())
+  trackId           String   @map("track_id")
+  track             Track    @relation(fields: [trackId], references: [id], onDelete: Cascade)
+  mechanicId        String   @map("mechanic_id")
+  targetConceptId   String   @map("target_concept_id")
+  carriedConceptIds String[] @map("carried_concept_ids")
+  scenes            String[]
+  propsRequired     String[] @map("props_required")
+  paramSchema       Json     @map("param_schema")
+  difficultyBand    Int      @default(5) @map("difficulty_band")
+  /// Which version of the world manifest this was projected from.
+  manifestVersion   String?  @map("manifest_version")
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  generated GeneratedMission[]
+
+  @@map("mission_templates")
+}
+
+/// One composed scenario. `validated` is set by a Python validator function, never by
+/// the model claiming its own output is fine. An unvalidated mission is never shown.
+model GeneratedMission {
+  id         String          @id @default(cuid())
+  templateId String          @map("template_id")
+  template   MissionTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  userId     String?         @map("user_id")
+  user       User?           @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  sceneId         String   @map("scene_id")
+  params          Json
+  content         Json
+  /// concept_id -> ScaffoldLevel. Also part of the hint cache key.
+  scaffoldPlan    Json     @map("scaffold_plan")
+  validated       Boolean  @default(false)
+  engineVersion   String?  @map("engine_version")
+  /// The manifest version this mission was generated against.
+  manifestVersion String?  @map("manifest_version")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  sessions PracticeSession[]
+
+  @@map("generated_missions")
+}
+
+// =============================================================================
+// ERROR VOCABULARY AND COST CONTROL
+// =============================================================================
+
+/// The OPEN half of error classification. Starts empty and fills itself: the
+/// classifier prompt carries the tags seen so far and either reuses one or coins a new
+/// snake_case tag. A spike in new tags means go and look at what students are hitting.
+model ErrorTag {
+  tag         String      @id
+  family      ErrorFamily
+  description String?
+  count       Int         @default(0)
+  firstSeenAt DateTime    @default(now()) @map("first_seen_at")
+  lastSeenAt  DateTime    @updatedAt @map("last_seen_at")
+
+  @@map("error_tags")
+}
+
+/// Cached hint text. Gemini's context caching targets large contexts with
+/// minimum-token thresholds that short hint prompts never reach, so THIS is the
+/// primary cost lever, not an optimisation. Beginners fail in a small number of
+/// identical ways, so the hit rate on early lessons is high.
+model HintCache {
+  id            String         @id @default(cuid())
+  exerciseId    String         @map("exercise_id")
+  hintLevel     Int            @map("hint_level")
+  errorTag      String?        @map("error_tag")
+  scaffoldState ScaffoldLevel? @map("scaffold_state")
+  locale        String         @default("ar-EG")
+  text          String         @db.Text
+  model         String?
+  hits          Int            @default(0)
+  createdAt     DateTime       @default(now()) @map("created_at")
+
+  @@unique([exerciseId, hintLevel, errorTag, scaffoldState, locale])
+  @@map("hint_cache")
 }

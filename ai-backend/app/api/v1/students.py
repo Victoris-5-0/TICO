@@ -20,6 +20,7 @@ from app.schemas.students import (
     MasteryOut,
     PlanRequest,
     PlanResponse,
+    RefreshRequest,
     RefreshResponse,
     StudentProfileOut,
 )
@@ -37,12 +38,16 @@ RESPONSES = {401: {"model": ErrorResponse}, 403: {"model": ErrorResponse}}
     description=(
         "Called in the background after a session closes — the client fires and forgets. "
         "Returns the recomputed profile, per-concept mastery, and whether the gate moved "
-        "the student on. `decided_by` says whether a rule or a model made that call."
+        "the student on. `decidedBy` says whether a rule or a model made that call.\n\n"
+        "Pass `watermark` (the newest submission id you have already accounted for) to "
+        "make the call idempotent — without it a double-fire would count the same "
+        "attempts into mastery twice."
     ),
 )
 def refresh(
     student_id: str,
     response: Response,
+    body: RefreshRequest | None = None,
     user: CurrentUser = Depends(get_current_user),
 ) -> RefreshResponse:
     mark(response)

@@ -21,6 +21,12 @@ from app.schemas.common import ErrorFamily, Schema
 
 class AnalyzeRequest(Schema):
     session_id: str
+    attempt_number: int = Field(
+        default=1,
+        ge=1,
+        description="Which try this is. Real evidence, not bookkeeping: the same error on "
+        "attempt 7 means something different from the same error on attempt 1.",
+    )
     submission_id: str | None = Field(
         default=None, description="The submissions row, when the engine has created one."
     )
@@ -31,11 +37,11 @@ class AnalyzeRequest(Schema):
 
 
 class AnalyzeResponse(Schema):
-    family: ErrorFamily = Field(
+    error_family: ErrorFamily = Field(
         description="Closed, seven values. Drives syntax_vs_logic and the classifier eval. "
         "The guard rejects anything outside the enum."
     )
-    tag: str = Field(
+    error_tag: str = Field(
         max_length=60,
         pattern=r"^[a-z][a-z0-9_]*$",
         description="OPEN snake_case label, e.g. 'assignment_vs_comparison'. The hint cache "

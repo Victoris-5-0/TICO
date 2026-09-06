@@ -52,7 +52,7 @@ def get_hint(
 
     return HintResponse(
         rung=HintRung(rung),
-        text=fx.HINT_LADDER[rung],
+        hint=fx.HINT_LADDER[rung],
         is_final=is_final,
         next_step="mini_practice" if is_final else None,
         hint_event_id=f"demo-hint-{body.session_id}-{rung}",
