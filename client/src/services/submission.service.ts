@@ -84,8 +84,17 @@ export class SubmissionService {
       throw new Error('Session not found or unauthorized');
     }
 
-    if (!session.exerciseId) {
-      throw new Error('Session is not associated with an exercise');
+    let resolvedExerciseId = session.exerciseId;
+    if (!resolvedExerciseId && session.generatedMissionId) {
+      const gm = await db.generatedMission.findUnique({
+        where: { id: session.generatedMissionId },
+        include: { template: { include: { track: { include: { lessons: { include: { exercises: true } } } } } } }
+      });
+      resolvedExerciseId = gm?.template.track.lessons[0]?.exercises[0]?.id || null;
+    }
+
+    if (!resolvedExerciseId) {
+      throw new Error('Session is not associated with an exercise or valid template');
     }
 
     const attemptNumber = session.submissions.length + 1;
@@ -126,15 +135,25 @@ export class SubmissionService {
     yesterday.setUTCDate(yesterday.getUTCDate() - 1);
 
     // Prefetch read data outside transaction to minimize lock time
-    const exercise = session.exerciseId ? await db.exercise.findUnique({
-      where: { id: session.exerciseId },
-      select: { lessonId: true }
-    }) : null;
+    let targetLessonId: string | null = null;
+    if (session.exerciseId) {
+      const exercise = await db.exercise.findUnique({
+        where: { id: session.exerciseId },
+        select: { lessonId: true }
+      });
+      targetLessonId = exercise?.lessonId || null;
+    } else if (resolvedExerciseId) {
+      const exercise = await db.exercise.findUnique({
+        where: { id: resolvedExerciseId },
+        select: { lessonId: true }
+      });
+      targetLessonId = exercise?.lessonId || null;
+    }
 
     let isFirstCompletionCandidate = false;
-    if (exercise) {
+    if (targetLessonId) {
       const existingProgress = await db.userProgress.findUnique({
-        where: { userId_lessonId: { userId, lessonId: exercise.lessonId } }
+        where: { userId_lessonId: { userId, lessonId: targetLessonId } }
       });
       if (!existingProgress || !existingProgress.completed) {
         isFirstCompletionCandidate = true;
@@ -145,7 +164,7 @@ export class SubmissionService {
       const submission = await tx.submission.create({
         data: {
           userId,
-          exerciseId: session.exerciseId!,
+          exerciseId: resolvedExerciseId,
           sessionId,
           code,
           status: runnerResult.status === 'TIMEOUT' ? 'ERROR' : runnerResult.status,
@@ -170,7 +189,7 @@ export class SubmissionService {
           }
         });
 
-        if (exercise && isFirstCompletionCandidate) {
+        if (targetLessonId && isFirstCompletionCandidate) {
           isFirstCompletion = true;
           xpAwarded = 100; // First-time completion bonus
 
@@ -195,9 +214,14 @@ export class SubmissionService {
           
           // 3. Mark lesson completed
           await tx.userProgress.upsert({
-            where: { userId_lessonId: { userId, lessonId: exercise.lessonId } },
+            where: { userId_lessonId: { userId, lessonId: targetLessonId } },
             update: { completed: true, completedAt: new Date() },
-            create: { userId, lessonId: exercise.lessonId, completed: true, completedAt: new Date() }
+            create: { userId, lessonId: targetLessonId, completed: true, completedAt: new Date() }
+          });
+
+          await tx.lessonPlan.updateMany({
+            where: { userId, lessonId: targetLessonId },
+            data: { requirement: 'DONE' }
           });
 
           // 4. Update Daily Activity and Calendar Streak

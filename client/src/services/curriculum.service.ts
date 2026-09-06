@@ -22,12 +22,22 @@ export class CurriculumService {
     });
 
     let completedLessonIds = new Set<string>();
+    let lessonPlanMap = new Map<string, string>();
+
     if (userId) {
-      const progress = await db.userProgress.findMany({
-        where: { userId, completed: true },
-        select: { lessonId: true }
-      });
+      const [progress, plans] = await Promise.all([
+        db.userProgress.findMany({
+          where: { userId, completed: true },
+          select: { lessonId: true }
+        }),
+        db.lessonPlan.findMany({
+          where: { userId },
+          select: { lessonId: true, requirement: true }
+        })
+      ]);
+
       completedLessonIds = new Set(progress.map((p) => p.lessonId));
+      lessonPlanMap = new Map(plans.map((p) => [p.lessonId, p.requirement]));
     }
 
     return tracks.map((track) => {
@@ -54,7 +64,7 @@ export class CurriculumService {
 
   /**
    * Retrieves a single track by its slug or ID, including all its lessons
-   * with derived game map state (LOCKED | AVAILABLE | COMPLETED) and star ratings.
+   * annotated with the student's personal LessonPlan, unlock state, and concept weights.
    */
   async getTrackBySlug(slug: string, userId?: string) {
     const track = await db.track.findFirst({
@@ -72,6 +82,13 @@ export class CurriculumService {
                 title: true,
                 difficulty: true,
                 order: true,
+                concepts: {
+                  include: {
+                    concept: {
+                      select: { id: true, slug: true, name: true, nameAr: true, sequenceOrder: true }
+                    }
+                  }
+                }
               },
               orderBy: { order: 'asc' }
             }
@@ -83,31 +100,39 @@ export class CurriculumService {
     if (!track) return null;
 
     let userProgressMap = new Map<string, boolean>();
+    let lessonPlanMap = new Map<string, { requirement: string; reason: string | null; decidedBy: string }>();
     const submissionsByExercise = new Map<string, { passed: boolean; attempts: number; hints: number }>();
 
     if (userId) {
-      const progress = await db.userProgress.findMany({
-        where: {
-          userId,
-          lessonId: { in: track.lessons.map((l) => l.id) }
-        }
-      });
-      userProgressMap = new Map(progress.map((p) => [p.lessonId, p.completed]));
-
+      const lessonIds = track.lessons.map((l) => l.id);
       const exerciseIds = track.lessons.flatMap((l) => l.exercises.map((e) => e.id));
-      const submissions = await db.submission.findMany({
-        where: {
-          userId,
-          exerciseId: { in: exerciseIds }
-        },
-        select: {
-          exerciseId: true,
-          status: true,
-          attemptNumber: true,
-          hintsUsedBefore: true,
-        },
-        orderBy: { attemptNumber: 'desc' }
-      });
+
+      const [progress, plans, submissions] = await Promise.all([
+        db.userProgress.findMany({
+          where: { userId, lessonId: { in: lessonIds } }
+        }),
+        db.lessonPlan.findMany({
+          where: { userId, lessonId: { in: lessonIds } },
+          select: { lessonId: true, requirement: true, reason: true, decidedBy: true }
+        }),
+        db.submission.findMany({
+          where: { userId, exerciseId: { in: exerciseIds } },
+          select: {
+            exerciseId: true,
+            status: true,
+            attemptNumber: true,
+            hintsUsedBefore: true,
+          },
+          orderBy: { attemptNumber: 'desc' }
+        })
+      ]);
+
+      userProgressMap = new Map(progress.map((p) => [p.lessonId, p.completed]));
+      lessonPlanMap = new Map(plans.map((p) => [p.lessonId, {
+        requirement: p.requirement,
+        reason: p.reason,
+        decidedBy: p.decidedBy
+      }]));
 
       for (const s of submissions) {
         if (!submissionsByExercise.has(s.exerciseId)) {
@@ -123,25 +148,31 @@ export class CurriculumService {
       }
     }
 
-    // Determine sequential unlock state (LOCKED, AVAILABLE, COMPLETED)
-    let previousLessonCompleted = true; // First lesson is available by default
+    // Determine unlock state taking into account skippable lessons
+    let previousLessonCompleted = true;
 
     const lessonsWithProgress = track.lessons.map((lesson, idx) => {
       const isCompleted = userProgressMap.get(lesson.id) ?? false;
+      const plan = lessonPlanMap.get(lesson.id);
+      const isOptional = plan?.requirement === 'OPTIONAL';
+      const isSkipped = plan?.requirement === 'SKIPPED';
+
       let status: 'LOCKED' | 'AVAILABLE' | 'COMPLETED' = 'LOCKED';
 
       if (isCompleted) {
         status = 'COMPLETED';
-      } else if (previousLessonCompleted || idx === 0) {
+      } else if (previousLessonCompleted || idx === 0 || isOptional) {
         status = 'AVAILABLE';
       } else {
         status = 'LOCKED';
       }
 
-      // Update condition for subsequent lessons
-      previousLessonCompleted = isCompleted;
+      // If this lesson is skippable/optional, don't block subsequent lessons
+      if (!isOptional && !isSkipped) {
+        previousLessonCompleted = isCompleted;
+      }
 
-      // TICO Mastery Star Ratings: 1 star (Solved), 2 stars (Autonomy / Zero Hints), 3 stars (Mastery / Fast & Clean)
+      // TICO Mastery Star Ratings
       const exercisesWithStars = lesson.exercises.map((exercise) => {
         const stats = submissionsByExercise.get(exercise.id);
         let stars = 0;
@@ -149,16 +180,24 @@ export class CurriculumService {
 
         if (stats?.passed) {
           exerciseStatus = 'COMPLETED';
-          stars = 1; // Base 1 star for solving
-          if (stats.hints === 0) stars = 2; // 2 stars for zero hints
-          if (stats.hints === 0 && stats.attempts <= 2) stars = 3; // 3 stars for clean master solve
+          stars = 1;
+          if (stats.hints === 0) stars = 2;
+          if (stats.hints === 0 && stats.attempts <= 2) stars = 3;
         }
 
+        const primaryConcept = exercise.concepts.find((c) => c.isPrimary)?.concept;
+        const carriedConcepts = exercise.concepts.filter((c) => !c.isPrimary).map((c) => c.concept);
+
         return {
-          ...exercise,
+          id: exercise.id,
+          title: exercise.title,
+          difficulty: exercise.difficulty,
+          order: exercise.order,
           status: exerciseStatus,
           stars,
           attempts: stats?.attempts ?? 0,
+          primaryConcept,
+          carriedConcepts,
         };
       });
 
@@ -170,6 +209,9 @@ export class CurriculumService {
         order: lesson.order,
         status,
         completed: isCompleted,
+        requirement: plan?.requirement ?? 'REQUIRED',
+        reason: plan?.reason ?? null,
+        decidedBy: plan?.decidedBy ?? 'RULE',
         exerciseCount: lesson.exercises.length,
         exercises: exercisesWithStars,
       };
@@ -209,6 +251,11 @@ export class CurriculumService {
             difficulty: true,
             order: true,
             hints: true,
+            concepts: {
+              include: {
+                concept: true
+              }
+            }
           },
           orderBy: { order: 'asc' }
         }
@@ -218,27 +265,42 @@ export class CurriculumService {
     if (!lesson) return null;
 
     let completed = false;
+    let plan = null;
     if (userId) {
-      const prog = await db.userProgress.findUnique({
-        where: { userId_lessonId: { userId, lessonId } }
-      });
+      const [prog, userPlan] = await Promise.all([
+        db.userProgress.findUnique({
+          where: { userId_lessonId: { userId, lessonId } }
+        }),
+        db.lessonPlan.findUnique({
+          where: { userId_lessonId: { userId, lessonId } }
+        })
+      ]);
       completed = prog?.completed ?? false;
+      plan = userPlan;
     }
 
     return {
       ...lesson,
       completed,
+      requirement: plan?.requirement ?? 'REQUIRED',
+      reason: plan?.reason ?? null,
     };
   }
 
   /**
    * Retrieves an exercise/mission for gameplay.
    * ANTI-CHEAT: Strips solutionCode and sensitive properties!
+   * Checks for active sessions (both exercise-based and generated missions).
    */
   async getExerciseById(exerciseId: string, userId?: string) {
     const exercise = await db.exercise.findUnique({
       where: { id: exerciseId },
       include: {
+        concepts: {
+          include: {
+            concept: true
+          }
+        },
         lesson: {
           select: {
             id: true,
@@ -278,7 +340,10 @@ export class CurriculumService {
           exerciseId,
           outcome: 'IN_PROGRESS',
         },
-        orderBy: { startedAt: 'desc' }
+        orderBy: { startedAt: 'desc' },
+        include: {
+          generatedMission: true,
+        }
       });
 
       latestSubmission = await db.submission.findFirst({
@@ -305,9 +370,9 @@ export class CurriculumService {
       hintCount: exercise.hints.length,
       testCases: publicTestCases,
       lesson: exercise.lesson,
+      concepts: exercise.concepts,
       activeSession,
       latestSubmission,
-      // Note: solutionCode is intentionally NEVER returned to client
     };
   }
 }

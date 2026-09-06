@@ -20,7 +20,7 @@ export async function POST(req: NextRequest) {
         concept: body.concept,
         worldManifestVersion: body.worldManifestVersion || '1.0.0',
         scaffoldLevel: body.scaffoldLevel || 'PARTIAL',
-        locale: body.locale || user.role === 'STUDENT' ? 'ar-EG' : 'en',
+        locale: body.locale || (user.role === 'STUDENT' ? 'ar-EG' : 'en'),
       });
       return NextResponse.json({ data: aiMission });
     } catch {

@@ -1,25 +1,35 @@
 import { db } from '@/lib/db';
-import { SessionOutcome } from '@prisma/client';
+import { aiClient } from '@/lib/ai/client';
+import { Phase, SessionOutcome, SessionKind } from '@prisma/client';
+
+export interface StartSessionParams {
+  userId: string;
+  exerciseId?: string | null;
+  generatedMissionId?: string | null;
+  lessonId?: string | null;
+  token?: string | null;
+}
 
 export class SessionService {
   /**
    * Starts a new practice session or returns the currently active one.
+   * Supports both authored Exercise rows and AI-generated missions.
    */
-  async startOrGetActiveSession(userId: string, exerciseId: string) {
-    const exercise = await db.exercise.findUnique({
-      where: { id: exerciseId },
-    });
+  async startOrGetActiveSession(params: StartSessionParams | string, legacyExerciseId?: string) {
+    // Handle backwards-compatible signature: (userId, exerciseId)
+    const normalized: StartSessionParams = typeof params === 'string'
+      ? { userId: params, exerciseId: legacyExerciseId }
+      : params;
 
-    if (!exercise) {
-      throw new Error('Exercise not found');
-    }
+    const { userId, exerciseId, generatedMissionId, lessonId, token } = normalized;
 
     // Check for an existing IN_PROGRESS session
     const existing = await db.practiceSession.findFirst({
       where: {
         userId,
-        exerciseId,
         outcome: 'IN_PROGRESS',
+        ...(generatedMissionId ? { generatedMissionId } : {}),
+        ...(exerciseId ? { exerciseId } : {}),
       },
       include: {
         _count: {
@@ -27,7 +37,9 @@ export class SessionService {
             submissions: true,
             hintEvents: true,
           }
-        }
+        },
+        exercise: true,
+        generatedMission: true,
       }
     });
 
@@ -39,15 +51,46 @@ export class SessionService {
       };
     }
 
-    // Create a new session
+    // Determine lesson / level ID for AI session creation
+    let targetLessonId = lessonId || null;
+    if (!targetLessonId && exerciseId) {
+      const ex = await db.exercise.findUnique({
+        where: { id: exerciseId },
+        select: { lessonId: true }
+      });
+      targetLessonId = ex?.lessonId || null;
+    }
+
+    // 1. Try opening session with AI Backend if token and levelId are available
+    let aiSessionId: string | null = null;
+    if (token && targetLessonId) {
+      try {
+        const aiSession = await aiClient.createSession(token, {
+          levelId: targetLessonId,
+          generatedMissionId: generatedMissionId || undefined,
+        });
+        aiSessionId = aiSession.id;
+      } catch (err) {
+        console.warn('AI createSession skipped or offline, creating local session:', err instanceof Error ? err.message : err);
+      }
+    }
+
+    // 2. Persist PracticeSession in PostgreSQL
     const session = await db.practiceSession.create({
       data: {
+        ...(aiSessionId ? { id: aiSessionId } : {}),
         userId,
-        exerciseId,
-        kind: 'LESSON',
-        outcome: 'IN_PROGRESS',
+        exerciseId: exerciseId || null,
+        generatedMissionId: generatedMissionId || null,
+        kind: SessionKind.LESSON,
+        phase: Phase.EXPLORE,
+        outcome: SessionOutcome.IN_PROGRESS,
         startedAt: new Date(),
       },
+      include: {
+        exercise: true,
+        generatedMission: true,
+      }
     });
 
     return {
@@ -60,12 +103,12 @@ export class SessionService {
   /**
    * Starts a fresh practice session unconditionally.
    */
-  async startPracticeSession(userId: string, exerciseId: string) {
-    return this.startOrGetActiveSession(userId, exerciseId);
+  async startPracticeSession(params: StartSessionParams | string, legacyExerciseId?: string) {
+    return this.startOrGetActiveSession(params, legacyExerciseId);
   }
 
   /**
-   * Retrieves a practice session with details.
+   * Retrieves a practice session with all related evidence (submissions, hint events).
    */
   async getSessionById(sessionId: string, userId: string) {
     const session = await db.practiceSession.findUnique({
@@ -79,6 +122,7 @@ export class SessionService {
             lessonId: true,
           }
         },
+        generatedMission: true,
         submissions: {
           select: {
             id: true,
@@ -112,9 +156,10 @@ export class SessionService {
   }
 
   /**
-   * Updates session outcome (e.g. ABANDONED or SOLVED).
+   * Advances the pedagogical phase in the 7-phase loop
+   * (ENCOUNTER -> EXPLORE -> DISCOVER -> UNDERSTAND -> GUIDED_CODING -> ADAPT_REMIX -> INDEPENDENT).
    */
-  async updateSessionState(sessionId: string, userId: string, outcome: SessionOutcome) {
+  async updateSessionPhase(sessionId: string, userId: string, phase: Phase, token?: string) {
     const session = await db.practiceSession.findUnique({
       where: { id: sessionId },
     });
@@ -123,11 +168,60 @@ export class SessionService {
       throw new Error('Session not found or unauthorized');
     }
 
+    // Call AI service if token is available
+    if (token) {
+      try {
+        await aiClient.updateSessionPhase(token, sessionId, { phase: phase as any });
+      } catch (err) {
+        console.warn('AI updateSessionPhase skipped or offline:', err instanceof Error ? err.message : err);
+      }
+    }
+
+    return db.practiceSession.update({
+      where: { id: sessionId },
+      data: { phase },
+    });
+  }
+
+  /**
+   * Updates session outcome (e.g. ABANDONED or SOLVED) and optionally syncs with AI service.
+   */
+  async updateSessionState(
+    sessionId: string,
+    userId: string,
+    outcome: SessionOutcome,
+    token?: string
+  ) {
+    const session = await db.practiceSession.findUnique({
+      where: { id: sessionId },
+    });
+
+    if (!session || session.userId !== userId) {
+      throw new Error('Session not found or unauthorized');
+    }
+
+    const timeSpentMs = session.startedAt
+      ? Date.now() - session.startedAt.getTime()
+      : 0;
+
+    // Call AI backend closeSession endpoint if closing
+    if (token && outcome !== 'IN_PROGRESS') {
+      try {
+        await aiClient.closeSession(token, sessionId, {
+          outcome: outcome as any,
+          timeSpentMs,
+        });
+      } catch (err) {
+        console.warn('AI closeSession skipped or offline:', err instanceof Error ? err.message : err);
+      }
+    }
+
     return db.practiceSession.update({
       where: { id: sessionId },
       data: {
         outcome,
         endedAt: outcome !== 'IN_PROGRESS' ? new Date() : null,
+        timeSpentMs,
       },
     });
   }
@@ -135,8 +229,8 @@ export class SessionService {
   /**
    * Completes a practice session.
    */
-  async completePracticeSession(sessionId: string, userId: string) {
-    return this.updateSessionState(sessionId, userId, 'SOLVED');
+  async completePracticeSession(sessionId: string, userId: string, token?: string) {
+    return this.updateSessionState(sessionId, userId, SessionOutcome.SOLVED, token);
   }
 
   /**
@@ -147,6 +241,7 @@ export class SessionService {
       where: { id: sessionId },
       include: {
         exercise: true,
+        generatedMission: true,
         submissions: {
           orderBy: { attemptNumber: 'asc' }
         },
@@ -163,13 +258,14 @@ export class SessionService {
     // Try AI service debrief if token is present
     if (token) {
       try {
-        const aiDebrief = await import('@/lib/ai/client').then(m => m.aiClient.getSessionDebrief(token, sessionId));
+        const aiDebrief = await aiClient.getSessionDebrief(token, sessionId);
         return aiDebrief;
-      } catch {
-        // Fall back to deterministic evaluation below
+      } catch (err) {
+        console.warn('AI getSessionDebrief fallback:', err instanceof Error ? err.message : err);
       }
     }
 
+    // Deterministic fallback
     const totalAttempts = session.submissions.length;
     const hintsUsed = session.hintEvents.length;
     const errorsOvercome = Array.from(new Set(session.submissions.map((s) => s.errorFamily).filter((e): e is NonNullable<typeof e> => Boolean(e))));
@@ -187,7 +283,7 @@ export class SessionService {
 
     const ticoFeedback = isSolved
       ? (starsEarned === 3
-        ? 'إتقان استثنائي! حللت التحدي بأعلى كفاءة وبدون أي تلميحات. استمر يا بطل!'
+        ? 'إتقان استثنائي! حللت المهمة بأعلى كفاءة وبدون أي تلميحات. استمر يا بطل!'
         : 'رائع جداً! تجاوزت التحدي بنجاح وتعلمت كيفية تصحيح الكود خطوة بخطوة.')
       : 'كل محاولة هي خطوة للأمام! مراجعة الأخطاء البرمجية هي الطريقة الأولى ليصبح المبرمج ماهراً. جرّب مجدداً!';
 
