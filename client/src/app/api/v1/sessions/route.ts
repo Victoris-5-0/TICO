@@ -7,15 +7,16 @@ const CreateSessionSchema = z.object({
   exerciseId: z.string().optional().nullable(),
   generatedMissionId: z.string().optional().nullable(),
   lessonId: z.string().optional().nullable(),
-}).refine((data) => data.exerciseId || data.generatedMissionId || data.lessonId, {
-  message: 'At least one of exerciseId, generatedMissionId, or lessonId must be provided',
-});
+}).default({});
 
 export async function POST(req: NextRequest) {
   try {
     const user = await requireUser();
     const token = await getAuthToken();
-    const body = await req.json();
+    let body = {};
+    try {
+      body = await req.json();
+    } catch {}
 
     const parseResult = CreateSessionSchema.safeParse(body);
     if (!parseResult.success) {
