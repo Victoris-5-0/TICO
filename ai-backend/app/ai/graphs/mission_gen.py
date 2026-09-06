@@ -1,14 +1,14 @@
 """Mission generation graph (M5 — P0).
 
 Implements the generation pipeline using LangGraph:
-    generate -> validate -> repair x2 -> (on second failure) -> template fallback
+    generate -> validate -> repair once -> validate (2nd rejection) -> template fallback
 
 Flowchart (docs/08 & AGENTS.md):
     1. Load versioned world manifest (content/worlds/*.yaml)
     2. Narrow legal option set via composer scaffold plan and target concept
     3. Model (gemini-3.5-flash) produces structured mission draft
     4. Python validator asserts schema, manifest IDs, legal verbs, and test execution
-    5. On validation error: retry once or twice with specific error feedback
+    5. On validation error: retry ONCE with specific error feedback (2 total generation attempts, matching AGENTS.md's 'validator rejects twice -> fall back')
     6. On repeated failure: fall back to reviewed template default
     7. Return validated GeneratedMissionOut
 """
@@ -41,6 +41,17 @@ from app.schemas.missions import (
 logger = logging.getLogger(__name__)
 
 MAX_REPAIR_ATTEMPTS: Final[int] = 2
+
+
+class TemplateFallbackValidationError(RuntimeError):
+    """Raised when a reviewed template fallback fails validation against the world manifest.
+
+    This represents a defect in content authoring (content/worlds/*.yaml) or mechanic
+    template configuration. When raised during generate_mission(), it propagates as a
+    hard failure in CI/dev. In production, API handlers (e.g. POST /v1/missions/next)
+    must catch this error and map it to a student-safe degraded response so students
+    never see an unhandled 500 error.
+    """
 
 
 # ---------------------------------------------------------------------------
@@ -344,7 +355,8 @@ def template_fallback_node(state: MissionGenState) -> dict[str, Any]:
             "expected": t_expected,
         })
 
-    # Validate template fallback to guarantee correctness
+    # Validate template fallback to guarantee correctness (AGENTS.md: never show unvalidated mission).
+    # If the reviewed template fails validation, fail-closed: log ERROR and raise TemplateFallbackValidationError.
     fallback_draft = {
         "world_id": state["world_id"],
         "scene_id": scene_id,
@@ -356,7 +368,18 @@ def template_fallback_node(state: MissionGenState) -> dict[str, Any]:
     }
     val_report = validate_manifest_and_solution(fallback_draft, manifest)
     if not val_report.passed:
-        logger.warning("Template fallback had validation warnings: %s", val_report.violations)
+        world_id = state["world_id"]
+        mechanic_id = mechanic.get("id", "unknown")
+        logger.error(
+            "Template fallback failed validation for world '%s', mechanic '%s': %s",
+            world_id,
+            mechanic_id,
+            val_report.violations,
+        )
+        raise TemplateFallbackValidationError(
+            f"Reviewed template fallback for world '{world_id}' and mechanic '{mechanic_id}' "
+            f"failed validation: {val_report.violations}"
+        )
 
     mission_id = f"fallback_{uuid.uuid4().hex[:12]}"
     tests_out = [

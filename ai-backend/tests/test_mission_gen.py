@@ -1,11 +1,13 @@
 """Unit tests for LangGraph mission generation pipeline (app.ai.graphs.mission_gen)."""
 
+import copy
 from unittest.mock import MagicMock, patch
 import pytest
 
 from app.ai.graphs.mission_gen import (
     MissionDraftRaw,
     MissionTestDraft,
+    TemplateFallbackValidationError,
     generate_mission,
     load_world_manifest,
 )
@@ -179,3 +181,52 @@ def test_mission_gen_falls_back_to_template_after_two_failed_attempts():
         assert "waiting = station.passengers" in mission.starter_code
         assert len(mission.tests) >= 1
         assert mock_runnable.invoke.call_count == 2
+
+
+@pytest.fixture
+def inconsistent_manifest():
+    """Manifest fixture where a mechanic's solution fails its own tests."""
+    manifest = copy.deepcopy(load_world_manifest("cairo_metro"))
+    for mechanic in manifest["mechanics"]:
+        if mechanic.get("target_concept") == "conditionals":
+            # Broken template: does not perform the required gate.open()
+            mechanic["solution_template"] = "pass"
+    return manifest
+
+
+def test_mission_gen_raises_when_template_fallback_fails_validation(inconsistent_manifest):
+    """When generation fails twice and fallback fails validation, pipeline raises TemplateFallbackValidationError."""
+    stubbornly_invalid_draft = MissionDraftRaw(
+        scene_id="platform_day",
+        brief="Bad draft",
+        params={},
+        starter_code="",
+        solution_code="station.teleport()",  # Not in manifest
+        tests=[],
+    )
+
+    mock_runnable = MagicMock()
+    mock_runnable.invoke.side_effect = [
+        stubbornly_invalid_draft,
+        stubbornly_invalid_draft,
+    ]
+
+    mock_model = MagicMock()
+    mock_model.with_structured_output.return_value = mock_runnable
+
+    with patch("app.ai.graphs.mission_gen.get_model", return_value=mock_model):
+        with pytest.raises(
+            TemplateFallbackValidationError, match="conditional_gate"
+        ) as exc_info:
+            generate_mission(
+                world_id="cairo_metro",
+                level_id="lvl_04_conditionals",
+                target_concept_id="conditionals",
+                manifest_override=inconsistent_manifest,
+            )
+
+        err_msg = str(exc_info.value)
+        assert "cairo_metro" in err_msg
+        assert "conditional_gate" in err_msg
+        assert "failed validation" in err_msg
+
