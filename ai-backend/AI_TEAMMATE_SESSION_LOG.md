@@ -72,7 +72,8 @@ This log tracks autonomous session tasks in `ai-backend/` following the pre-appr
 - **Assumptions made**:
   - Low confidence threshold for escalation is 0.6.
   - Sane deterministic heuristics handle offline provider states without crashing the API contract.
-- **Open questions for review**: None.
+- **Open questions for review**:
+  - NEEDS DECISION: `ESCALATION_CONFIDENCE_THRESHOLD = 0.6` is a reasonable default, not sourced from AGENTS.md or docs/08, which do not specify an exact escalation confidence value — confirm with the team before relying on it for production tuning.
 
 ---
 

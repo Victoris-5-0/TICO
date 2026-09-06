@@ -170,7 +170,52 @@ def test_deterministic_fallback_scenarios():
 
     # Logic: = instead of ==
     fam, tag, misc, conf = _deterministic_fallback("if x = 5:\n    pass", None, None, None)
-    assert fam == ErrorFamily.LOGIC or fam == ErrorFamily.SYNTAX
+    assert fam == ErrorFamily.LOGIC
+    assert tag == "assignment_vs_comparison"
+    assert misc == "Used a single equals sign (=) for assignment where a double equals (==) comparison was intended."
+    assert conf == 0.95
+
+
+def test_deterministic_fallback_assignment_vs_comparison_false_positive_avoided():
+    """Syntactically valid code with assignment inside body must not trigger assignment_vs_comparison."""
+    fam, tag, misc, conf = _deterministic_fallback("if waiting > 30:\n    x = 1", None, None, None)
+    assert tag != "assignment_vs_comparison"
+    assert fam == ErrorFamily.UNKNOWN
+
+
+def test_classify_error_existing_tags_normalized_for_novelty():
+    """Verify non-normalized existing_tags are normalized so matching tags are not marked new.
+
+    Uses a tag NOT in STANDARD_KNOWN_TAGS so the test only passes if existing_tags
+    normalization actually works. Also asserts the inverse control case (tag is marked
+    new when not in existing_tags).
+    """
+    mock_runnable = MagicMock()
+    mock_runnable.invoke.return_value = ErrorClassificationRaw(
+        family=ErrorFamily.LOGIC,
+        tag="custom_legacy_tag",
+        misconception="A team-specific historical pattern.",
+        confidence=0.9,
+    )
+    mock_model = MagicMock()
+    mock_model.with_structured_output.return_value = mock_runnable
+
+    with patch("app.ai.chains.classify_error.get_model", return_value=mock_model):
+        # Case 1: Unnormalized existing tag matches normalized output -> NOT new
+        response_with_tags = classify_error(
+            code="x = 1",
+            existing_tags=["Custom Legacy Tag"],  # deliberately unnormalized
+        )
+        assert response_with_tags.tag == "custom_legacy_tag"
+        assert response_with_tags.is_new_tag is False
+
+        # Case 2 (Inverse control): Without existing_tags, custom tag is recognized as NEW
+        response_without_tags = classify_error(
+            code="x = 1",
+            existing_tags=None,
+        )
+        assert response_without_tags.tag == "custom_legacy_tag"
+        assert response_without_tags.is_new_tag is True
 
 
 def test_classify_error_model_failure_triggers_safe_fallback():

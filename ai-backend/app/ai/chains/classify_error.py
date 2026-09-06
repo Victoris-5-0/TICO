@@ -15,7 +15,6 @@ from __future__ import annotations
 
 import ast
 import logging
-import re
 from typing import Any, Final
 
 from langchain_core.messages import HumanMessage, SystemMessage
@@ -24,7 +23,9 @@ from pydantic import BaseModel, Field
 from app.ai.chains.tico_hint import strip_pii_from_text
 from app.ai.prompts.error_analysis import (
     ERROR_ANALYSIS_PROMPT_VERSION,
+    STANDARD_KNOWN_TAGS,
     get_error_analysis_system_prompt,
+    normalize_tag,
 )
 from app.ai.router import AICapability, get_model, get_model_name
 from app.schemas.common import ErrorFamily
@@ -32,26 +33,9 @@ from app.schemas.submissions import AnalyzeResponse
 
 logger = logging.getLogger(__name__)
 
-STANDARD_KNOWN_TAGS: Final[set[str]] = {
-    "assignment_vs_comparison",
-    "missing_colon",
-    "indentation_error",
-    "undefined_variable",
-    "undefined_function",
-    "type_mismatch_int_str",
-    "type_mismatch",
-    "off_by_one",
-    "infinite_loop",
-    "index_out_of_range",
-    "missing_return",
-    "unquoted_string",
-    "reversed_condition",
-    "output_mismatch",
-    "incomplete_code",
-    "syntax_error",
-    "division_by_zero",
-}
-
+# NEEDS DECISION: this threshold is a reasonable default, not sourced from
+# AGENTS.md or docs/08, which do not specify an exact escalation confidence
+# value — confirm with the team before relying on it for production tuning.
 ESCALATION_CONFIDENCE_THRESHOLD: Final[float] = 0.6
 
 
@@ -71,15 +55,6 @@ class ErrorClassificationRaw(BaseModel):
         ge=0.0, le=1.0, description="Certainty score between 0.0 and 1.0"
     )
 
-
-def normalize_tag(tag: str) -> str:
-    """Normalize any string into a valid snake_case tag meeting ^[a-z][a-z0-9_]*$."""
-    cleaned = re.sub(r"[^a-z0-9_]+", "_", tag.lower().strip()).strip("_")
-    if not cleaned:
-        return "unknown_error"
-    if not cleaned[0].isalpha():
-        cleaned = f"tag_{cleaned}"
-    return cleaned[:60]
 
 
 def _check_in_scaffolded_region(code: str, scaffold_code: str | None) -> bool:
@@ -109,7 +84,14 @@ def _deterministic_fallback(
     try:
         ast.parse(code)
     except SyntaxError as exc:
-        msg = str(exc).lower()
+        msg = (getattr(exc, "msg", None) or str(exc)).lower()
+        if "maybe you meant" in msg or "'=='" in msg:
+            return (
+                ErrorFamily.LOGIC,
+                "assignment_vs_comparison",
+                "Used a single equals sign (=) for assignment where a double equals (==) comparison was intended.",
+                0.95,
+            )
         if "indent" in msg:
             return (
                 ErrorFamily.SYNTAX,
@@ -173,16 +155,7 @@ def _deterministic_fallback(
                 0.85,
             )
 
-    # 4. Common logic heuristics
-    if "if " in code and "=" in code and "==" not in code:
-        return (
-            ErrorFamily.LOGIC,
-            "assignment_vs_comparison",
-            "Used single equals assignment (=) instead of comparison (==) inside condition.",
-            0.85,
-        )
-
-    # 5. Output mismatch
+    # 4. Output mismatch
     if expected_output is not None and actual_output is not None and expected_output != actual_output:
         return (
             ErrorFamily.LOGIC,
@@ -230,7 +203,7 @@ def classify_error(
     # Known tags vocabulary for prompt and novelty check
     known_tags = set(STANDARD_KNOWN_TAGS)
     if existing_tags:
-        known_tags.update(existing_tags)
+        known_tags.update(normalize_tag(t) for t in existing_tags)
 
     # 2. Build system and user messages
     system_prompt = get_error_analysis_system_prompt(existing_tags=existing_tags)

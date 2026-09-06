@@ -9,8 +9,40 @@ Classifies student code failure into:
 from __future__ import annotations
 
 from typing import Final
+import re
 
 ERROR_ANALYSIS_PROMPT_VERSION: Final[str] = "1.0.0"
+
+STANDARD_KNOWN_TAGS: Final[set[str]] = {
+    "assignment_vs_comparison",
+    "missing_colon",
+    "indentation_error",
+    "undefined_variable",
+    "undefined_function",
+    "type_mismatch_int_str",
+    "type_mismatch",
+    "off_by_one",
+    "infinite_loop",
+    "index_out_of_range",
+    "missing_return",
+    "unquoted_string",
+    "reversed_condition",
+    "output_mismatch",
+    "incomplete_code",
+    "syntax_error",
+    "division_by_zero",
+}
+
+
+def normalize_tag(tag: str) -> str:
+    """Normalize any string into a valid snake_case tag meeting ^[a-z][a-z0-9_]*$."""
+    cleaned = re.sub(r"[^a-z0-9_]+", "_", tag.lower().strip()).strip("_")
+    if not cleaned:
+        return "unknown_error"
+    if not cleaned[0].isalpha():
+        cleaned = f"tag_{cleaned}"
+    return cleaned[:60]
+
 
 _SYSTEM_TEMPLATE = """\
 You are an expert Python programming education diagnostic assistant.
@@ -51,21 +83,15 @@ def get_error_analysis_system_prompt(existing_tags: list[str] | None = None) -> 
         The complete system prompt.
     """
     if existing_tags:
-        tags_formatted = "\n".join(f"     * {tag}" for tag in existing_tags[:30])
+        normalized_tags = [normalize_tag(tag) for tag in existing_tags]
+        seen: set[str] = set()
+        deduped_tags: list[str] = []
+        for tag in normalized_tags:
+            if tag not in seen:
+                seen.add(tag)
+                deduped_tags.append(tag)
+        tags_formatted = "\n".join(f"     * {tag}" for tag in deduped_tags[:30])
     else:
-        tags_formatted = (
-            "     * assignment_vs_comparison\n"
-            "     * missing_colon\n"
-            "     * indentation_error\n"
-            "     * undefined_variable\n"
-            "     * undefined_function\n"
-            "     * type_mismatch_int_str\n"
-            "     * off_by_one\n"
-            "     * infinite_loop\n"
-            "     * index_out_of_range\n"
-            "     * missing_return\n"
-            "     * unquoted_string\n"
-            "     * reversed_condition"
-        )
+        tags_formatted = "\n".join(f"     * {tag}" for tag in sorted(STANDARD_KNOWN_TAGS))
 
     return _SYSTEM_TEMPLATE.format(known_tags_list=tags_formatted)
