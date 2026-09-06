@@ -1,0 +1,28 @@
+# Never let a secret into an image layer. Deleting it in a later layer does not remove
+# it from the image — `docker history` still has it.
+.env
+.env.*
+!.env.example
+
+# The local conda env is Windows-built and multi-GB; the image builds its own.
+env/
+.conda/
+venv/
+.venv/
+
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+tests/
+evals/
+docs/
+*.md
+!README.md
+
+.git/
+.github/
+.vscode/
+.idea/

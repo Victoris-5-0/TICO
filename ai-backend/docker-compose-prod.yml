@@ -1,0 +1,28 @@
+# Production, on the EC2 box.
+#
+#   docker compose -f docker-compose-prod.yml up -d --build
+#
+# Binds to 127.0.0.1 ONLY. Nginx on the host is the single public entry point; it
+# terminates TLS and proxies here. Publishing 0.0.0.0:8000 would expose the app
+# directly on the instance's public IP, bypassing TLS and the rate limit — with a
+# security group that allows 8000, that is a plaintext API open to the internet.
+
+services:
+  ai-backend:
+    build: .
+    image: tico-ai:latest
+    ports:
+      - "127.0.0.1:8000:8000"
+    env_file:
+      - .env
+    environment:
+      ENVIRONMENT: production
+      WEB_CONCURRENCY: 4
+    restart: always
+    logging:
+      # Without this, container logs grow until the disk fills. On a t3.micro that is
+      # not a theoretical risk.
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
