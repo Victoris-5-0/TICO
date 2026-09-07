@@ -15,6 +15,12 @@ services:
       - .env
     environment:
       ENVIRONMENT: development
+      # Force dev mode regardless of what .env holds. The same .env is used for the
+      # deployed box, so it has a real SUPABASE_URL in it — and that alone is enough to
+      # switch auth ON, which makes every local call 401 with no obvious cause.
+      # These two empty values are what dev mode actually keys off.
+      SUPABASE_URL: ""
+      JWT_SECRET: ""
       # One worker with --reload: code changes restart the server, and a single worker
       # keeps the stub endpoints' in-memory state (the hint rung counter) coherent.
       WEB_CONCURRENCY: 1
