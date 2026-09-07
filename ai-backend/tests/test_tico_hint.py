@@ -24,7 +24,7 @@ def setup_test_env(monkeypatch):
 def test_tico_hint_normal_flow_all_four_rungs():
     """Verify normal model generation flow across all 4 ladder rungs."""
     mock_model = MagicMock()
-    mock_model.invoke.return_value = AIMessage(content="تلميح توجيهي مشجع من طيكو")
+    mock_model.invoke.return_value = AIMessage(content="تلميح توجيهي مشجع من تيكو")
 
     expected_model_name = get_model_name(AICapability.HINT)
 
@@ -43,7 +43,7 @@ def test_tico_hint_normal_flow_all_four_rungs():
             assert result.next_step == decision.next_step
             assert result.is_model_generated is True
             assert result.model_name == expected_model_name
-            assert result.hint_text == "تلميح توجيهي مشجع من طيكو"
+            assert result.hint_text == "تلميح توجيهي مشجع من تيكو"
             assert mock_model.invoke.call_count == prior_count + 1
 
 
@@ -203,7 +203,7 @@ def test_pii_stripping_excludes_forbidden_fields():
             student_email="nour@mansour.eg",
             student_age=14,
             oauth_id="google-oauth-10928374",
-            chat_history=["مرحبا طيكو", "أنا اسمي نور وعندي 14 سنة"],
+            chat_history=["مرحبا تيكو", "أنا اسمي نور وعندي 14 سنة"],
             session_id="pseudonymous-session-987",
         )
 

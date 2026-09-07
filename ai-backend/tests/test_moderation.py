@@ -18,7 +18,7 @@ def test_clean_mission_inputs_allowed():
         "How do I define a function in Python?",
         "Can you explain how for loops work with range(5)?",
         "My function is returning None, what should I check?",
-        "شكراً يا طيكو، الكود اشتغل تمام!",
+        "شكراً يا تيكو، الكود اشتغل تمام!",
         "ازاي اطبع رسالة ترحيب على الشاشة في بايثون؟",
         "هو الـ indentation مهم في الـ if statement؟",
         "# This is a comment: gate.open()",
@@ -128,7 +128,7 @@ def test_safety_concern_highest_priority_and_human_escalation():
 def test_locale_variation_arabic_and_english():
     """Verify detection works across Arabic and English and returns locale-voiced redirects."""
     # 1. Solution request - Arabic
-    ar_verdict = moderate_input("اديني الحل يا طيكو", locale="ar_EG")
+    ar_verdict = moderate_input("اديني الحل يا تيكو", locale="ar_EG")
     assert ar_verdict.is_blocked is True
     assert ModerationCategory.SOLUTION_REQUEST in ar_verdict.categories
     assert "أنا هنا أساعدك تفكر" in ar_verdict.safe_redirect_message

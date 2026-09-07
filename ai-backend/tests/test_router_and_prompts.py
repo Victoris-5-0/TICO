@@ -119,7 +119,7 @@ def test_get_model_forbids_fallback_key_in_production(monkeypatch):
 
 def test_tico_persona_prompt():
     """Verify TICO persona prompt adheres to pedagogical, safety and language rules."""
-    assert TICO_PERSONA_VERSION == "1.0.0"
+    assert TICO_PERSONA_VERSION == "1.1.0"
 
     prompt = get_tico_system_prompt(
         world_title="مخبز بلدي",
@@ -128,7 +128,7 @@ def test_tico_persona_prompt():
     )
 
     # Must contain persona identity
-    assert "طيكو" in prompt
+    assert "تيكو" in prompt
     assert "TICO" in prompt
 
     # Must contain Egyptian phrasing

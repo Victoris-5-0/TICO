@@ -7,6 +7,10 @@ This version string is recorded in `ai_interaction.prompt_version` on every mode
 
 from __future__ import annotations
 
+from app.ai.prompts.tico_chat import (
+    TICO_CHAT_PROMPT_VERSION,
+    get_tico_chat_system_prompt,
+)
 from app.ai.prompts.tico_persona import (
     TICO_BASE_PERSONA,
     TICO_PERSONA_VERSION,
@@ -16,7 +20,9 @@ from app.ai.prompts.tico_persona import (
 
 __all__ = [
     "TICO_BASE_PERSONA",
+    "TICO_CHAT_PROMPT_VERSION",
     "TICO_PERSONA_VERSION",
-    "get_tico_system_prompt",
     "get_hint_prompt",
+    "get_tico_chat_system_prompt",
+    "get_tico_system_prompt",
 ]

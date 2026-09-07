@@ -298,7 +298,7 @@ SAFE_REDIRECT_MESSAGES: Final[dict[ModerationCategory, dict[str, str]]] = {
         "en": "Your safety comes first! We don't share personal details here—let's keep our attention on the mission.",
     },
     ModerationCategory.ROMANTIC_SEXUAL: {
-        "ar": "أنا طيكو، صديقك وهدهد الكود لمساعدتك في تعلم البرمجة! يلا نرجع لمهمتنا وتحدي بايثون الممتع.",
+        "ar": "أنا تيكو، صديقك لمساعدتك في تعلم البرمجة! يلا نرجع لمهمتنا وتحدي بايثون الممتع.",
         "en": "I'm TICO, your coding companion! Let's get right back to our mission and Python challenges.",
     },
     ModerationCategory.SAFETY_CONCERN: {
@@ -306,7 +306,7 @@ SAFE_REDIRECT_MESSAGES: Final[dict[ModerationCategory, dict[str, str]]] = {
         "en": "Your safety and wellbeing matter very much to us. Please reach out to a trusted adult, parent, or teacher right away.",
     },
     ModerationCategory.PROMPT_INJECTION: {
-        "ar": "أنا طيكو وهدفي دايماً أساعدك تتعلم بايثون خطوة بخطوة! سيبك من الحيل دي ويلا نكمل كودنا.",
+        "ar": "أنا تيكو وهدفي دايماً أساعدك تتعلم بايثون خطوة بخطوة! سيبك من الحيل دي ويلا نكمل كودنا.",
         "en": "I'm TICO and I'm here to guide your Python learning step by step! Let's skip the tricks and get back to the code.",
     },
 }
