@@ -3,6 +3,11 @@ from app.ai.guards import (
     validate_hint_output,
     validate_manifest_and_solution,
 )
+from app.ai.moderation import (
+    ModerationCategory,
+    ModerationVerdict,
+    moderate_input,
+)
 from app.ai.router import (
     AICapability,
     get_model,
@@ -14,6 +19,10 @@ __all__ = [
     "GuardResult",
     "get_model",
     "get_model_name",
+    "ModerationCategory",
+    "ModerationVerdict",
+    "moderate_input",
     "validate_hint_output",
     "validate_manifest_and_solution",
 ]
+
