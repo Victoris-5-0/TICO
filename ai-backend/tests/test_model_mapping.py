@@ -14,6 +14,7 @@ import re
 from pathlib import Path
 
 import pytest
+from sqlalchemy import DateTime
 
 from app.models_tables import Base
 
@@ -194,3 +195,35 @@ def test_enum_types_match_prisma_type_names():
         assert pg_type.create_type is False, (
             f"{expected}: create_type must be False — Prisma owns the type"
         )
+
+
+def test_every_required_timestamp_can_be_written():
+    """A NOT NULL timestamp needs a default on one side or the other, or INSERTs fail.
+
+    Two distinct traps, and they fail in opposite directions:
+
+    * A column with `DEFAULT CURRENT_TIMESTAMP` in Postgres needs `server_default` on the
+      model. Without it SQLAlchemy sends an explicit NULL instead of omitting the column,
+      and Postgres rejects the row — the database default never gets a chance to apply.
+    * Prisma's `@updatedAt` is applied by the Prisma *client*, so those columns have no
+      database default at all. Nothing fills them for a write from this service, so the
+      model must.
+
+    This broke every insert the service could make, and was only found by trying to seed
+    four rows.
+    """
+    from datetime import datetime
+
+    offenders = []
+    for mapper in Base.registry.mappers:
+        for col in mapper.local_table.columns:
+            is_ts = isinstance(col.type, DateTime) or col.type.__class__.__name__ == "DateTime"
+            if not is_ts or col.nullable or col.primary_key:
+                continue
+            if col.server_default is None and col.default is None:
+                offenders.append(f"{mapper.class_.__name__}.{col.name}")
+
+    assert not offenders, (
+        "NOT NULL timestamp columns with no default on either side — every INSERT "
+        f"touching these will fail: {sorted(offenders)}"
+    )

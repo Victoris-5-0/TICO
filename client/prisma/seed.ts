@@ -1,9 +1,9 @@
-import { PrismaClient, Role, Difficulty, ItemType } from '@prisma/client';
+import { PrismaClient, Role, Difficulty, ItemType, LessonRequirement, DecidedBy, SkillBand } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log('🌱 Starting TICO production-ready database seed...');
+  console.log('🌱 Starting TICO canonical AI-driven database seed...');
 
   // 1. Seed or update demo users
   const demoStudent = await prisma.user.upsert({
@@ -18,7 +18,7 @@ async function main() {
       email: 'student@tico.dev',
       name: 'Adham Developer',
       role: Role.STUDENT,
-      bio: 'Python student exploring Cairo Metro and Nile algorithms.',
+      bio: 'Python student exploring El Forn, El Mahatta, and Isharet Cairo.',
       xp: 320,
       streak: 4,
     },
@@ -44,63 +44,117 @@ async function main() {
 
   console.log(`👤 Users seeded: ${demoStudent.email}, ${demoTeacher.email}`);
 
-  // 2. Seed Egypt World Tracks & Lessons
-  const cairoMetro = await prisma.track.upsert({
-    where: { slug: 'cairo-metro' },
-    update: {
-      title: 'Cairo Metro: Foundations of Code',
-      description: 'Navigate Line 1 and Line 2 through Python variables, calculations, and ticketing logic.',
-      icon: 'train',
-      language: 'python',
-      published: true,
-      order: 1,
-    },
+  // 2. Seed The Linear Concept Spine (variables -> conditionals -> loops -> functions)
+  const conceptVariables = await prisma.concept.upsert({
+    where: { slug: 'variables' },
+    update: { sequenceOrder: 1, name: 'Variables & Calculation', nameAr: 'المتغيرات والعمليات الحسابية' },
     create: {
-      slug: 'cairo-metro',
-      title: 'Cairo Metro: Foundations of Code',
-      description: 'Navigate Line 1 and Line 2 through Python variables, calculations, and ticketing logic.',
-      icon: 'train',
-      language: 'python',
-      published: true,
-      order: 1,
+      slug: 'variables',
+      name: 'Variables & Calculation',
+      nameAr: 'المتغيرات والعمليات الحسابية',
+      description: 'Storing values, assigning identifiers, and performing basic arithmetic in Python.',
+      sequenceOrder: 1,
     },
   });
 
-  await prisma.track.upsert({
+  const conceptConditionals = await prisma.concept.upsert({
+    where: { slug: 'conditionals' },
+    update: { sequenceOrder: 2, name: 'Conditionals & Branching', nameAr: 'الشروط والقرارات المنطقية' },
+    create: {
+      slug: 'conditionals',
+      name: 'Conditionals & Branching',
+      nameAr: 'الشروط والقرارات المنطقية',
+      description: 'Branching logic using if, elif, else, and comparison operators.',
+      sequenceOrder: 2,
+    },
+  });
+
+  const conceptLoops = await prisma.concept.upsert({
+    where: { slug: 'loops' },
+    update: { sequenceOrder: 3, name: 'Loops & Collections', nameAr: 'التكرار والقوائم البرمجية' },
+    create: {
+      slug: 'loops',
+      name: 'Loops & Collections',
+      nameAr: 'التكرار والقوائم البرمجية',
+      description: 'Iterating through queues and batches using for-loops, while-loops, and lists.',
+      sequenceOrder: 3,
+    },
+  });
+
+  const conceptFunctions = await prisma.concept.upsert({
+    where: { slug: 'functions' },
+    update: { sequenceOrder: 4, name: 'Functions & Modularity', nameAr: 'الدوال والوحدات البرمجية' },
+    create: {
+      slug: 'functions',
+      name: 'Functions & Modularity',
+      nameAr: 'الدوال والوحدات البرمجية',
+      description: 'Encapsulating reusable logic into functions with parameters and return values.',
+      sequenceOrder: 4,
+    },
+  });
+
+  console.log('📐 Concept spine seeded: variables (1), conditionals (2), loops (3), functions (4)');
+
+  // 3. Seed The 3 Canonical Egypt Worlds (Tracks)
+  // World 1: El Forn (The Baladi Bakery)
+  const elForn = await prisma.track.upsert({
     where: { slug: 'el-forn' },
     update: {
-      title: 'El Forn Bakery: Loops & Bread Production',
-      description: 'Manage daily baladi bread production using for-loops, while-loops, and lists.',
+      title: 'El Forn: Baladi Bakery',
+      description: 'Organize bread trays, count portions, and help the morning queue move fairly using Python variables and limits.',
       icon: 'flame',
       language: 'python',
       published: true,
-      order: 2,
+      order: 1,
     },
     create: {
       slug: 'el-forn',
-      title: 'El Forn Bakery: Loops & Bread Production',
-      description: 'Manage daily baladi bread production using for-loops, while-loops, and lists.',
+      title: 'El Forn: Baladi Bakery',
+      description: 'Organize bread trays, count portions, and help the morning queue move fairly using Python variables and limits.',
       icon: 'flame',
+      language: 'python',
+      published: true,
+      order: 1,
+    },
+  });
+
+  // World 2: El Mahatta (Egyptian Railway Station)
+  const elMahatta = await prisma.track.upsert({
+    where: { slug: 'el-mahatta' },
+    update: {
+      title: 'El Mahatta: Railway Station',
+      description: 'Organize ticket lines, route passengers to correct platforms, and structure travel data using lists and loops.',
+      icon: 'train',
+      language: 'python',
+      published: true,
+      order: 2,
+    },
+    create: {
+      slug: 'el-mahatta',
+      title: 'El Mahatta: Railway Station',
+      description: 'Organize ticket lines, route passengers to correct platforms, and structure travel data using lists and loops.',
+      icon: 'train',
       language: 'python',
       published: true,
       order: 2,
     },
   });
 
-  await prisma.track.upsert({
-    where: { slug: 'cairo-traffic' },
+  // World 3: Isharet Cairo (Traffic Control)
+  const isharetCairo = await prisma.track.upsert({
+    where: { slug: 'isharet-cairo' },
     update: {
-      title: 'Cairo Traffic: Functions & Automation',
-      description: 'Control 6th October Bridge traffic signals using modular Python functions and logic.',
+      title: 'Isharet Cairo: Traffic Control',
+      description: 'Read intersection sensors, coordinate signal countdowns, and diagnose city traffic controllers with modular functions.',
       icon: 'car',
       language: 'python',
       published: true,
       order: 3,
     },
     create: {
-      slug: 'cairo-traffic',
-      title: 'Cairo Traffic: Functions & Automation',
-      description: 'Control 6th October Bridge traffic signals using modular Python functions and logic.',
+      slug: 'isharet-cairo',
+      title: 'Isharet Cairo: Traffic Control',
+      description: 'Read intersection sensors, coordinate signal countdowns, and diagnose city traffic controllers with modular functions.',
       icon: 'car',
       language: 'python',
       published: true,
@@ -108,116 +162,470 @@ async function main() {
     },
   });
 
-  await prisma.track.upsert({
-    where: { slug: 'nile-river' },
-    update: {
-      title: 'Nile River: Flood Monitoring & Mastery',
-      description: 'Monitor water levels from Aswan to the Delta using data structures and algorithms.',
-      icon: 'droplets',
-      language: 'python',
-      published: true,
-      order: 4,
-    },
-    create: {
-      slug: 'nile-river',
-      title: 'Nile River: Flood Monitoring & Mastery',
-      description: 'Monitor water levels from Aswan to the Delta using data structures and algorithms.',
-      icon: 'droplets',
-      language: 'python',
-      published: true,
-      order: 4,
-    },
-  });
+  console.log('🗺️ Canonical Worlds seeded: El Forn (1), El Mahatta (2), Isharet Cairo (3)');
 
-  console.log('🗺️ Tracks seeded: Cairo Metro, El Forn, Cairo Traffic, Nile River');
+  // 4. Seed Canonical Lessons & Template Exercises with ExerciseConcept Joins
 
-  // 3. Seed Cairo Metro Lesson 1 & Exercise
-  const metroLesson1 = await prisma.lesson.upsert({
-    where: {
-      trackId_slug: {
-        trackId: cairoMetro.id,
-        slug: 'metro-line-departure',
-      },
-    },
+  // World 1 - Lesson 1: Opening Message
+  const fornLesson1 = await prisma.lesson.upsert({
+    where: { trackId_slug: { trackId: elForn.id, slug: 'opening-message' } },
     update: {
-      title: '1. Station Departure & Fare Calculation',
-      description: 'Learn Python variable assignment and arithmetic to compute passenger metro fares.',
+      title: 'رسالة الفتح (Opening Message)',
+      description: 'إعداد إشعار فتح المخبز وحساب كمية الخبز الأولى باستخدام المتغيرات.',
       order: 1,
     },
     create: {
-      trackId: cairoMetro.id,
-      slug: 'metro-line-departure',
-      title: '1. Station Departure & Fare Calculation',
-      description: 'Learn Python variable assignment and arithmetic to compute passenger metro fares.',
-      content: `# Station Departure & Fare Calculation
-Welcome to the Cairo Metro control room at Sadat Station!
-In this lesson, you will learn how to write Python code to calculate total fare revenue.
-`,
+      trackId: elForn.id,
+      slug: 'opening-message',
+      title: 'رسالة الفتح (Opening Message)',
+      description: 'إعداد إشعار فتح المخبز وحساب كمية الخبز الأولى باستخدام المتغيرات.',
+      content: 'مرحباً بك في مخبز العيش البلدي مع تيكو والعم حسن! في هذه المهمة، ستكتب كوداً لطباعة إشعار فتح المخبز.',
       order: 1,
     },
   });
 
-  const metroExercise1 = await prisma.exercise.upsert({
-    where: { id: 'exercise-cairo-metro-01' },
+  const fornExercise1 = await prisma.exercise.upsert({
+    where: { id: 'exercise-forn-01' },
     update: {
-      title: 'Calculate Metro Revenue',
-      lessonId: metroLesson1.id,
-      instructions: 'Write a function `calculate_revenue(passengers: int, price_per_ticket: int) -> int` that calculates total fare collected.',
-      starterCode: `def calculate_revenue(passengers: int, price_per_ticket: int) -> int:
-    # Calculate and return total revenue
+      title: 'إشعار فتح المخبز (Bakery Opening Notice)',
+      lessonId: fornLesson1.id,
+      instructions: 'اكتب دالة `opening_notice(station_name: str, loaves: int) -> str` تقوم بتركيب رسالة الفتح: `"مخبز " + station_name + " جاهز بـ " + str(loaves) + " رغيف"`.',
+      starterCode: `def opening_notice(station_name: str, loaves: int) -> str:
+    # ركّب رسالة الفتح وأرجعها
     pass
 `,
-      solutionCode: `def calculate_revenue(passengers: int, price_per_ticket: int) -> int:
-    return passengers * price_per_ticket
+      solutionCode: `def opening_notice(station_name: str, loaves: int) -> str:
+    return f"مخبز {station_name} جاهز بـ {loaves} رغيف"
 `,
       testCases: [
-        { input: 'calculate_revenue(10, 8)', expectedOutput: '80', isHidden: false },
-        { input: 'calculate_revenue(50, 10)', expectedOutput: '500', isHidden: false },
-        { input: 'calculate_revenue(0, 8)', expectedOutput: '0', isHidden: true },
+        { input: 'opening_notice("الفرن البلدي", 100)', expectedOutput: '"مخبز الفرن البلدي جاهز بـ 100 رغيف"', isHidden: false },
+        { input: 'opening_notice("السيدة زينب", 250)', expectedOutput: '"مخبز السيدة زينب جاهز بـ 250 رغيف"', isHidden: false },
       ],
       hints: [
-        'Multiply `passengers` by `price_per_ticket` using the `*` operator.',
-        'Remember to `return` the final calculated value from the function.',
+        'استخدم علامة الجمع `+` أو الـ f-strings لدمج النصوص في بايثون.',
+        'تأكد من إرجاع النتيجة باستخدام `return`.',
       ],
       difficulty: Difficulty.BEGINNER,
       order: 1,
     },
     create: {
-      id: 'exercise-cairo-metro-01',
-      lessonId: metroLesson1.id,
-      title: 'Calculate Metro Revenue',
-      instructions: 'Write a function `calculate_revenue(passengers: int, price_per_ticket: int) -> int` that calculates total fare collected.',
-      starterCode: `def calculate_revenue(passengers: int, price_per_ticket: int) -> int:
-    # Calculate and return total revenue
+      id: 'exercise-forn-01',
+      lessonId: fornLesson1.id,
+      title: 'إشعار فتح المخبز (Bakery Opening Notice)',
+      instructions: 'اكتب دالة `opening_notice(station_name: str, loaves: int) -> str` تقوم بتركيب رسالة الفتح: `"مخبز " + station_name + " جاهز بـ " + str(loaves) + " رغيف"`.',
+      starterCode: `def opening_notice(station_name: str, loaves: int) -> str:
+    # ركّب رسالة الفتح وأرجعها
     pass
 `,
-      solutionCode: `def calculate_revenue(passengers: int, price_per_ticket: int) -> int:
-    return passengers * price_per_ticket
+      solutionCode: `def opening_notice(station_name: str, loaves: int) -> str:
+    return f"مخبز {station_name} جاهز بـ {loaves} رغيف"
 `,
       testCases: [
-        { input: 'calculate_revenue(10, 8)', expectedOutput: '80', isHidden: false },
-        { input: 'calculate_revenue(50, 10)', expectedOutput: '500', isHidden: false },
-        { input: 'calculate_revenue(0, 8)', expectedOutput: '0', isHidden: true },
+        { input: 'opening_notice("الفرن البلدي", 100)', expectedOutput: '"مخبز الفرن البلدي جاهز بـ 100 رغيف"', isHidden: false },
+        { input: 'opening_notice("السيدة زينب", 250)', expectedOutput: '"مخبز السيدة زينب جاهز بـ 250 رغيف"', isHidden: false },
       ],
       hints: [
-        'Multiply `passengers` by `price_per_ticket` using the `*` operator.',
-        'Remember to `return` the final calculated value from the function.',
+        'استخدم علامة الجمع `+` أو الـ f-strings لدمج النصوص في بايثون.',
+        'تأكد من إرجاع النتيجة باستخدام `return`.',
       ],
       difficulty: Difficulty.BEGINNER,
       order: 1,
     },
   });
 
-  console.log(`🚇 Lessons & Exercises seeded: ${metroLesson1.title} -> ${metroExercise1.title}`);
+  await prisma.exerciseConcept.upsert({
+    where: { exerciseId_conceptId: { exerciseId: fornExercise1.id, conceptId: conceptVariables.id } },
+    update: { isPrimary: true, weight: 1.0 },
+    create: { exerciseId: fornExercise1.id, conceptId: conceptVariables.id, isPrimary: true, weight: 1.0 },
+  });
 
-  // 4. Seed Heroes
+  // World 1 - Lesson 2: Count the Trays
+  const fornLesson2 = await prisma.lesson.upsert({
+    where: { trackId_slug: { trackId: elForn.id, slug: 'count-the-trays' } },
+    update: {
+      title: 'عدّ الصواني (Count the Trays)',
+      description: 'حساب إجمالي الأرغفة المنتجة بناء على عدد الصواني وسعة كل صينية.',
+      order: 2,
+    },
+    create: {
+      trackId: elForn.id,
+      slug: 'count-the-trays',
+      title: 'عدّ الصواني (Count the Trays)',
+      description: 'حساب إجمالي الأرغفة المنتجة بناء على عدد الصواني وسعة كل صينية.',
+      content: 'في هذا الدرس، سنحسب مجموع الأرغفة التي يخرجها حسن من الفرن في الصواني.',
+      order: 2,
+    },
+  });
+
+  const fornExercise2 = await prisma.exercise.upsert({
+    where: { id: 'exercise-forn-02' },
+    update: {
+      title: 'حساب إجمالي الأرغفة (Total Loaves Calculation)',
+      lessonId: fornLesson2.id,
+      instructions: 'اكتب دالة `calculate_loaves(trays: int, loaves_per_tray: int) -> int` تقوم بضرب عدد الصواني في سعة الصينية.',
+      starterCode: `def calculate_loaves(trays: int, loaves_per_tray: int) -> int:
+    # احسب وأرجع الإجمالي
+    pass
+`,
+      solutionCode: `def calculate_loaves(trays: int, loaves_per_tray: int) -> int:
+    return trays * loaves_per_tray
+`,
+      testCases: [
+        { input: 'calculate_loaves(5, 12)', expectedOutput: '60', isHidden: false },
+        { input: 'calculate_loaves(10, 8)', expectedOutput: '80', isHidden: false },
+      ],
+      hints: [
+        'استخدم معامل الضرب `*` لضرب المتغيرين.',
+      ],
+      difficulty: Difficulty.BEGINNER,
+      order: 1,
+    },
+    create: {
+      id: 'exercise-forn-02',
+      lessonId: fornLesson2.id,
+      title: 'حساب إجمالي الأرغفة (Total Loaves Calculation)',
+      instructions: 'اكتب دالة `calculate_loaves(trays: int, loaves_per_tray: int) -> int` تقوم بضرب عدد الصواني في سعة الصينية.',
+      starterCode: `def calculate_loaves(trays: int, loaves_per_tray: int) -> int:
+    # احسب وأرجع الإجمالي
+    pass
+`,
+      solutionCode: `def calculate_loaves(trays: int, loaves_per_tray: int) -> int:
+    return trays * loaves_per_tray
+`,
+      testCases: [
+        { input: 'calculate_loaves(5, 12)', expectedOutput: '60', isHidden: false },
+        { input: 'calculate_loaves(10, 8)', expectedOutput: '80', isHidden: false },
+      ],
+      hints: [
+        'استخدم معامل الضرب `*` لضرب المتغيرين.',
+      ],
+      difficulty: Difficulty.BEGINNER,
+      order: 1,
+    },
+  });
+
+  await prisma.exerciseConcept.upsert({
+    where: { exerciseId_conceptId: { exerciseId: fornExercise2.id, conceptId: conceptVariables.id } },
+    update: { isPrimary: true, weight: 1.0 },
+    create: { exerciseId: fornExercise2.id, conceptId: conceptVariables.id, isPrimary: true, weight: 1.0 },
+  });
+
+  // World 2 - Lesson 1: Ticket Queue
+  const mahattaLesson1 = await prisma.lesson.upsert({
+    where: { trackId_slug: { trackId: elMahatta.id, slug: 'ticket-queue' } },
+    update: {
+      title: 'طابور التذاكر (Ticket Queue)',
+      description: 'تنظيم شباك التذاكر وتوزيع المقاعد باستخدام القوائم والحلقات التكرارية.',
+      order: 1,
+    },
+    create: {
+      trackId: elMahatta.id,
+      slug: 'ticket-queue',
+      title: 'طابور التذاكر (Ticket Queue)',
+      description: 'تنظيم شباك التذاكر وتوزيع المقاعد باستخدام القوائم والحلقات التكرارية.',
+      content: 'في محطة قطار مصر، تساعد دينا في شباك التذاكر لتنظيم طلبات الركاب.',
+      order: 1,
+    },
+  });
+
+  const mahattaExercise1 = await prisma.exercise.upsert({
+    where: { id: 'exercise-mahatta-01' },
+    update: {
+      title: 'معالجة طابور التذاكر (Process Ticket Queue)',
+      lessonId: mahattaLesson1.id,
+      instructions: 'اكتب دالة `count_passengers_for_destination(queue: list, destination: str) -> int` لحساب عدد الركاب المتجهين لمحطة معينة.',
+      starterCode: `def count_passengers_for_destination(queue: list, destination: str) -> int:
+    # عد الركاب المتجهين إلى الوجهة المطلوبة
+    pass
+`,
+      solutionCode: `def count_passengers_for_destination(queue: list, destination: str) -> int:
+    count = 0
+    for passenger in queue:
+        if passenger.get("destination") == destination:
+            count += 1
+    return count
+`,
+      testCases: [
+        { input: 'count_passengers_for_destination([{"destination": "الإسكندرية"}, {"destination": "أسوان"}, {"destination": "الإسكندرية"}], "الإسكندرية")', expectedOutput: '2', isHidden: false },
+      ],
+      hints: [
+        'استخدم حلقة `for` للمرور على كل راكب في القائمة.',
+        'قارن قيمة المفتاح `"destination"` مع الوجهة المطلوبة باستخدام `==`.',
+      ],
+      difficulty: Difficulty.INTERMEDIATE,
+      order: 1,
+    },
+    create: {
+      id: 'exercise-mahatta-01',
+      lessonId: mahattaLesson1.id,
+      title: 'معالجة طابور التذاكر (Process Ticket Queue)',
+      instructions: 'اكتب دالة `count_passengers_for_destination(queue: list, destination: str) -> int` لحساب عدد الركاب المتجهين لمحطة معينة.',
+      starterCode: `def count_passengers_for_destination(queue: list, destination: str) -> int:
+    # عد الركاب المتجهين إلى الوجهة المطلوبة
+    pass
+`,
+      solutionCode: `def count_passengers_for_destination(queue: list, destination: str) -> int:
+    count = 0
+    for passenger in queue:
+        if passenger.get("destination") == destination:
+            count += 1
+    return count
+`,
+      testCases: [
+        { input: 'count_passengers_for_destination([{"destination": "الإسكندرية"}, {"destination": "أسوان"}, {"destination": "الإسكندرية"}], "الإسكندرية")', expectedOutput: '2', isHidden: false },
+      ],
+      hints: [
+        'استخدم حلقة `for` للمرور على كل راكب في القائمة.',
+        'قارن قيمة المفتاح `"destination"` مع الوجهة المطلوبة باستخدام `==`.',
+      ],
+      difficulty: Difficulty.INTERMEDIATE,
+      order: 1,
+    },
+  });
+
+  await prisma.exerciseConcept.upsert({
+    where: { exerciseId_conceptId: { exerciseId: mahattaExercise1.id, conceptId: conceptLoops.id } },
+    update: { isPrimary: true, weight: 1.0 },
+    create: { exerciseId: mahattaExercise1.id, conceptId: conceptLoops.id, isPrimary: true, weight: 1.0 },
+  });
+
+  await prisma.exerciseConcept.upsert({
+    where: { exerciseId_conceptId: { exerciseId: mahattaExercise1.id, conceptId: conceptConditionals.id } },
+    update: { isPrimary: false, weight: 0.3 },
+    create: { exerciseId: mahattaExercise1.id, conceptId: conceptConditionals.id, isPrimary: false, weight: 0.3 },
+  });
+
+  // World 3 - Lesson 1: Signal Rules
+  const trafficLesson1 = await prisma.lesson.upsert({
+    where: { trackId_slug: { trackId: isharetCairo.id, slug: 'signal-rules' } },
+    update: {
+      title: 'قواعد الإشارة (Signal Rules)',
+      description: 'التحكم في إشارات المرور وتوقيتات فتح المسارات باستخدام الدوال الشرطية.',
+      order: 1,
+    },
+    create: {
+      trackId: isharetCairo.id,
+      slug: 'signal-rules',
+      title: 'قواعد الإشارة (Signal Rules)',
+      description: 'التحكم في إشارات المرور وتوقيتات فتح المسارات باستخدام الدوال الشرطية.',
+      content: 'في مركز تحكم مرور القاهرة مع المهندسة فرح، سنبرمج دورة الإشارة الضوئية.',
+      order: 1,
+    },
+  });
+
+  const trafficExercise1 = await prisma.exercise.upsert({
+    where: { id: 'exercise-traffic-01' },
+    update: {
+      title: 'تحديد حالة الإشارة (Determine Signal State)',
+      lessonId: trafficLesson1.id,
+      instructions: 'اكتب دالة `next_signal_state(current_state: str, seconds_elapsed: int) -> str` لتحديد الحالة التالية للإشارة.',
+      starterCode: `def next_signal_state(current_state: str, seconds_elapsed: int) -> str:
+    # حدد الحالة التالية للإشارة
+    pass
+`,
+      solutionCode: `def next_signal_state(current_state: str, seconds_elapsed: int) -> str:
+    if current_state == "RED" and seconds_elapsed >= 45:
+        return "GREEN"
+    elif current_state == "GREEN" and seconds_elapsed >= 30:
+        return "YELLOW"
+    elif current_state == "YELLOW" and seconds_elapsed >= 5:
+        return "RED"
+    return current_state
+`,
+      testCases: [
+        { input: 'next_signal_state("RED", 50)', expectedOutput: '"GREEN"', isHidden: false },
+        { input: 'next_signal_state("GREEN", 35)', expectedOutput: '"YELLOW"', isHidden: false },
+        { input: 'next_signal_state("YELLOW", 6)', expectedOutput: '"RED"', isHidden: false },
+      ],
+      hints: [
+        'استخدم جمل `if / elif / else` لفحص الحالة الحالية والوقت المنقضي.',
+      ],
+      difficulty: Difficulty.ADVANCED,
+      order: 1,
+    },
+    create: {
+      id: 'exercise-traffic-01',
+      lessonId: trafficLesson1.id,
+      title: 'تحديد حالة الإشارة (Determine Signal State)',
+      instructions: 'اكتب دالة `next_signal_state(current_state: str, seconds_elapsed: int) -> str` لتحديد الحالة التالية للإشارة.',
+      starterCode: `def next_signal_state(current_state: str, seconds_elapsed: int) -> str:
+    # حدد الحالة التالية للإشارة
+    pass
+`,
+      solutionCode: `def next_signal_state(current_state: str, seconds_elapsed: int) -> str:
+    if current_state == "RED" and seconds_elapsed >= 45:
+        return "GREEN"
+    elif current_state == "GREEN" and seconds_elapsed >= 30:
+        return "YELLOW"
+    elif current_state == "YELLOW" and seconds_elapsed >= 5:
+        return "RED"
+    return current_state
+`,
+      testCases: [
+        { input: 'next_signal_state("RED", 50)', expectedOutput: '"GREEN"', isHidden: false },
+        { input: 'next_signal_state("GREEN", 35)', expectedOutput: '"YELLOW"', isHidden: false },
+        { input: 'next_signal_state("YELLOW", 6)', expectedOutput: '"RED"', isHidden: false },
+      ],
+      hints: [
+        'استخدم جمل `if / elif / else` لفحص الحالة الحالية والوقت المنقضي.',
+      ],
+      difficulty: Difficulty.ADVANCED,
+      order: 1,
+    },
+  });
+
+  await prisma.exerciseConcept.upsert({
+    where: { exerciseId_conceptId: { exerciseId: trafficExercise1.id, conceptId: conceptFunctions.id } },
+    update: { isPrimary: true, weight: 1.0 },
+    create: { exerciseId: trafficExercise1.id, conceptId: conceptFunctions.id, isPrimary: true, weight: 1.0 },
+  });
+
+  await prisma.exerciseConcept.upsert({
+    where: { exerciseId_conceptId: { exerciseId: trafficExercise1.id, conceptId: conceptConditionals.id } },
+    update: { isPrimary: false, weight: 0.4 },
+    create: { exerciseId: trafficExercise1.id, conceptId: conceptConditionals.id, isPrimary: false, weight: 0.4 },
+  });
+
+  console.log('📚 Lessons, Exercises, and ExerciseConcept weights seeded.');
+
+  // 5. Seed MissionTemplates for Runtime AI Generation
+  await prisma.missionTemplate.upsert({
+    where: { id: 'template-forn-variables' },
+    update: {
+      trackId: elForn.id,
+      mechanicId: 'bakery_orders',
+      targetConceptId: conceptVariables.id,
+      carriedConceptIds: [],
+      scenes: ['bakery.street', 'bakery.counter', 'bakery.queue'],
+      propsRequired: ['bakery.tray', 'bakery.queue_token'],
+      paramSchema: { queueLength: { min: 4, max: 12 }, loavesPerPerson: { min: 2, max: 4 } },
+      difficultyBand: 3,
+      manifestVersion: '1.0.0',
+    },
+    create: {
+      id: 'template-forn-variables',
+      trackId: elForn.id,
+      mechanicId: 'bakery_orders',
+      targetConceptId: conceptVariables.id,
+      carriedConceptIds: [],
+      scenes: ['bakery.street', 'bakery.counter', 'bakery.queue'],
+      propsRequired: ['bakery.tray', 'bakery.queue_token'],
+      paramSchema: { queueLength: { min: 4, max: 12 }, loavesPerPerson: { min: 2, max: 4 } },
+      difficultyBand: 3,
+      manifestVersion: '1.0.0',
+    },
+  });
+
+  await prisma.missionTemplate.upsert({
+    where: { id: 'template-mahatta-loops' },
+    update: {
+      trackId: elMahatta.id,
+      mechanicId: 'station_dispatch',
+      targetConceptId: conceptLoops.id,
+      carriedConceptIds: [conceptConditionals.id],
+      scenes: ['station.concourse', 'station.ticket_hall', 'station.platform'],
+      propsRequired: ['station.ticket', 'station.barrier'],
+      paramSchema: { passengerCount: { min: 5, max: 20 }, ticketCategories: 3 },
+      difficultyBand: 5,
+      manifestVersion: '1.0.0',
+    },
+    create: {
+      id: 'template-mahatta-loops',
+      trackId: elMahatta.id,
+      mechanicId: 'station_dispatch',
+      targetConceptId: conceptLoops.id,
+      carriedConceptIds: [conceptConditionals.id],
+      scenes: ['station.concourse', 'station.ticket_hall', 'station.platform'],
+      propsRequired: ['station.ticket', 'station.barrier'],
+      paramSchema: { passengerCount: { min: 5, max: 20 }, ticketCategories: 3 },
+      difficultyBand: 5,
+      manifestVersion: '1.0.0',
+    },
+  });
+
+  await prisma.missionTemplate.upsert({
+    where: { id: 'template-traffic-functions' },
+    update: {
+      trackId: isharetCairo.id,
+      mechanicId: 'traffic_control',
+      targetConceptId: conceptFunctions.id,
+      carriedConceptIds: [conceptConditionals.id, conceptLoops.id],
+      scenes: ['traffic.intersection', 'traffic.sensor', 'traffic.control_room'],
+      propsRequired: ['traffic.signal', 'traffic.sensor'],
+      paramSchema: { intersectionSensors: 4, peakHourFactor: 1.5 },
+      difficultyBand: 7,
+      manifestVersion: '1.0.0',
+    },
+    create: {
+      id: 'template-traffic-functions',
+      trackId: isharetCairo.id,
+      mechanicId: 'traffic_control',
+      targetConceptId: conceptFunctions.id,
+      carriedConceptIds: [conceptConditionals.id, conceptLoops.id],
+      scenes: ['traffic.intersection', 'traffic.sensor', 'traffic.control_room'],
+      propsRequired: ['traffic.signal', 'traffic.sensor'],
+      paramSchema: { intersectionSensors: 4, peakHourFactor: 1.5 },
+      difficultyBand: 7,
+      manifestVersion: '1.0.0',
+    },
+  });
+
+  console.log('🏛️ MissionTemplates seeded for closed world manifests.');
+
+  // 6. Seed StudentProfile & Initial LessonPlan for Demo Student
+  await prisma.studentProfile.upsert({
+    where: { userId: demoStudent.id },
+    update: {
+      skillBand: SkillBand.ON_LEVEL,
+      hintDependency: 0.2,
+      syntaxVsLogic: 0.5,
+      locale: 'ar-EG',
+      lastComputedAt: new Date(),
+    },
+    create: {
+      userId: demoStudent.id,
+      skillBand: SkillBand.ON_LEVEL,
+      hintDependency: 0.2,
+      syntaxVsLogic: 0.5,
+      locale: 'ar-EG',
+      lastComputedAt: new Date(),
+    },
+  });
+
+  await prisma.lessonPlan.upsert({
+    where: { userId_lessonId: { userId: demoStudent.id, lessonId: fornLesson1.id } },
+    update: { requirement: LessonRequirement.REQUIRED, decidedBy: DecidedBy.RULE },
+    create: {
+      userId: demoStudent.id,
+      lessonId: fornLesson1.id,
+      requirement: LessonRequirement.REQUIRED,
+      reason: 'بداية المسار التعليمي لأساسيات البرمجة في مخبز العيش البلدي.',
+      decidedBy: DecidedBy.RULE,
+      confidence: 1.0,
+    },
+  });
+
+  await prisma.lessonPlan.upsert({
+    where: { userId_lessonId: { userId: demoStudent.id, lessonId: fornLesson2.id } },
+    update: { requirement: LessonRequirement.REQUIRED, decidedBy: DecidedBy.RULE },
+    create: {
+      userId: demoStudent.id,
+      lessonId: fornLesson2.id,
+      requirement: LessonRequirement.REQUIRED,
+      reason: 'تطبيق عملي على المتغيرات الحسابية.',
+      decidedBy: DecidedBy.RULE,
+      confidence: 1.0,
+    },
+  });
+
+  // 7. Seed Heroes
   const heroes = [
     {
       id: 'hero-cairo-navigator',
       slug: 'cairo-navigator',
       name: 'Cairo Navigator',
-      nameAr: 'مستكشف مترو القاهرة',
-      description: 'Agile transit engineer equipped with a digital metro scanner.',
+      nameAr: 'مستكشف شوارع القاهرة',
+      description: 'Agile transit engineer equipped with a digital sensor.',
       spriteUrl: '/heroes/cairo-navigator.png',
       unlockRule: { level: 1, xpRequired: 0 },
     },
@@ -226,7 +634,7 @@ In this lesson, you will learn how to write Python code to calculate total fare 
       slug: 'nile-explorer',
       name: 'Nile Explorer',
       nameAr: 'مستكشف النيل',
-      description: 'Master of water current sensors and botanical river navigation.',
+      description: 'Master of water current sensors and river navigation.',
       spriteUrl: '/heroes/nile-explorer.png',
       unlockRule: { level: 3, xpRequired: 300 },
     },
@@ -249,7 +657,6 @@ In this lesson, you will learn how to write Python code to calculate total fare 
     });
   }
 
-  // Equip default hero for demo student
   await prisma.userHero.upsert({
     where: {
       userId_heroId: {
@@ -265,9 +672,7 @@ In this lesson, you will learn how to write Python code to calculate total fare 
     },
   });
 
-  console.log('🦸 Heroes seeded & active hero configured for student.');
-
-  // 5. Seed Items (Equipment & Shop)
+  // 8. Seed Equipment Items
   const items = [
     {
       id: 'item-pharaoh-staff',
@@ -284,7 +689,7 @@ In this lesson, you will learn how to write Python code to calculate total fare 
       slug: 'metro-ticket-badge',
       name: 'Golden Metro Pass',
       nameAr: 'تذكرة المترو الذهبية',
-      description: 'A shiny commemorative badge for Line 1 graduates.',
+      description: 'A shiny commemorative badge for graduates.',
       type: ItemType.BADGE,
       spriteUrl: '/items/metro-badge.png',
       cost: 100,
@@ -299,16 +704,6 @@ In this lesson, you will learn how to write Python code to calculate total fare 
       spriteUrl: '/items/sinai-robe.png',
       cost: 200,
     },
-    {
-      id: 'item-anubis-pet',
-      slug: 'anubis-companion',
-      name: 'Anubis Digital Pet',
-      nameAr: 'مرافق أنوبيس البرمجي',
-      description: 'A mythical companion who cheers you on during debugging.',
-      type: ItemType.COSMETIC,
-      spriteUrl: '/items/anubis-pet.png',
-      cost: 450,
-    },
   ];
 
   for (const item of items) {
@@ -319,9 +714,7 @@ In this lesson, you will learn how to write Python code to calculate total fare 
     });
   }
 
-  console.log('🎒 Equipment items seeded.');
-
-  // 6. Seed Achievements
+  // 9. Seed Achievements
   const achievements = [
     {
       id: 'ach-first-code',
@@ -334,14 +727,14 @@ In this lesson, you will learn how to write Python code to calculate total fare 
       criteria: { submissionsCount: 1 },
     },
     {
-      id: 'ach-metro-master',
-      slug: 'metro-master',
-      name: 'Metro Engineer',
-      nameAr: 'مهندس المترو',
-      description: 'Complete the fare and transit calculations in Cairo Metro.',
-      iconUrl: 'train',
+      id: 'ach-forn-master',
+      slug: 'forn-master',
+      name: 'Master Baker',
+      nameAr: 'خباز ماهر',
+      description: 'Complete the bread calculations and queue rules in El Forn.',
+      iconUrl: 'flame',
       xpReward: 150,
-      criteria: { trackCompleted: 'cairo-metro' },
+      criteria: { trackCompleted: 'el-forn' },
     },
     {
       id: 'ach-streak-3',
@@ -353,16 +746,6 @@ In this lesson, you will learn how to write Python code to calculate total fare 
       xpReward: 100,
       criteria: { minStreak: 3 },
     },
-    {
-      id: 'ach-xp-collector',
-      slug: 'xp-collector',
-      name: 'Centurion',
-      nameAr: 'جامع النقاط',
-      description: 'Reach 300 total XP earned.',
-      iconUrl: 'trophy',
-      xpReward: 150,
-      criteria: { minXp: 300 },
-    },
   ];
 
   for (const ach of achievements) {
@@ -373,7 +756,6 @@ In this lesson, you will learn how to write Python code to calculate total fare 
     });
   }
 
-  // Unlock first achievement for demo student
   await prisma.userAchievement.upsert({
     where: {
       userId_achievementId: {
@@ -388,19 +770,19 @@ In this lesson, you will learn how to write Python code to calculate total fare 
     },
   });
 
-  // 7. Seed Demo Classroom
+  // 10. Seed Demo Classroom
   const demoClassroom = await prisma.classroom.upsert({
     where: { joinCode: 'TICO-EGY1' },
     update: {
       name: 'Cairo STEM Academy - Python Cohort A',
       teacherId: demoTeacher.id,
-      trackId: cairoMetro.id,
+      trackId: elForn.id,
     },
     create: {
       name: 'Cairo STEM Academy - Python Cohort A',
       joinCode: 'TICO-EGY1',
       teacherId: demoTeacher.id,
-      trackId: cairoMetro.id,
+      trackId: elForn.id,
     },
   });
 
@@ -419,7 +801,7 @@ In this lesson, you will learn how to write Python code to calculate total fare 
   });
 
   console.log(`🏫 Classroom seeded: "${demoClassroom.name}" (Code: ${demoClassroom.joinCode})`);
-  console.log('✨ All TICO production-ready baseline data successfully seeded!');
+  console.log('✨ All TICO canonical database data successfully seeded!');
 }
 
 main()

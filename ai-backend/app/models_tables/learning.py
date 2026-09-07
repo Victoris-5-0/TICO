@@ -10,12 +10,19 @@ field, unlike the original seven tables. See `base.py` for why the schema is mix
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 
-from sqlalchemy import Boolean, Float, ForeignKey, Integer, Text
+from sqlalchemy import Boolean, Float, ForeignKey, Integer, Text, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models_tables.base import Base
+from app.models_tables.ids import new_id
+
+
+def _utcnow() -> datetime:
+    """Prisma's @updatedAt runs in the Prisma client, so it never fires for a
+    write from this service. Naive UTC to match the TIMESTAMP(3) columns."""
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 from app.models_tables.enums import (
     DECIDED_BY,
     LESSON_REQUIREMENT,
@@ -36,13 +43,13 @@ class Concept(Base):
 
     __tablename__ = "concepts"
 
-    id: Mapped[str] = mapped_column(Text, primary_key=True)
+    id: Mapped[str] = mapped_column(Text, primary_key=True, default=new_id)
     slug: Mapped[str] = mapped_column(Text, unique=True)
     name: Mapped[str] = mapped_column(Text)
     name_ar: Mapped[str | None] = mapped_column(Text)
     description: Mapped[str | None] = mapped_column(Text)
     sequence_order: Mapped[int] = mapped_column(Integer, unique=True)
-    created_at: Mapped[datetime]
+    created_at: Mapped[datetime] = mapped_column(server_default=func.now())
 
     exercises: Mapped[list["ExerciseConcept"]] = relationship(back_populates="concept")
     mastery: Mapped[list["ConceptMastery"]] = relationship(back_populates="concept")
@@ -101,7 +108,7 @@ class ConceptMastery(Base):
     #: How much evidence backs the number. Low mastery on one attempt is not a verdict.
     evidence_count: Mapped[int] = mapped_column(Integer, default=0)
     last_seen_at: Mapped[datetime | None]
-    updated_at: Mapped[datetime]
+    updated_at: Mapped[datetime] = mapped_column(default=_utcnow, onupdate=_utcnow)
 
     user: Mapped["User"] = relationship(back_populates="concept_mastery")  # noqa: F821
     concept: Mapped[Concept] = relationship(back_populates="mastery")
@@ -163,7 +170,7 @@ class LessonPlan(Base):
     reason: Mapped[str | None] = mapped_column(Text)
     decided_by: Mapped[DecidedBy] = mapped_column(DECIDED_BY, default=DecidedBy.RULE)
     confidence: Mapped[float] = mapped_column(Float, default=1.0)
-    decided_at: Mapped[datetime]
+    decided_at: Mapped[datetime] = mapped_column(server_default=func.now())
 
     user: Mapped["User"] = relationship(back_populates="lesson_plans")  # noqa: F821
     lesson: Mapped["Lesson"] = relationship(back_populates="lesson_plans")  # noqa: F821

@@ -1,36 +1,21 @@
 'use server';
 
 import { requireUser, getAuthToken } from '@/lib/auth';
-import { aiClient } from '@/lib/ai/client';
-import { db } from '@/lib/db';
+import { missionService } from '@/services/mission.service';
 
-export async function getNextMissionAction(data: { lessonId: string }) {
+export async function getNextMissionAction(data: { lessonId: string; forceRegenerate?: boolean }) {
   try {
-    // Still the auth guard — it throws when there is no session. The id itself is not
-    // passed on: the AI service derives the student from the verified JWT.
-    await requireUser();
+    const user = await requireUser();
     const token = await getAuthToken();
 
-    try {
-      const nextMission = await aiClient.getNextMission(token, {
-        lessonId: data.lessonId,
-        worldManifestVersion: '1.0.0'
-      });
-      return { success: true, mission: nextMission };
-    } catch {
-      const fallbackExercise = await db.exercise.findFirst({
-        where: { lessonId: data.lessonId },
-        orderBy: { order: 'asc' }
-      });
-      return {
-        success: true,
-        mission: {
-          missionId: fallbackExercise?.id ?? '',
-          isTemplateFallback: true,
-          manifestVersion: '1.0.0'
-        }
-      };
-    }
+    const mission = await missionService.getNextMission(
+      user.id,
+      data.lessonId,
+      token,
+      { forceRegenerate: data.forceRegenerate }
+    );
+
+    return { success: true, mission };
   } catch (error: unknown) {
     console.error('Failed to get next mission:', error);
     return { success: false, error: 'Failed to get next mission' };

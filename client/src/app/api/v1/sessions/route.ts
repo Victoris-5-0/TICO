@@ -1,16 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { requireUser } from '@/lib/auth';
+import { requireUser, getAuthToken } from '@/lib/auth';
 import { sessionService } from '@/services/session.service';
 
 const CreateSessionSchema = z.object({
-  exerciseId: z.string().min(1, 'exerciseId is required'),
-});
+  exerciseId: z.string().optional().nullable(),
+  generatedMissionId: z.string().optional().nullable(),
+  lessonId: z.string().optional().nullable(),
+}).default({});
 
 export async function POST(req: NextRequest) {
   try {
     const user = await requireUser();
-    const body = await req.json();
+    const token = await getAuthToken();
+    let body = {};
+    try {
+      body = await req.json();
+    } catch {}
 
     const parseResult = CreateSessionSchema.safeParse(body);
     if (!parseResult.success) {
@@ -20,10 +26,13 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const session = await sessionService.startOrGetActiveSession(
-      user.id,
-      parseResult.data.exerciseId
-    );
+    const session = await sessionService.startOrGetActiveSession({
+      userId: user.id,
+      exerciseId: parseResult.data.exerciseId,
+      generatedMissionId: parseResult.data.generatedMissionId,
+      lessonId: parseResult.data.lessonId,
+      token,
+    });
 
     return NextResponse.json({
       data: session,
