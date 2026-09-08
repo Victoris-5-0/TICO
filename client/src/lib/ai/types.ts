@@ -78,6 +78,16 @@ export interface ChallengeRequest {
   excludeLevelIds?: Array<string>;
 }
 
+/**
+ * A line of code tied to a thing in the scene. This link is the whole lesson.
+ */
+export interface CodeAnnotation {
+  line: number;
+  textAr: string;
+  /** Prop name the line refers to, for a connector line. */
+  pointsAt?: string | null;
+}
+
 /** Rules propose, the model reviews. Always recorded so a decision can be explained. */
 export type DecidedBy = "RULE" | "MODEL";
 
@@ -112,6 +122,19 @@ export type ErrorFamily = "SYNTAX" | "NAME" | "TYPE" | "LOGIC" | "INCOMPLETE" | 
  */
 export interface ErrorResponse {
   error: ErrorBody;
+}
+
+/**
+ * One question TICO asks about the world. Buttons, never an editor.
+ */
+export interface ExploreRound {
+  questionAr: string;
+  optionsAr: Array<string>;
+  correctIndex: number;
+  /** What TICO says on a wrong answer. A narrower question, never a correction — this phase has no failure state. */
+  nudgeAr: string;
+  /** Props to light up while asking, so the question is about things they can see and count. */
+  highlight?: Array<string>;
 }
 
 /**
@@ -165,11 +188,15 @@ export interface GeneratedMissionOut {
   sceneId: string;
   targetConceptId: string;
   carriedConceptIds?: Array<string>;
-  /** The situation, in TICO's voice. */
+  /** Short mission name, shown on the card and the results screen. */
+  title: string;
+  /** What to actually write, including the required function signature. This is what the student reads above the editor. */
+  instructions: string;
+  /** The situation, in TICO's voice. Flavour; `instructions` is the task. */
   brief: string;
   /** Python, with the scaffold plan already applied. */
   starterCode: string;
-  tests?: Array<MissionTest>;
+  tests?: Array<app__schemas__missions__MissionTest>;
   scaffoldPlan: ScaffoldPlan;
   /** What generation filled in, bounded by param_schema. */
   params?: Record<string, unknown>;
@@ -179,10 +206,25 @@ export interface GeneratedMissionOut {
   reused?: boolean;
 }
 
+/**
+ * The same code with something taken out. Step A takes one value; step B takes more.
+ */
+export interface GuidedStep {
+  /** Code with `___` marking each blank, in order. */
+  code: string;
+  /** What belongs in each `___`, in order. */
+  blanks: Array<string>;
+  /** What to do, in one line. */
+  promptAr: string;
+  /** A first nudge before the hint ladder is called. */
+  hintAr?: string | null;
+}
+
 export interface HealthResponse {
   status: string;
   environment: string;
   database: string;
+  version: string;
 }
 
 /**
@@ -215,6 +257,8 @@ export interface HintResponse {
   isFinal: boolean;
   /** Set when is_final: 'mini_practice'. No rung ever returns the solution. */
   nextStep?: string | null;
+  /** How many rungs are left. Derived from `rung`, and returned so the client does not compute it separately and drift when the ladder length changes. */
+  remainingRungs: number;
   hintEventId: string;
   /** Served from the Postgres hint cache with no model call. Expected to be common on early lessons. */
   cached?: boolean;
@@ -261,14 +305,15 @@ export interface MasteryOut {
 }
 
 /**
- * One check the engine runs against the student's code. The validator asserts the
- * generated solution passes all of these before the mission ships.
+ * All six, for one scenario.
  */
-export interface MissionTest {
-  name: string;
-  /** Python expression to evaluate, using only manifest verbs. */
-  call: string;
-  expected: string;
+export interface MissionPhases {
+  encounter: PhaseEncounter;
+  explore: PhaseExplore;
+  discover: PhaseDiscover;
+  understand: PhaseUnderstand;
+  guided: PhaseGuided;
+  remix: PhaseRemix;
 }
 
 /**
@@ -289,6 +334,111 @@ export interface NextMissionRequest {
 
 /** The seven-phase mission loop from the proposal. */
 export type Phase = "ENCOUNTER" | "EXPLORE" | "DISCOVER" | "UNDERSTAND" | "GUIDED_CODING" | "ADAPT_REMIX" | "INDEPENDENT";
+
+/**
+ * Name what they just did. Credit, not a lesson.
+ */
+export interface PhaseDiscover {
+  /** Must match a real concepts.slug. */
+  conceptSlug: string;
+  conceptNameAr: string;
+  /** Three lines at most. No syntax yet. */
+  explanationAr: string;
+  ticoLineAr?: string;
+}
+
+/**
+ * A real problem, stated by someone who has it. No programming word appears.
+ */
+export interface PhaseEncounter {
+  /** Character id from the world manifest, or 'tico' where the world has no NPC artwork. */
+  speaker: string;
+  speakerNameAr: string;
+  /** Egyptian Arabic. One or two sentences. */
+  lineAr: string;
+  /** The single button. */
+  ctaAr?: string;
+  /** The scene at rest, mid-problem: oven cold, queue stuck. */
+  world?: WorldState;
+}
+
+/**
+ * They reason before anything is explained, and discover the pattern themselves.
+ */
+export interface PhaseExplore {
+  /** TICO opens. Curious, not testing. */
+  ticoIntroAr: string;
+  rounds: Array<ExploreRound>;
+}
+
+/**
+ * Their first typing, and it is one blank. Never 'now write the whole program'.
+ */
+export interface PhaseGuided {
+  steps: Array<GuidedStep>;
+  /** Used to check their attempt, never shown. */
+  solutionCode: string;
+  tests: Array<app__schemas__phases__MissionTest>;
+  onRun: WorldChange;
+}
+
+/**
+ * The world changes and their code is now wrong.
+ *
+ * `starting_code` is the phase-5 solution — the client loads it into the editor and
+ * **does not reset it**. That is what makes this feel like the world moved rather than
+ * a new exercise arriving.
+ */
+export interface PhaseRemix {
+  /** The event, as the world announces it. */
+  twistAr: string;
+  /** What must now also be true. */
+  newRequirementAr: string;
+  /** What visibly changed — a burnt tray, an ambulance. */
+  worldChange: WorldChange;
+  /** Their working code from phase 5. */
+  startingCode: string;
+  /** What it needs to become. */
+  solutionCode: string;
+  /** Old tests plus new ones. Their earlier behaviour must not break. */
+  tests: Array<app__schemas__phases__MissionTest>;
+  onRun: WorldChange;
+}
+
+/**
+ * The finished code, read-only — but they press Run and watch it work.
+ */
+export interface PhaseUnderstand {
+  introAr?: string;
+  /** The complete working solution. Nothing is hidden. */
+  code: string;
+  annotations?: Array<CodeAnnotation>;
+  runLabelAr?: string;
+  /** What the student watches happen. The point of the phase. */
+  onRun: WorldChange;
+}
+
+/**
+ * What `POST /v1/missions/next` returns.
+ *
+ * `validated` is set by a Python validator that actually runs the code at every stage.
+ * An unvalidated mission is never returned, so the client never has to defend against
+ * an unsolvable one.
+ */
+export interface PhasedMissionOut {
+  id: string;
+  worldId: string;
+  sceneId: string;
+  targetConceptId: string;
+  carriedConceptIds?: Array<string>;
+  titleAr: string;
+  /** "model" when Gemini wrote it, "template" on fallback. */
+  source: string;
+  validated: boolean;
+  phases: MissionPhases;
+  scaffold?: Record<string, string>;
+  difficultyBand?: number;
+}
 
 export interface PlanRequest {
   /** From onboarding. True marks every lesson required with no diagnostic and no model call. */
@@ -377,6 +527,8 @@ export interface SessionDebriefResponse {
   timeSpentMs: number;
   /** Concepts that crossed the mastery threshold in this session. */
   conceptsMastered?: Array<string>;
+  /** concept_id -> how much mastery moved during this session, -1..1. Computed in Python from attempts and hints; a model is never asked how much a child learned. */
+  masteryDelta?: Record<string, number>;
   /** Egyptian Arabic. Specific to what happened, never generic praise. */
   ticoFeedback: string;
   starsEarned: number;
@@ -424,4 +576,53 @@ export interface TicoMessageRequest {
   /** Also the LangGraph thread_id. A closed session is rejected — TICO has no context to stand on. */
   sessionId: string;
   message: string;
+}
+
+/**
+ * What happens to the scene when the student's code runs.
+ *
+ * `animate` names one motion from the world manifest's closed list. If the client has
+ * no animation by that name, nothing moves — which is why the validator checks it
+ * against the manifest rather than trusting the model.
+ */
+export interface WorldChange {
+  /** One of the manifest animations, e.g. "trays_into_oven". */
+  animate?: string | null;
+  /** The scene after running. Values may reference a variable from the student's code as "= total". */
+  props?: Record<string, number | string>;
+  /** Optional floating label, e.g. '١٠٠ رغيف'. */
+  captionAr?: string | null;
+}
+
+/**
+ * What the scene shows. Keys are world-manifest vocabulary; the client maps them
+ * to sprites.
+ *
+ * Values are counts for things you can have several of (`tray: 5`) or a state string
+ * for things with modes (`oven: "cold"`).
+ */
+export interface WorldState {
+  /** e.g. {"tray": 5, "loaf": 0, "oven": "cold"} */
+  props?: Record<string, number | string>;
+}
+
+/**
+ * One check the engine runs against the student's code. The validator asserts the
+ * generated solution passes all of these before the mission ships.
+ */
+export interface app__schemas__missions__MissionTest {
+  name: string;
+  /** Python expression to evaluate, using only manifest verbs. */
+  call: string;
+  expected: string;
+}
+
+/**
+ * One check the runner performs. `expected` is derived by running the solution.
+ */
+export interface app__schemas__phases__MissionTest {
+  call: string;
+  expected: string;
+  name?: string | null;
+  hidden?: boolean;
 }

@@ -62,6 +62,12 @@ class HintResponse(Schema):
         default=None,
         description="Set when is_final: 'mini_practice'. No rung ever returns the solution.",
     )
+    remaining_rungs: int = Field(
+        ge=0,
+        le=3,
+        description="How many rungs are left. Derived from `rung`, and returned so the "
+        "client does not compute it separately and drift when the ladder length changes.",
+    )
     hint_event_id: str
     cached: bool = Field(
         default=False,

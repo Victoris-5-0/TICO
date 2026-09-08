@@ -1,0 +1,380 @@
+# =============================================================================
+# WORLD MANIFEST — El Forn (البلدي bakery)
+#
+# The CLOSED SET of everything a generated mission in this world may use.
+# If it is not written here, generation may not put it in a mission.
+# Generation is SELECTION from this inventory, never invention.
+#
+# Read twice per generated mission:
+#   1. to COMPOSE  — the model picks a scene, a mechanic and parameters from these lists
+#   2. to VALIDATE — a Python function re-reads this file and rejects any mission whose
+#                    function signature, scene or vocabulary is not here
+#
+# -----------------------------------------------------------------------------
+# NOTE ON SHAPE — this manifest was rewritten on 7 September 2026.
+#
+# The first version modelled a game API: props with `verbs` like `gate.open()` and
+# `reads` like `station.passengers`, as if the student were driving a simulation.
+# That is not what got built. The exercises in `client/prisma/seed.ts` are plain Python
+# functions with a signature and a return value, executed by Pyodide in the browser:
+#
+#     def opening_notice(station_name: str, loaves: int) -> str
+#
+# So the closed set is no longer props and verbs. It is **function signatures** plus the
+# world's **vocabulary**. A generated mission must ask for one of the signatures below,
+# and may only dress it in the nouns listed under `vocabulary`.
+# =============================================================================
+
+world:
+  id: el_forn
+  name_en: "El Forn: Baladi Bakery"
+  name_ar: الفرن البلدي
+  order: 1                       # first chapter in the fixed roadmap
+
+  # Links this file to the database. Must match tracks.slug exactly.
+  track_slug: el-forn
+
+  # The character TICO plays here. Warm, floury, up before dawn.
+  mentor_persona: baker
+
+  # One line of orientation the generator may draw on for a brief. Not a prompt.
+  premise_ar: >
+    فرن بلدي في حي شعبي. الصواني بتطلع من الفرن من قبل الفجر، والزباين بيستنوا
+    على الرصيف. كل حاجة في الفرن بتتعد: الصواني، الأرغفة، الطلبات.
+
+# -----------------------------------------------------------------------------
+# SCENES — backdrops that exist as artwork under client/public/assets/bakery-v2.
+# Generation picks one per mission and stores it on generated_missions.scene_id.
+# It may not describe a place with no id here.
+# -----------------------------------------------------------------------------
+scenes:
+  - id: bakery_establishing
+    asset: worlds/bakery/establishing-v1.webp
+    description_en: The bakery from the street at dawn, awning out, oven glowing
+    description_ar: الفرن من الشارع بدري، التندة نازلة والفرن نوّر
+    supports_vocabulary: [loaves, trays, opening_time, customers]
+
+  - id: bakery_gameplay
+    asset: worlds/bakery/gameplay/playfield-topdown-v1.webp
+    description_en: Behind the counter — worktop, peel, trays going into the oven
+    description_ar: ورا التسليم — الطبلية والمدرة والصواني داخلة الفرن
+    supports_vocabulary: [loaves, trays, loaves_per_tray, dough, oven_temperature, orders]
+
+characters:
+  - id: tico
+    role: mentor
+    asset: characters/tico/tico-neutral.webp
+    voice: warm, playful, encouraging; never sarcastic, never condescending
+    language: Egyptian Arabic for dialogue, English for code identifiers
+    beats: [greeting, nudge, success, failure, celebrate]
+
+  - id: hassan
+    name_ar: حسن
+    role: npc
+    asset: characters/bakery/hassan-v1.webp
+    description: The baker at the oven. Counts everything by eye, and is usually right.
+    voice: gruff, kind underneath, short practical sentences
+    beats: [problem_intro, reaction]
+
+  - id: mariam
+    name_ar: مريم
+    role: npc
+    asset: characters/bakery/mariam-v1.webp
+    description: Runs the counter and the orders book.
+    voice: quick, organised, keeps a running total in her head
+    beats: [problem_intro, reaction]
+
+  - id: salma
+    name_ar: سلمى
+    role: npc
+    asset: characters/bakery/salma-v1.webp
+    description: Learning the trade. Asks the questions the student is thinking.
+    voice: curious, a little unsure, asks rather than tells
+    beats: [problem_intro]
+
+vocabulary:
+  loaves:
+    en: loaves of baladi bread
+    ar: أرغفة
+    type: int
+    plausible_range: [10, 500]
+
+  trays:
+    en: baking trays
+    ar: صواني
+    type: int
+    plausible_range: [1, 40]
+
+  loaves_per_tray:
+    en: loaves that fit on one tray
+    ar: عدد الأرغفة في الصينية
+    type: int
+    plausible_range: [8, 30]
+
+  customers:
+    en: people waiting at the counter
+    ar: زباين
+    type: int
+    plausible_range: [1, 60]
+
+  orders:
+    en: a list of orders taken
+    ar: طلبات
+    type: list
+
+  price:
+    en: price per loaf, in piastres
+    ar: سعر الرغيف بالقرش
+    type: int
+    plausible_range: [5, 150]
+
+  flour_sacks:
+    en: sacks of flour delivered
+    ar: شكاير دقيق
+    type: int
+    plausible_range: [1, 50]
+
+  station_name:
+    en: the branch or neighbourhood name
+    ar: اسم الفرع أو الحي
+    type: str
+    # Real Cairo neighbourhoods only. A generated mission set in an invented
+    # district reads as fake to the exact children this is for.
+    options: [الفرن البلدي, السيدة زينب, شبرا, المعادي, الدقي, إمبابة, حلوان]
+
+  opening_time:
+    en: the hour the bakery opens
+    ar: ميعاد الفتح
+    type: int
+    plausible_range: [4, 9]
+
+  dough:
+    en: batches of dough resting
+    ar: عجين
+    type: int
+    plausible_range: [1, 20]
+
+  oven_temperature:
+    en: oven temperature in celsius
+    ar: حرارة الفرن
+    type: int
+    plausible_range: [180, 350]
+
+  weight_per_sack:
+    en: weight of one flour sack, in kilos
+    ar: وزن الشكارة بالكيلو
+    type: int
+    plausible_range: [10, 50]
+
+
+# -----------------------------------------------------------------------------
+# VISUAL — the closed vocabulary the client can draw and move.
+#
+# THE CONTRACT WITH THE FRONTEND. Generation may only name a sprite, a state or an
+# animation that appears here. Anything else is rejected by the validator, because a
+# mission asking for artwork nobody drew renders as a dead screen and the code would
+# still look correct.
+#
+# `sprites` map to files under client/public/assets/bakery-v2/.
+# -----------------------------------------------------------------------------
+visual:
+  backdrop: worlds/bakery/gameplay/playfield-topdown-v1.webp
+  establishing: worlds/bakery/establishing-v1.webp
+
+  sprites:
+    tray:     { asset: bakery-v2/tray.webp,     countable: true,  max_shown: 8 }
+    loaf:     { asset: bakery-v2/loaf.webp,     countable: true,  max_shown: 12 }
+    dough:    { asset: bakery-v2/dough.webp,    countable: true,  max_shown: 6 }
+    bag:      { asset: bakery-v2/bag.webp,      countable: true,  max_shown: 6 }
+    oven:     { asset: bakery-v2/oven.webp,     states: [cold, lit] }
+    peel:     { asset: bakery-v2/peel.webp }
+    worktop:  { asset: bakery-v2/worktop.webp }
+    counter:  { asset: bakery-v2/counter.webp }
+
+  # A tray can also be burnt — that is what phase 6 changes.
+  states:
+    tray: [normal, burnt]
+    oven: [cold, lit]
+
+  animations:
+    - trays_into_oven     # the peel loads trays, the oven lights
+    - loaves_appear       # finished bread stacks on the counter
+    - count_up            # a number ticks up beside the counter
+    - tray_burns          # one tray blackens, smoke rises
+
+# -----------------------------------------------------------------------------
+# MECHANICS — authored templates. Each becomes one mission_templates row.
+# Generation fills `param_schema`; it never invents a mechanic, never changes
+# `target_concept`, and never alters the function signature.
+#
+#   mechanics[].id               -> mission_templates.mechanic_id
+#   mechanics[].target_concept   -> mission_templates.target_concept_id (concepts.slug)
+#   mechanics[].carried_concepts -> mission_templates.carried_concept_ids
+#   mechanics[].param_schema     -> mission_templates.param_schema
+#
+# `signature` is the contract with Pyodide. The tests call exactly this name with
+# exactly these types, so a generated mission that renames the function produces
+# tests that cannot pass.
+# -----------------------------------------------------------------------------
+mechanics:
+  - id: compose_notice
+    target_concept: variables
+    carried_concepts: []
+    scenes: [bakery_establishing, bakery_gameplay]
+    difficulty_band: 2
+    signature: "<<fn_name>>(<<a_name>>: str, <<b_name>>: int) -> str"
+    # Modelled on exercise-forn-01, which already exists and works.
+    goal_shape: >
+      Build one sentence out of a string and a number and return it.
+    vocabulary_used: [station_name, loaves]
+    param_schema:
+      fn_name:  { type: enum, options: [opening_notice, ready_message, morning_notice] }
+      a_name:   { type: const, value: station_name }
+      b_name:   { type: enum, options: [loaves, trays, customers] }
+      opener:  { type: enum, options: [مخبز, فرن] }
+    starter_template: |
+      def <<fn_name>>(<<a_name>>: str, <<b_name>>: int) -> str:
+          # <<brief_ar>>
+          pass
+    solution_template: |
+      def <<fn_name>>(<<a_name>>: str, <<b_name>>: int) -> str:
+          return f"<<opener>> {<<a_name>>} جاهز بـ {<<b_name>>} رغيف"
+    tests:
+      - input: '<<fn_name>>("<<sample_destination>>", <<sample_b>>)'
+        expected: '"<<expected_sentence>>"'
+      - input: '<<fn_name>>("<<sample_place2>>", <<sample_b2>>)'
+        expected: '"<<expected_sentence_2>>"'
+
+  - id: multiply_quantities
+    target_concept: variables
+    carried_concepts: []
+    scenes: [bakery_establishing, bakery_gameplay]
+    difficulty_band: 2
+    signature: "<<fn_name>>(<<a_name>>: int, <<b_name>>: int) -> int"
+    # Modelled on exercise-forn-02.
+    goal_shape: >
+      Multiply two counted quantities and return the total.
+    vocabulary_used: [trays, loaves_per_tray, flour_sacks]
+    param_schema:
+      fn_name: { type: enum, options: [calculate_loaves, total_loaves, count_output] }
+      a_name:  { type: enum, options: [trays, sacks] }
+      b_name:  { type: enum, options: [loaves_per_tray, weight_per_sack] }
+    starter_template: |
+      def <<fn_name>>(<<a_name>>: int, <<b_name>>: int) -> int:
+          # <<brief_ar>>
+          pass
+    solution_template: |
+      def <<fn_name>>(<<a_name>>: int, <<b_name>>: int) -> int:
+          return <<a_name>> * <<b_name>>
+    tests:
+      - input: "<<fn_name>>(<<sample_a>>, <<sample_b>>)"
+        expected: "<<product>>"
+      - input: "<<fn_name>>(0, <<sample_b>>)"
+        expected: "0"
+
+  - id: threshold_decision
+    target_concept: conditionals
+    carried_concepts: [variables]
+    scenes: [bakery_establishing, bakery_gameplay]
+    difficulty_band: 4
+    signature: "<<fn_name>>(<<a_name>>: int, <<b_name>>: int) -> str"
+    goal_shape: >
+      Return one of two messages depending on whether a count crosses a threshold.
+    vocabulary_used: [loaves, customers, trays]
+    param_schema:
+      fn_name:    { type: enum, options: [bake_more, should_bake, check_stock] }
+      a_name:     { type: enum, options: [loaves, customers] }
+      b_name:     { type: const, value: threshold }
+      comparison: { type: enum, options: ["<", "<=", ">", ">="] }
+      yes_msg:    { type: enum, options: ["اخبز كمان", "لسه في وقت"] }
+      no_msg:     { type: enum, options: ["كفاية كده", "الفرن مليان"] }
+    starter_template: |
+      def <<fn_name>>(<<a_name>>: int, <<b_name>>: int) -> str:
+          # <<brief_ar>>
+          <<carried_scaffold>>
+          pass
+    solution_template: |
+      def <<fn_name>>(<<a_name>>: int, <<b_name>>: int) -> str:
+          if <<a_name>> <<comparison>> <<b_name>>:
+              return "<<yes_msg>>"
+          return "<<no_msg>>"
+    tests:
+      - input: "<<fn_name>>(<<below>>, <<threshold>>)"
+        expected: '"<<yes_msg>>"'
+      - input: "<<fn_name>>(<<above>>, <<threshold>>)"
+        expected: '"<<no_msg>>"'
+
+  - id: sum_a_list
+    target_concept: loops
+    carried_concepts: [variables]
+    scenes: [bakery_gameplay]
+    difficulty_band: 5
+    signature: "<<fn_name>>(<<a_name>>: list) -> int"
+    goal_shape: >
+      Walk a list of counts and return the total.
+    vocabulary_used: [orders, trays, loaves]
+    param_schema:
+      fn_name: { type: enum, options: [total_orders, count_all, sum_trays] }
+      a_name:  { type: enum, options: [orders, trays] }
+    starter_template: |
+      def <<fn_name>>(<<a_name>>: list) -> int:
+          # <<brief_ar>>
+          <<carried_scaffold>>
+          pass
+    solution_template: |
+      def <<fn_name>>(<<a_name>>: list) -> int:
+          total = 0
+          for item in <<a_name>>:
+              total = total + item
+          return total
+    tests:
+      - input: "<<fn_name>>([<<sample_list>>])"
+        expected: "<<list_total>>"
+      - input: "<<fn_name>>([])"
+        expected: "0"
+
+# -----------------------------------------------------------------------------
+# CARRIED SCAFFOLD — how a carried concept is pre-filled when the composer decides
+# a student is already strong on it. Substituted into <<carried_scaffold>> above.
+# NONE means the placeholder is replaced with nothing at all.
+#
+# This is the mechanism that makes a loops mission about loops rather than about
+# remembering how to declare a variable.
+# -----------------------------------------------------------------------------
+carried_scaffold:
+  variables:
+    FULL:    "total = 0   # جاهزة ليك"
+    PARTIAL: "total =     # ابدأ من كام؟"
+    NONE:    ""
+
+# -----------------------------------------------------------------------------
+# GUARDRAILS — asserted by a Python validator, never trusted to the model.
+# -----------------------------------------------------------------------------
+constraints:
+  may_vary:
+    - scene
+    - params
+    - brief_wording
+    - npc_lines
+    - carried_scaffold
+    - function_name          # within the enum in param_schema, never freely
+  may_not_vary:
+    - world
+    - target_concept
+    - mechanic
+    - signature_shape        # arity and types are fixed; only names vary
+    - solution_shape
+  locale: ar-EG
+  reading_age: 10-17
+  max_starter_lines: 12
+
+  # Asserted per generated mission:
+  #   - every identifier in the solution appears in vocabulary or param_schema
+  #   - the solution actually passes every generated test, run in Pyodide
+  #   - the starter code does NOT pass (otherwise there is nothing to do)
+  #   - no test expects output the brief never asked for
+  must_hold:
+    - solution_passes_all_tests
+    - starter_fails_at_least_one_test
+    - identifiers_within_manifest
+    - at_least_two_tests

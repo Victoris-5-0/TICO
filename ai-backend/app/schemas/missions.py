@@ -44,7 +44,16 @@ class GeneratedMissionOut(Schema):
     target_concept_id: str
     carried_concept_ids: list[str] = Field(default_factory=list)
 
-    brief: str = Field(description="The situation, in TICO's voice.")
+    title: str = Field(
+        description="Short mission name, shown on the card and the results screen."
+    )
+    instructions: str = Field(
+        description="What to actually write, including the required function signature. "
+        "This is what the student reads above the editor."
+    )
+    brief: str = Field(
+        description="The situation, in TICO's voice. Flavour; `instructions` is the task."
+    )
     starter_code: str = Field(description="Python, with the scaffold plan already applied.")
     tests: list[MissionTest] = Field(default_factory=list)
 

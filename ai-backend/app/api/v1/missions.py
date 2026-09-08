@@ -10,13 +10,20 @@ a Python validator checks every id and verb against that same manifest before re
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, Response
+from fastapi import APIRouter, Depends, HTTPException, Response, status
+from sqlalchemy.orm import Session
 
 from app.api.v1 import _fixtures as fx
 from app.api.v1._stub import mark
+from app.database import get_db
+from app.services import missions as missions_service
 from app.core.auth import CurrentUser, get_current_user
 from app.schemas.common import ErrorResponse
+from app.schemas.common import ScaffoldLevel
+from app.schemas.phases import PhasedMissionOut
 from app.schemas.missions import (
+    MissionTest,
+    ScaffoldPlan,
     ChallengeRequest,
     GeneratedMissionOut,
     GenerateMissionRequest,
@@ -31,34 +38,45 @@ RESPONSES = {401: {"model": ErrorResponse}, 403: {"model": ErrorResponse}}
 
 @router.post(
     "/missions/next",
-    response_model=GeneratedMissionOut,
-    responses=RESPONSES,
-    summary="Get the next mission, composed for this student",
+    response_model=PhasedMissionOut,
+    responses={**RESPONSES, 503: {"model": ErrorResponse}},
+    summary="Get the next mission — all six phases",
     description=(
-        "The student comes from the verified token, never from the body.\n\n"
-        "`validated` is set by a Python validator that re-reads the world manifest — an "
-        "unvalidated mission is never returned. `reused` means an equivalent params and "
-        "scaffold combination already existed, which is a direct cost saving."
+        "Returns one Egyptian scenario as **six phases**: encounter, explore, discover, "
+        "understand, guided coding, and adapt/remix. The student walks all six with the "
+        "world on screen throughout.\n\n"
+        "Send `lessonId` when the student picked a lesson — it decides what the mission "
+        "teaches. Without it the server picks the first concept they have not mastered.\n\n"
+        "`validated: true` means a Python validator **ran the code at every stage**: the "
+        "solution passes its tests, each guided step genuinely fails until filled in, and "
+        "the remix twist really does break their existing code. An unvalidated mission is "
+        "never returned, so the client never has to defend against an unsolvable one.\n\n"
+        "Takes 20-30 seconds — the model is writing a whole mission. Returns **503** when "
+        "generation cannot produce something playable."
     ),
 )
 def next_mission(
     body: NextMissionRequest,
-    response: Response,
     user: CurrentUser = Depends(get_current_user),
-) -> GeneratedMissionOut:
-    mark(response)
-    data = fx.generated_mission()
-    if body.force_regenerate:
-        data["id"] = "demo-generated-2"
-        data["scene_id"] = "control_room"
-        data["params"] = {
-            "reading": "train.delay_minutes",
-            "threshold": 5,
-            "comparison": ">",
-        }
-        data["brief"] = "القطر متأخر. شغّل الإعلان لو التأخير أكتر من ٥ دقايق."
-        data["reused"] = False
-    return GeneratedMissionOut(**data)
+    db: Session = Depends(get_db),
+) -> PhasedMissionOut:
+    try:
+        _, mission, _ = missions_service.next_mission(
+            db,
+            user_id=user.id,
+            lesson_id=body.lesson_id,
+            force_regenerate=body.force_regenerate,
+        )
+    except missions_service.NoMissionAvailable as exc:
+        # Say so rather than returning a broken mission — a child cannot tell the
+        # difference and will blame themselves.
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=f"Could not build a mission right now. {exc}",
+        ) from exc
+
+    db.commit()
+    return mission
 
 
 @router.post(

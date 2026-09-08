@@ -1,0 +1,286 @@
+# =============================================================================
+# WORLD MANIFEST — El Mahatta (the railway station)
+#
+# Closed set for this world. See el_forn.yaml for the full explanation of what a
+# manifest is and why the shape changed on 7 September 2026 from props-and-verbs to
+# function-signatures-and-vocabulary.
+#
+# This world supersedes the earlier cairo_metro.yaml, which described a track that was
+# never built. The station is where lists and loops live: queues, destinations,
+# timetables — all naturally sequences a student walks through.
+# =============================================================================
+
+world:
+  id: el_mahatta
+  name_en: "El Mahatta: Railway Station"
+  name_ar: المحطة
+  order: 2
+
+  track_slug: el-mahatta
+  mentor_persona: station_clerk
+
+  premise_ar: >
+    محطة قطر مزدحمة. طوابير على شباك التذاكر، ركاب رايحين محافظات مختلفة،
+    ومواعيد بتتغير. كل حاجة هنا عبارة عن قوايم: طابور، جدول، وجهات.
+
+scenes:
+  - id: station_establishing
+    asset: worlds/station/establishing-v1.webp
+    description_en: The station concourse, queues at the windows, board overhead
+    description_ar: صالة المحطة، طوابير على الشبابيك واللوحة فوق
+    supports_vocabulary: [queue, destination, ticket_price, passengers, delay_minutes, timetable]
+
+characters:
+  - id: tico
+    role: mentor
+    asset: characters/tico/tico-neutral.webp
+    voice: warm, playful, encouraging; never sarcastic, never condescending
+    language: Egyptian Arabic for dialogue, English for code identifiers
+    beats: [greeting, nudge, success, failure, celebrate]
+
+vocabulary:
+  queue:
+    en: the list of passengers waiting
+    ar: الطابور
+    type: list
+
+  passengers:
+    en: how many people are waiting
+    ar: عدد الركاب
+    type: int
+    plausible_range: [1, 200]
+
+  destination:
+    en: where a passenger is heading
+    ar: الوجهة
+    type: str
+    # Real Egyptian destinations. Invented cities read as fake.
+    options: [الإسكندرية, أسوان, المنيا, طنطا, بورسعيد, الأقصر, دمياط]
+
+  ticket_price:
+    en: price of one ticket, in pounds
+    ar: سعر التذكرة بالجنيه
+    type: int
+    plausible_range: [15, 400]
+
+  delay_minutes:
+    en: how late the train is
+    ar: دقايق التأخير
+    type: int
+    plausible_range: [0, 180]
+
+  timetable:
+    en: a list of departure times
+    ar: جدول المواعيد
+    type: list
+
+  platform_number:
+    en: which station_establishing
+    ar: رقم الرصيف
+    type: int
+    plausible_range: [1, 12]
+
+# -----------------------------------------------------------------------------
+# VISUAL — the closed vocabulary the client can draw and move.
+#
+# THE CONTRACT WITH THE FRONTEND. Generation may only name a sprite, a state or an
+# animation listed here; the validator rejects anything else. A mission that asks for
+# artwork nobody drew renders as a dead screen, and the code would still look correct.
+#
+# El Mahatta has ONE establishing shot and no loose props, so everything here is a DOM
+# overlay positioned on the backdrop. That is a real constraint, not a placeholder — do
+# not write missions that assume objects can move around the scene.
+# -----------------------------------------------------------------------------
+visual:
+  backdrop: worlds/station/establishing-v1.webp
+  establishing: worlds/station/establishing-v1.webp
+
+  sprites:
+    queue_chip:   { overlay: true, countable: true, max_shown: 8 }
+    counter_pill: { overlay: true }
+    board_row:    { overlay: true, countable: true, max_shown: 6 }
+
+  states:
+    queue_chip: [normal, checked, matched]
+
+  animations:
+    - queue_walk          # chips highlight one at a time, left to right
+    - count_up            # the counter ticks up as matches are found
+    - chip_highlight      # a single chip lights, for explore questions
+
+mechanics:
+  - id: count_matching
+    target_concept: loops
+    carried_concepts: [conditionals, variables]
+    scenes: [station_establishing]
+    difficulty_band: 6
+    signature: "<<fn_name>>(<<a_name>>: list, <<b_name>>: str) -> int"
+    # Modelled on exercise-mahatta-01, which already exists and works.
+    goal_shape: >
+      Walk a list and count how many entries match a given value.
+    vocabulary_used: [queue, destination]
+    param_schema:
+      fn_name: { type: enum, options: [count_passengers_for_destination, count_for, tally_destination] }
+      a_name:  { type: const, value: queue }
+      b_name:  { type: const, value: destination }
+    starter_template: |
+      def <<fn_name>>(<<a_name>>: list, <<b_name>>: str) -> int:
+          # <<brief_ar>>
+          <<carried_scaffold>>
+          pass
+    solution_template: |
+      def <<fn_name>>(<<a_name>>: list, <<b_name>>: str) -> int:
+          count = 0
+          for passenger in <<a_name>>:
+              if passenger == <<b_name>>:
+                  count = count + 1
+          return count
+    tests:
+      - input: '<<fn_name>>([<<sample_queue>>], "<<sample_destination>>")'
+        expected: "<<match_count>>"
+      - input: '<<fn_name>>([], "<<sample_destination>>")'
+        expected: "0"
+
+  - id: find_largest
+    target_concept: loops
+    carried_concepts: [conditionals, variables]
+    scenes: [station_establishing]
+    difficulty_band: 6
+    signature: "<<fn_name>>(<<a_name>>: list) -> int"
+    goal_shape: >
+      Walk a list of numbers and return the largest.
+    vocabulary_used: [timetable, delay_minutes]
+    param_schema:
+      fn_name: { type: enum, options: [longest_delay, worst_delay, max_wait] }
+      a_name:  { type: enum, options: [delays, waits] }
+    starter_template: |
+      def <<fn_name>>(<<a_name>>: list) -> int:
+          # <<brief_ar>>
+          <<carried_scaffold>>
+          pass
+    solution_template: |
+      def <<fn_name>>(<<a_name>>: list) -> int:
+          largest = <<a_name>>[0]
+          for value in <<a_name>>:
+              if value > largest:
+                  largest = value
+          return largest
+    tests:
+      - input: "<<fn_name>>([<<sample_numbers>>])"
+        expected: "<<largest>>"
+      - input: "<<fn_name>>([<<single_number>>])"
+        expected: "<<single_number>>"
+
+  - id: filter_to_list
+    target_concept: loops
+    carried_concepts: [conditionals]
+    scenes: [station_establishing]
+    difficulty_band: 7
+    signature: "<<fn_name>>(<<a_name>>: list, <<b_name>>: int) -> list"
+    goal_shape: >
+      Walk a list and return a new list containing only the entries that qualify.
+    vocabulary_used: [queue, ticket_price, delay_minutes]
+    param_schema:
+      fn_name:    { type: enum, options: [affordable_tickets, under_budget, on_time_only] }
+      a_name:     { type: enum, options: [prices, delays] }
+      b_name:     { type: const, value: limit }
+      comparison: { type: enum, options: ["<", "<=" ] }
+    starter_template: |
+      def <<fn_name>>(<<a_name>>: list, <<b_name>>: int) -> list:
+          # <<brief_ar>>
+          pass
+    solution_template: |
+      def <<fn_name>>(<<a_name>>: list, <<b_name>>: int) -> list:
+          result = []
+          for value in <<a_name>>:
+              if value <<comparison>> <<b_name>>:
+                  result.append(value)
+          return result
+    tests:
+      - input: "<<fn_name>>([<<sample_numbers>>], <<limit>>)"
+        expected: "[<<filtered>>]"
+      - input: "<<fn_name>>([], <<limit>>)"
+        expected: "[]"
+
+  - id: package_a_helper
+    target_concept: functions
+    carried_concepts: [loops, conditionals, variables]
+    scenes: [station_establishing]
+    difficulty_band: 8
+    signature: "<<fn_name>>(<<a_name>>: list, <<b_name>>: str) -> str"
+    goal_shape: >
+      Call one function from inside another, and return a formatted answer.
+    vocabulary_used: [queue, destination, passengers]
+    param_schema:
+      fn_name: { type: enum, options: [destination_report, queue_summary] }
+      a_name:  { type: const, value: queue }
+      b_name:  { type: const, value: destination }
+    starter_template: |
+      def count_for(queue: list, destination: str) -> int:
+          count = 0
+          for passenger in queue:
+              if passenger == destination:
+                  count = count + 1
+          return count
+
+
+      def <<fn_name>>(<<a_name>>: list, <<b_name>>: str) -> str:
+          # <<brief_ar>>
+          pass
+    solution_template: |
+      def count_for(queue: list, destination: str) -> int:
+          count = 0
+          for passenger in queue:
+              if passenger == destination:
+                  count = count + 1
+          return count
+
+
+      def <<fn_name>>(<<a_name>>: list, <<b_name>>: str) -> str:
+          total = count_for(<<a_name>>, <<b_name>>)
+          return f"{total} راكب رايحين {<<b_name>>}"
+    tests:
+      - input: '<<fn_name>>([<<sample_queue>>], "<<sample_destination>>")'
+        expected: '"<<expected_report>>"'
+      # An empty queue must still return a sentence, not crash. Children reliably
+      # forget the empty case, so it is always tested.
+      - input: '<<fn_name>>([], "<<sample_destination>>")'
+        expected: '"<<expected_report_empty>>"'
+
+carried_scaffold:
+  variables:
+    FULL:    "count = 0   # جاهزة ليك"
+    PARTIAL: "count =     # ابدأ من كام؟"
+    NONE:    ""
+  conditionals:
+    FULL:    "# الشرط مكتوب لك جوه اللوب"
+    PARTIAL: "# فاضل تحط الشرط"
+    NONE:    ""
+  loops:
+    FULL:    "# اللوب جاهز، ركّز على اللي جواه"
+    PARTIAL: "# ابدأ اللوب بنفسك: for ... in ..."
+    NONE:    ""
+
+constraints:
+  may_vary:
+    - scene
+    - params
+    - brief_wording
+    - npc_lines
+    - carried_scaffold
+    - function_name
+  may_not_vary:
+    - world
+    - target_concept
+    - mechanic
+    - signature_shape
+    - solution_shape
+  locale: ar-EG
+  reading_age: 10-17
+  max_starter_lines: 16      # higher than el_forn: helper-function missions are longer
+
+  must_hold:
+    - solution_passes_all_tests
+    - starter_fails_at_least_one_test
+    - identifiers_within_manifest
+    - at_least_two_tests
