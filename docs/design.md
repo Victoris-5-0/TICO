@@ -708,3 +708,30 @@ so its bottom edge cannot create a color seam. Native scrolling retains a thin w
 Header, artwork, and typography reflow at tablet and phone widths; anchors allow room for
 the fixed header. Account forms expose required fields, pending, failure, and email-confirmation
 states; successful live authentication still depends on the configured Supabase service.
+
+## 21. About and Pricing
+
+`/[locale]/about` implements Figma `2:797`: three peach panels for About Us, Our
+Mission, and Our Vision, with the exported orange SVG icons and a 4 px orange lower
+edge. `marketing-pages.module.css` owns the layout; English uses Inter and Arabic
+uses Alexandria. Panels stack at every width and use the existing reduced-motion-aware
+Reveal component.
+
+`/[locale]/pricing` implements the three-card composition in Figma `2:526`: Free Plan,
+Premium, and Pro, with preview amounts $0, $30, and $100. The source repeats placeholder
+feature text and specifies no billing period. Until product supplies the real plan
+matrix and billing terms, a visible preview notice labels this state. Lists describe
+the documented TICO learning experience, not distinct paid entitlements. Paid actions
+open a native modal explaining availability, with Escape close, focus containment,
+focus restoration, and a link to the learning map. This is presentation only: no
+subscription, billing, quota enforcement, or account-plan mutation is implemented.
+The Free Plan links to signup rather than asserting an unverified current subscription.
+
+`marketing-chrome.tsx` shares the existing animated navigation and footer across the
+landing, About, and Pricing pages. The current route is marked with `aria-current`,
+and header locale switching preserves About/Pricing. Guest account actions remain
+consistent with the landing page instead of presenting the reference's fictional
+signed-in profile. Existing landing animation implementations are unchanged.
+Asset source nodes are recorded alongside the exports in `public/assets/about/` and
+`public/assets/pricing/`. New pages are checked with Chrome DevTools at desktop and
+320 px widths in both locales, including the plan dialog's keyboard behavior.

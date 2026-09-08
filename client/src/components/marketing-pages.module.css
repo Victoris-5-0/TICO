@@ -1,0 +1,49 @@
+.page { background: linear-gradient(125deg, var(--landing-tint), var(--landing-white) 50%, var(--landing-tint)); }
+.main { inline-size: min(1240px, calc(100% - 64px)); margin-inline: auto; padding-block: 218px 88px; }
+.srOnly { position: absolute; inline-size: 1px; block-size: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.aboutPanels { display: grid; gap: 48px; }
+.aboutPanel { padding: 40px; border-radius: 40px; background: var(--landing-tint); box-shadow: 0 4px 0 var(--coral); }
+.panelHeading { display: flex; align-items: center; gap: 16px; margin-block-end: 20px; }
+.panelHeading h2 { margin: 0; font-size: 40px; line-height: 1.2; font-weight: 700; letter-spacing: -.025em; }
+.aboutIcon { display: grid; place-items: center; inline-size: 44px; block-size: 44px; flex-shrink: 0; }
+.aboutIcon img { object-fit: contain; }
+.info img { inline-size: 36.667px; block-size: 36.667px; }
+.mission img { inline-size: 38px; block-size: 38px; }
+.vision img { inline-size: 36px; block-size: 36px; }
+.aboutPanel p { margin: 0; padding-block-end: 16px; color: var(--muted); font-size: 20px; line-height: 1.55; }
+.previewNotice { margin: -36px auto 32px; max-inline-size: 760px; text-align: center; color: var(--muted); font-size: 13px; line-height: 1.6; }
+.plans { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 28px; }
+.planReveal { min-inline-size: 0; }
+.plan { min-block-size: 762px; block-size: 100%; padding: 36px 28px; border: 1px solid var(--landing-tint); border-radius: 40px; box-shadow: 0 4px 0 var(--coral); background: rgb(253 241 236 / 52%); }
+.featuredPlan { border-color: var(--coral); background: var(--landing-tint); }
+.planHeading { display: flex; align-items: center; gap: 12px; }
+.planNumber { display: grid; place-items: center; flex: 0 0 39px; block-size: 39px; border-radius: 8px; background: var(--coral); font-size: 22px; font-weight: 500; color: var(--ink); }
+.planHeading h2 { margin: 0; font-size: clamp(26px, 2.7vw, 38px); font-weight: 700; line-height: 1.25; letter-spacing: -.035em; }
+.price { font-size: 22px; line-height: 1.3; font-weight: 600; white-space: nowrap; margin-inline-start: auto; }
+.planSubtitle { color: var(--muted); font-size: 16px; margin: 18px 0 20px; line-height: 1.5; }
+.planActionRow { padding-block: 16px; border-block: 1px solid var(--line); }
+.planAction { display: flex; justify-content: center; align-items: center; min-block-size: 56px; inline-size: 100%; padding: 12px 20px; border-radius: 999px; border: 1px solid transparent; cursor: pointer; font-size: 18px; line-height: 1.4; text-align: center; transition: background .16s, border-color .16s; }
+.freeAction { border-color: var(--coral); background: transparent; color: var(--landing-orange-text); }
+.freeAction:hover { background: var(--landing-tint); }
+.premiumAction { background: var(--coral); color: var(--ink); }
+.premiumAction:hover { background: var(--gold); }
+.proAction { background: var(--landing-teal); color: white; }
+.proAction:hover { background: var(--ink); }
+.featureHeading { margin: 22px 0 16px; font-size: 12px; color: var(--muted); font-weight: 500; }
+.features { display: grid; gap: 15px; list-style: none; margin: 0; padding: 0; }
+.features li { display: flex; align-items: flex-start; gap: 13px; font-size: 15px; line-height: 1.55; }
+.features img { flex-shrink: 0; object-fit: contain; }
+.check { inline-size: 22.468px; block-size: 23.184px; }
+.cancel { inline-size: 24px; block-size: 24px; }
+.unavailable { border-top: 1px solid var(--line); margin-block-start: 24px; padding-block-start: 20px; color: var(--muted); }
+.dialog { inline-size: min(480px, calc(100% - 40px)); margin: auto; padding: 28px; border: 1px solid var(--line); border-radius: 24px; background: var(--paper); color: var(--ink); box-shadow: var(--shadow); }
+.dialog::backdrop { background: rgb(31 24 32 / 45%); backdrop-filter: blur(6px); }
+.dialogTop { display: flex; align-items: center; justify-content: space-between; gap: 16px; color: var(--landing-orange-text); font-size: 14px; }
+.dialogTop button { flex-shrink: 0; inline-size: 44px; block-size: 44px; border: 0; border-radius: 50%; background: var(--landing-tint); font-size: 28px; cursor: pointer; color: var(--ink); }
+.dialog h2 { font-size: 28px; line-height: 1.25; font-weight: 700; margin-block: 18px; }
+.dialog p { color: var(--muted); line-height: 1.75; margin-block: 0 28px; }
+.page:dir(rtl) h2 { letter-spacing: 0; }
+@media (max-width: 1150px) { .plans { gap: 20px; } .plan { padding-inline: 22px; } .planHeading { gap: 8px; flex-wrap: wrap; } .planHeading h2 { font-size: 28px; } .price { font-size: 20px; } }
+@media (max-width: 900px) { .main { padding-block: 170px 64px; inline-size: calc(100% - 40px); } .aboutPanels { gap: 32px; } .aboutPanel { padding: 28px; border-radius: 28px; } .panelHeading h2 { font-size: 30px; } .aboutPanel p { font-size: 17px; } .previewNotice { margin-block-start: 0; } .plans { grid-template-columns: 1fr; max-inline-size: 520px; margin-inline: auto; gap: 32px; } .plan { min-block-size: 0; padding: 32px; } .planHeading h2 { font-size: 36px; } }
+@media (max-width: 400px) { .main { inline-size: calc(100% - 32px); } .aboutPanel, .plan { padding: 24px; } .panelHeading { gap: 10px; } .panelHeading h2 { font-size: 25px; } .aboutIcon { inline-size: 38px; block-size: 38px; } .planHeading h2 { font-size: 28px; } .planNumber { flex-basis: 32px; block-size: 32px; font-size: 18px; } .price { font-size: 18px; } .features li { font-size: 14px; } }
+@media (prefers-reduced-motion: reduce) { .page * { transition: none; } }

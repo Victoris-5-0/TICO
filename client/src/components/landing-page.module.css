@@ -282,3 +282,8 @@
 .contact > p a { text-decoration: underline; text-underline-offset: 3px; }
 .contactDetails { margin-block-start: 24px; }
 @media (max-width: 900px) { .supportGrid { grid-template-columns: 1fr; gap: 32px; } .contact { padding: 28px; } }
+
+/* Shared public navigation now includes About and Pricing. */
+.nav a[aria-current="page"] { color: var(--landing-orange-text); font-weight: 700; }
+@media (max-width: 900px) { .nav { gap: 20px; } }
+@media (max-width: 400px) { .nav { gap: 12px; font-size: 12px; } }

@@ -1,0 +1,10 @@
+{
+  "fileKey": "mYA52DN0D9UfDUJzB4PQsX",
+  "frame": "2:797",
+  "exportedAt": "2026-09-08",
+  "assets": {
+    "info.svg": { "node": "2:852", "displayWidth": 36.667, "displayHeight": 36.667 },
+    "mission.svg": { "node": "2:861", "displayWidth": 38, "displayHeight": 38 },
+    "vision.svg": { "node": "2:871", "displayWidth": 36, "displayHeight": 36 }
+  }
+}

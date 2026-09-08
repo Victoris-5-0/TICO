@@ -7,6 +7,8 @@ This document defines information architecture and localization behavior. [The T
 Public routes:
 
 - `/[locale]` — landing page and product explanation.
+- `/[locale]/about` — platform mission and vision.
+- `/[locale]/pricing` — plan preview; paid subscriptions remain unavailable until billing terms and entitlements are defined.
 - `/[locale]/login`, `/signup`, `/forgot-password` — required authentication.
 
 Authenticated learner routes:
