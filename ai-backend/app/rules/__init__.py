@@ -1,3 +1,9 @@
+from app.rules.arena import (
+    ArenaSelectionResult,
+    InsufficientMasteredConceptsError,
+    prepare_arena_composition_args,
+    select_arena_concepts,
+)
 from app.rules.composer import (
     AdvanceOrHoldDecision,
     ComposerPlanResult,
@@ -23,11 +29,15 @@ from app.rules.mastery import (
 
 __all__ = [
     "AdvanceOrHoldDecision",
+    "ArenaSelectionResult",
     "ComposerPlanResult",
+    "InsufficientMasteredConceptsError",
     "advance_or_hold",
     "compose",
     "compute_difficulty_band",
     "compute_scaffold_level",
+    "prepare_arena_composition_args",
+    "select_arena_concepts",
     "HintLadderDecision",
     "evaluate_ladder",
     "get_authored_fallback",
