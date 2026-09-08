@@ -178,9 +178,27 @@ This log tracks autonomous session tasks in `ai-backend/` following the pre-appr
 
 ---
 
+### Task 10: Generation legality eval in CI (M5 Generation, P1)
+
+- **CSV Notes verbatim**: `(none)`
+- **Status**: DONE
+- **Files touched**:
+  - `ai-backend/evals/generation_legality_eval.py`
+  - `ai-backend/evals/test_generation_legality_eval.py`
+  - `ai-backend/AI_TEAMMATE_SESSION_LOG.md`
+- **Test count**: 234 -> 237 passed (+3 tests: 1 full synthetic legality eval sweep across 23 deterministic cases and LangGraph pipeline + 1 dynamic report formatting verification test + 1 dunder spy non-execution regression test)
+- **Plain-language summary**:
+  Implemented closed-manifest generation legality regression evaluation suite in `evals/generation_legality_eval.py` and pytest test runner in `evals/test_generation_legality_eval.py`. Hand-authored 23 deterministic synthetic mission drafts against `content/worlds/cairo_metro.yaml` systematically covering all 16 distinct violation categories in `app/ai/guards.py` (legal baselines, world/scene/target_concept mismatches, param bounds/types/enums, undeclared prop verbs in starter/solution, syntax errors, empty code, missing tests, test assertion failures, runtime exceptions, unauthorized imports, blocked builtins, dunder gadget chains, infinite loop timeouts, and premature answer leaks). Verified with execution spy that dunder gadget chains are rejected without entering execution sandbox. Verified the full LangGraph generation pipeline (`generate_mission`) retry x2 repair loop with a mocked model, confirming it gracefully routes to a validated template-fallback mission (`fallback_...`) without publishing unvalidated code. Standalone script outputs dynamic per-category PASS/FAIL reporting and pipeline outcome telemetry.
+- **Assumptions made**:
+  - Manifest loading uses existing `app.ai.graphs.mission_gen.load_world_manifest("cairo_metro")`.
+  - Zero real model calls or network I/O; model responses in pipeline test are mocked with MagicMock.
+- **Open questions for review**: None.
+
+---
+
 ## Session Summary
 
-- **Total Tasks Completed**: 9
+- **Total Tasks Completed**: 10
   - Task 1: `ai/guards.py — validate model output, retry once, authored fallback` (DONE in 78a8bf0)
   - Task 2: `HINT LEAK TEST in CI` (DONE in 02675f3)
   - Task 3: `Authored fallback hints for all 4 rungs` (DONE in 268ca9b)
@@ -189,9 +207,10 @@ This log tracks autonomous session tasks in `ai-backend/` following the pre-appr
   - Task 6: `Escalation review chain` (DONE in 94b5981)
   - Task 7: `ai/graphs/mission_gen.py` (DONE in 33f8251)
   - Task 8: `The validator: every id/verb exists, solution runs` (DONE in ea8e807)
-  - Task 9: `Planner safety eval + composer eval` (Composer eval DONE, planner safety deferred)
+  - Task 9: `Planner safety eval + composer eval` (Composer eval DONE in 0b2a17f, planner safety deferred)
+  - Task 10: `Generation legality eval in CI` (DONE)
 - **Total Blocked Tasks**: 0
-  - World manifest dependency (`content/worlds/cairo_metro.yaml`) was present and verified, allowing Tasks 7 and 8 to complete without blocking.
+  - World manifest dependency (`content/worlds/cairo_metro.yaml`) was present and verified, allowing Tasks 7, 8, and 10 to complete without blocking.
   - Path planner skip escalation review was built with a generic contract against `gemini-3.5-flash`, with integration ready for when `rules/plan.py` unblocks.
 - **Total Open Questions Across All Tasks**: 4
   - Task 5: Mastery thresholds (GATE=0.7, STRONG=0.7, WEAK=0.4) are implementation defaults awaiting empirical calibration.
@@ -200,4 +219,4 @@ This log tracks autonomous session tasks in `ai-backend/` following the pre-appr
   - Task 9: Planner safety eval deferred until `rules/plan.py` is unblocked.
 - **Test Suite Results**:
   - Initial tests: 80 passed
-  - Final tests: 234 passed (+154 new tests added, 0 failures, 0 skipped)
+  - Final tests: 237 passed (+157 new tests added, 0 failures, 0 skipped)
