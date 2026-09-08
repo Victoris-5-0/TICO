@@ -85,3 +85,13 @@ Roles are `STUDENT`, `TEACHER`, and `ADMIN`. Role checks occur server-side at ea
 ## Trust boundaries
 
 Student code is hostile input and remains in the browser worker. Model output is untrusted content and must pass schema and semantic validators. JWT claims are verified, not decoded and trusted. Asset IDs are allowlisted through manifests. Browser-reported test results are treated as formative evidence, never high-stakes proof.
+
+## Google account entry (2026-09-08)
+
+The public login UI now offers only Google OAuth; signup URLs redirect to it, per
+[ADR 0003](decisions/0003-google-sign-in.md). The PKCE callback provisions by verified
+Supabase subject ID and sends new users to localized onboarding. Returning users go to
+`/[locale]/learn`; unfinished onboarding resumes. Client-selected `next` destinations
+are not accepted by the callback. Cookie refresh is propagated through the Next proxy.
+Onboarding uses Supabase user metadata for preferences/completion and the existing
+`users.name` for display name; JWT verification, Prisma schema, and AI DTOs are unchanged.

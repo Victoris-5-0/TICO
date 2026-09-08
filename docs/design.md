@@ -755,3 +755,26 @@ The caller supplies all panel callbacks and map availability. Exact Figma asset 
 and provenance are stored in `public/assets/mission-ui/` and `public/assets/challenge-map/`.
 Sprite-sheet crops retain the Figma geometry in CSS. See
 [mission component usage](mission-ui-components.md) for APIs and browser checks.
+
+## 23. Google login and two-step onboarding
+
+The owner's revised reference uses Figma `2:1008` for login, `2:1202` for personal
+setup, and `2:1244` for Learner/Challenger selection. Login uses an orange window bar,
+rounded peach-gradient frame, Inter typography, and a large waving TICO. The single
+Google action retains the owner's Google-only requirement; the reference's password,
+GitHub, and separate signup controls are not reintroduced.
+
+Onboarding preserves the two progress segments, large thinking TICO crop, rounded
+inputs, and large selectable cards. Step one collects a name and coarse age band in
+place of the reference's exact birthday, following the privacy baseline. Step two
+collects `LEARNER` or `CHALLENGER` as a self-reported preference, not an authorization
+role or an automatic curriculum unlock. Back preserves both steps' values. Native
+radio controls provide keyboard selection; progress is announced as Step 1/2.
+White text is used on orange only for large bold actions meeting the contrast rule.
+Arabic retains Alexandria, and compact layouts stack the artwork below the controls.
+Motion for React handles short step transitions and respects reduced motion.
+
+`/[locale]/onboarding/preview` exposes both steps for visual review without an account;
+its completion is explicitly a preview and saves nothing. The real onboarding route
+continues to verify identity and uses the authenticated completion action. Asset source
+nodes and crop geometry are recorded in `public/assets/auth/sources.json`.

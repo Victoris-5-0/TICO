@@ -9,9 +9,13 @@ Public routes:
 - `/[locale]` — landing page and product explanation.
 - `/[locale]/about` — platform mission and vision.
 - `/[locale]/pricing` — plan preview; paid subscriptions remain unavailable until billing terms and entitlements are defined.
-- `/[locale]/login`, `/signup`, `/forgot-password` — required authentication.
+- `/[locale]/login` — Google sign-in for new and returning users.
+- `/[locale]/signup` — compatibility redirect to the same Google sign-in page.
 
 Authenticated learner routes:
+
+- `/[locale]/onboarding` — two-step first-visit profile setup; interrupted setup resumes.
+- `/[locale]/onboarding/preview` — public, non-persistent visual preview of both setup steps.
 
 - `/[locale]/learn` — current mission, roadmap, and continue action.
 - `/[locale]/worlds/[worldSlug]` — chapter scene and lesson path.

@@ -1,40 +1,35 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { db } from '@/lib/db';
+import { isLocale } from '@/i18n/config';
+import { accountDestination, provisionGoogleAccount } from '@/lib/auth/entry';
 
 export async function GET(request: Request) {
-  const { searchParams, origin } = new URL(request.url);
+  const { searchParams } = new URL(request.url);
+  const requestedLocale = searchParams.get('locale');
+  const locale = isLocale(requestedLocale ?? '') ? requestedLocale as 'en' | 'ar-EG' : 'ar-EG';
+  const localRedirect = (path: string) => new NextResponse(null, { status: 303, headers: { Location: path } });
+  const failed = () => localRedirect(`/${locale}/login?error=auth_failed`);
   const code = searchParams.get('code');
-  const next = searchParams.get('next') ?? '/ar-EG/learn';
+  if (!code || searchParams.has('error')) return failed();
 
-  if (code) {
+  try {
     const supabase = await createClient();
     const { data, error } = await supabase.auth.exchangeCodeForSession(code);
-    if (!error && data.user) {
-      // Just-in-time provisioning in PostgreSQL
-      try {
-        await db.user.upsert({
-          where: { email: data.user.email! },
-          update: {
-            name: data.user.user_metadata?.full_name || data.user.email?.split('@')[0],
-            avatarUrl: data.user.user_metadata?.avatar_url,
-          },
-          create: {
-            id: data.user.id,
-            email: data.user.email!,
-            name: data.user.user_metadata?.full_name || data.user.email?.split('@')[0] || 'Explorer',
-            avatarUrl: data.user.user_metadata?.avatar_url || '/assets/characters/tico/tico-neutral.webp',
-            role: 'STUDENT',
-            xp: 0,
-            streak: 0,
-          },
-        });
-      } catch (dbErr) {
-        console.warn('JIT user provisioning during auth callback skipped:', dbErr);
-      }
-      return NextResponse.redirect(`${origin}${next}`);
-    }
+    if (error || !data.user) return failed();
+    const onboarding = await provisionGoogleAccount(data.user, {
+      exists: async id => Boolean(await db.user.findUnique({ where: { id }, select: { id: true } })),
+      markOnboarding: async () => {
+        const { error } = await supabase.auth.updateUser({ data: { onboarding_required: true } });
+        if (error) throw new Error('Unable to initialize onboarding');
+      },
+      createIfMissing: async user => {
+        await db.user.upsert({ where: { id: user.id }, update: {}, create: { ...user, role: 'STUDENT' } });
+      },
+    });
+    return localRedirect(accountDestination(locale, onboarding));
+  } catch {
+    // No raw provider errors or identity data in logs, and no successful redirect on provisioning failure.
+    return failed();
   }
-
-  return NextResponse.redirect(`${origin}/ar-EG?error=auth_failed`);
 }

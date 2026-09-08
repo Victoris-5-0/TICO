@@ -1,0 +1,8 @@
+{
+  "fileKey": "mYA52DN0D9UfDUJzB4PQsX",
+  "assets": [
+    { "file": "welcome.png", "node": "2:1012", "frame": "2:1008", "sourcePixels": [1500, 1500], "figmaBox": [778, 778], "transform": "horizontal flip" },
+    { "file": "thinking-sheet.png", "nodes": ["2:1243", "2:1265"], "frames": ["2:1202", "2:1244"], "sourcePixels": [1500, 1500], "figmaCrop": [506, 791], "transform": "Figma crop percentages and horizontal flip" },
+    { "file": "google.svg", "node": "2:1050", "frame": "2:1008", "figmaBox": [41.892, 41.115], "renderedBox": [32, 32], "fit": "contain" }
+  ]
+}

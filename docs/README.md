@@ -45,3 +45,5 @@ The concept order is fixed. Personalization changes lesson membership and scaffo
 
 - [Mission UI components](mission-ui-components.md): reusable Figma mission panels,
   illustrated challenge-map API, bilingual preview routes, and Chrome verification.
+
+- [ADR 0003 — Google sign-in](decisions/0003-google-sign-in.md): unified account entry and first-visit onboarding.

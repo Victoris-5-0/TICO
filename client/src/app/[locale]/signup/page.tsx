@@ -1,9 +1,8 @@
-import { notFound } from "next/navigation";
-import { AccountForm } from "@/components/account-form";
+import { notFound, redirect } from "next/navigation";
 import { isLocale } from "@/i18n/config";
 
 export default async function SignupPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
   if (!isLocale(locale)) notFound();
-  return <AccountForm locale={locale} mode="signup" />;
+  redirect(`/${locale}/login`);
 }
