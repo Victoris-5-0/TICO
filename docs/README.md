@@ -42,3 +42,6 @@ The concept order is fixed. Personalization changes lesson membership and scaffo
 ## Database authority
 
 `client/prisma/schema.prisma` is the only schema and migration source for both game and AI tables. All tables use the shared PostgreSQL `public` schema. The Python service maintains matching synchronous SQLAlchemy models for runtime reads/writes only; it has no Alembic migrations. The eight target AI tables described in [06 — Data model and contracts](06-data-model-and-contracts.md) remain planned until a Prisma migration adds them.
+
+- [Mission UI components](mission-ui-components.md): reusable Figma mission panels,
+  illustrated challenge-map API, bilingual preview routes, and Chrome verification.

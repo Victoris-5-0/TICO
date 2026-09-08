@@ -1,0 +1,46 @@
+{
+  "assets": [
+    {
+      "file": "traffic.png",
+      "fileKey": "mYA52DN0D9UfDUJzB4PQsX",
+      "node": "6:82",
+      "source": "https://www.figma.com/api/mcp/asset/3b64491e-6878-489c-b916-6feddb3784b5.png"
+    },
+    {
+      "file": "traffic-banner.png",
+      "fileKey": "mYA52DN0D9UfDUJzB4PQsX",
+      "node": "6:82",
+      "source": "https://www.figma.com/api/mcp/asset/fff1782a-2f0a-4385-82bc-c167fdffffe8.png"
+    },
+    {
+      "file": "bakery.png",
+      "fileKey": "mYA52DN0D9UfDUJzB4PQsX",
+      "node": "6:82",
+      "source": "https://www.figma.com/api/mcp/asset/c284efd1-5d31-41bf-ad21-2406ddaddd46.png"
+    },
+    {
+      "file": "bakery-node.png",
+      "fileKey": "mYA52DN0D9UfDUJzB4PQsX",
+      "node": "6:82",
+      "source": "https://www.figma.com/api/mcp/asset/5bbd0f58-5924-4924-94f4-08b0baf05dcf.png"
+    },
+    {
+      "file": "traffic-node.png",
+      "fileKey": "mYA52DN0D9UfDUJzB4PQsX",
+      "node": "6:82",
+      "source": "https://www.figma.com/api/mcp/asset/60543f5d-d6ed-44f7-8598-d5c2ef8338bb.png"
+    },
+    {
+      "file": "tico.png",
+      "fileKey": "mYA52DN0D9UfDUJzB4PQsX",
+      "node": "6:82",
+      "source": "https://www.figma.com/api/mcp/asset/f11bec03-1935-4dd3-b416-bddb327fb529.png"
+    },
+    {
+      "file": "bakery-banner.png",
+      "fileKey": "mYA52DN0D9UfDUJzB4PQsX",
+      "node": "6:82",
+      "source": "https://www.figma.com/api/mcp/asset/1bb36543-1823-49cf-8d83-f3fddd317374.png"
+    }
+  ]
+}

@@ -1,0 +1,48 @@
+.map { max-width: 1440px; margin-inline: auto; background: #f8f9fb; }
+.stage { width: 100%; }
+.banner { width: 100%; position: relative; aspect-ratio: 1440/447; display: grid; place-items: center; text-align: center; color: #5f2512; }
+.banner > img { object-fit: fill; }
+.banner > div { position: relative; width: 100%; padding-inline: 24px; }
+.banner p { font-size: clamp(16px,2.78vw,40px); margin: 0; line-height: 1.2; }
+.banner h2 { font-family: var(--font-map-title),cursive; font-size: clamp(36px,8.89vw,128px); font-weight: 700; margin: 0; line-height: 1.2; }
+.banner:dir(rtl) h2 { font-family: var(--font-arabic),sans-serif; font-size: clamp(26px,6vw,80px); line-height: 1.6; }
+.trafficBanner { color: #fff; }
+.scene { position: relative; width: 100%; aspect-ratio: 1440/1929; }
+.sceneArt { object-fit: fill; }
+.nodes { list-style: none; margin: 0; padding: 0; }
+.nodePosition { position: absolute; width: 12.8%; z-index: 2; }
+.node { display: block; position: relative; width: 100%; min-width: 44px; min-height: 44px; padding: 0; border: 0; background: transparent; cursor: pointer; border-radius: 50%; }
+.node > img { display: block; width: 100%; height: auto; }
+.nodeNumber { position: absolute; inset: 0; display: grid; place-items: center; padding-bottom: 14%; color: #fff; font-size: clamp(18px,2.3vw,32px); font-weight: 700; text-shadow: 0 1px 4px #1f1820; }
+.nodeLabel { position: absolute; top: 100%; left: 50%; transform: translateX(-50%); background: #fffdf9; color: var(--ink); border: 2px solid var(--coral); border-radius: 12px; padding: 8px 12px; width: max-content; max-width: min(220px,46vw); font-size: 16px; line-height: 1.4; opacity: 0; pointer-events: none; box-shadow: 0 4px 16px #1f182022; }
+.node:hover .nodeLabel,.node:focus-visible .nodeLabel { opacity: 1; }
+.node:focus-visible { outline: 4px solid #fff; outline-offset: 4px; box-shadow: 0 0 0 8px var(--focus, #267977); }
+.node[data-status="current"] { outline: 3px solid #fff; outline-offset: 3px; }
+.node[data-status="locked"] { filter: grayscale(1); cursor: not-allowed; }
+.companion { position: absolute; width: 21.16%; pointer-events: none; z-index: 3; }
+.companion > img { width: 100%; height: auto; transform: scaleX(-1); }
+.speech { position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%); margin: 0 0 12px; padding: 18px 25px; border: 3px solid var(--coral); background: white; color: #0f172a; border-radius: 28px; font-size: clamp(14px,1.79vw,26px); font-weight: 700; width: max-content; max-width: 32vw; box-shadow: 0 24px 50px #0002; }
+.empty { padding: 48px 24px; text-align: center; }
+.page { background: #f8f9fb; color: var(--ink); font-family: var(--font-mission),var(--font-latin),sans-serif; }
+.page:dir(rtl) { font-family: var(--font-arabic),sans-serif; }
+.header { background: #174e58; min-height: 88px; padding: 16px max(24px,calc((100vw - 1240px)/2)); display: flex; align-items: center; justify-content: space-between; gap: 24px; color: #fff; }
+.logo { width: 147px; height: auto; }
+.header nav { display: flex; gap: 36px; align-items: center; }
+.header a { min-height: 44px; display: inline-flex; align-items: center; text-decoration: none; font-size: 18px; }
+.header a[aria-current] { background: var(--coral); color: var(--ink); border-radius: 10px; padding: 10px 14px; }
+.header a:focus-visible { outline: 3px solid #fff; outline-offset: 4px; }
+.previewNotice { max-width: 1440px; margin: auto; padding: 12px 24px; font-size: 14px; background: #fffdf9; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.previewNotice h1 { font-size: 16px; margin: 0; }
+.previewNotice p { margin: 0; }
+@media(max-width: 700px) {
+ .header { padding: 12px 16px; gap: 12px; flex-wrap: wrap; }
+ .logo { width: 100px; }
+ .header nav { order: 3; width: 100%; justify-content: center; gap: 24px; }
+ .header a { font-size: 15px; }
+ .banner { min-height: 160px; }
+ .scene { aspect-ratio: 1440/2500; }
+ .nodePosition { width: 16%; margin-left: -1.6%; }
+ .nodeNumber { font-size: 20px; }
+ .speech { font-size: 12px; padding: 8px 10px; border-width: 2px; border-radius: 14px; max-width: 46vw; margin-bottom: 4px; }
+ .previewNotice { padding: 12px 16px; }
+}

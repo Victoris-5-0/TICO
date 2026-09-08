@@ -735,3 +735,23 @@ signed-in profile. Existing landing animation implementations are unchanged.
 Asset source nodes are recorded alongside the exports in `public/assets/about/` and
 `public/assets/pricing/`. New pages are checked with Chrome DevTools at desktop and
 320 px widths in both locales, including the plan dialog's keyboard behavior.
+
+## 22. Reusable mission panels and illustrated challenge map
+
+The requested Figma nodes `2:1266`, `2:1346`, `2:1354`, `2:1337`, `2:1359`,
+`2:1276`, and `6:82` are implemented under `client/src/components/mission-ui/`.
+They follow the supplied peach gradients, Inter typography, rounded panels and pill
+buttons; orange actions retain ink text for contrast. Arabic uses Alexandria. Map
+banner titles use Caveat in English. These choices are scoped to the new components.
+
+`/[locale]/components-preview` demonstrates all six references, native modal behavior,
+and the map's four node states. `2:1276` is named “edit profile” in Figma but contains
+the same mission-success content as `2:1266`; both use `MissionSuccessPanel`.
+`/[locale]/challenges` previews the two illustrated Figma scenes with independently
+selectable mission nodes. The existing three-world learning map remains the curriculum
+entry point. The preview does not assert saved progress or change world ordering.
+
+The caller supplies all panel callbacks and map availability. Exact Figma asset exports
+and provenance are stored in `public/assets/mission-ui/` and `public/assets/challenge-map/`.
+Sprite-sheet crops retain the Figma geometry in CSS. See
+[mission component usage](mission-ui-components.md) for APIs and browser checks.
