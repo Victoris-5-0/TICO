@@ -112,22 +112,13 @@ def test_experienced_plan_skips_and_explains_every_skip(client):
             assert lesson["decidedBy"] == "MODEL", "every skip is model-reviewed"
 
 
-def test_next_mission_is_validated_and_bounded(client):
-    r = client.post("/v1/missions/next", json={"force_regenerate": False})
-    assert r.status_code == 200
-    body = data(r)
-    assert body["validated"] is True
-    assert body["worldId"] == "cairo_metro"
-    assert body["targetConceptId"] == "conditionals"
-    assert body["sceneId"] in {"platform_day", "ticket_hall", "control_room"}
-
-
-def test_force_regenerate_changes_the_scenario_not_the_concept(client):
-    a = data(client.post("/v1/missions/next", json={"force_regenerate": False}))
-    b = data(client.post("/v1/missions/next", json={"force_regenerate": True}))
-    assert a["sceneId"] != b["sceneId"]
-    assert a["targetConceptId"] == b["targetConceptId"]
-    assert a["worldId"] == b["worldId"]
+# `/v1/missions/next` used to be stubbed here. It is real now — it selects a concept,
+# generates a mission with Gemini, validates it by running the code, and persists it — so
+# it needs a database and cannot be tested offline alongside the stubs.
+#
+# Its behaviour is covered by:
+#   test_generation.py       the composer, validator and fallback, offline
+#   test_missions_live.py    the whole pipeline, against a real database
 
 
 def test_challenge_has_no_scaffolding(client):

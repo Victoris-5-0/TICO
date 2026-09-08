@@ -64,5 +64,11 @@ class SessionDebriefResponse(Schema):
     concepts_mastered: list[str] = Field(
         default_factory=list, description="Concepts that crossed the mastery threshold in this session."
     )
+    mastery_delta: dict[str, float] = Field(
+        default_factory=dict,
+        description="concept_id -> how much mastery moved during this session, -1..1. "
+        "Computed in Python from attempts and hints; a model is never asked how much a "
+        "child learned.",
+    )
     tico_feedback: str = Field(description="Egyptian Arabic. Specific to what happened, never generic praise.")
     stars_earned: int = Field(ge=0, le=3)

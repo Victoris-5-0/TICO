@@ -9,6 +9,6 @@ caller owns the transaction, because a submission write and its session update h
 land together or not at all.
 """
 
-from app.queries import ai_log, hints, sessions, students
+from app.queries import ai_log, hints, sessions, students, users
 
-__all__ = ["sessions", "hints", "students", "ai_log"]
+__all__ = ["sessions", "hints", "students", "ai_log", "users"]

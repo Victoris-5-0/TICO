@@ -18,11 +18,21 @@ from app.schemas.common import Schema
 
 router = APIRouter(tags=["health"])
 
+#: Single source for the running version. FastAPI already carries it, so reading it here
+#: means one place to bump rather than two that drift.
+def app_version() -> str:
+    from app.main import app
+
+    return app.version
+
 
 class HealthResponse(Schema):
     status: str
     environment: str
     database: str
+    #: Which build is live. Asked for in the client's sequence diagram, and the first
+    #: thing worth knowing when a deploy behaves like the previous one.
+    version: str
 
 
 @router.get("/health", response_model=HealthResponse)
@@ -36,6 +46,7 @@ def health(db: Session = Depends(get_db)) -> HealthResponse:
         status_ = "degraded"
 
     return HealthResponse(
+        version=app_version(),
         status=status_,
         environment=settings.environment,
         database=database,

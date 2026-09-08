@@ -54,6 +54,7 @@ def get_hint(
         rung=HintRung(rung),
         hint=fx.HINT_LADDER[rung],
         is_final=is_final,
+        remaining_rungs=MAX_RUNG - rung,
         next_step="mini_practice" if is_final else None,
         hint_event_id=f"demo-hint-{body.session_id}-{rung}",
         cached=rung > 1,  # pretend the later rungs came from the Postgres cache
