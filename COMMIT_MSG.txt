@@ -1,0 +1,72 @@
+Seed the concept spine and build the queries layer
+
+M1 and M2 groundwork: the concept rows every adaptive decision measures against, the
+SQLAlchemy query layer the services will sit on, and the AI call log.
+
+SEEDING
+scripts/seed_concepts.py inserts the four concepts in their fixed order: variables,
+conditionals, loops, functions. Idempotent, with a --check mode for CI.
+
+It seeds through SQLAlchemy rather than client/prisma/seed.ts. Prisma owns the schema,
+but these are rows, and concepts are this service's own vocabulary - mastery,
+scaffolding and lesson plans all need an axis to measure along. sequence_order IS the
+roadmap; there is no prerequisite graph because a straight line does not need one.
+
+TWO BUGS THAT BROKE EVERY INSERT
+Both found by trying to seed four rows, and both the same shape: something that looks
+like the database will handle it, and will not.
+
+1. Timestamps. 25 columns have DEFAULT CURRENT_TIMESTAMP in Postgres, but without
+   server_default on the model SQLAlchemy sends an explicit NULL instead of omitting
+   the column - so the default never fires. Meanwhile 13 columns have no database
+   default at all, because Prisma's @updatedAt runs in the Prisma client and never
+   fires for a write from this service. Those need a Python-side default instead.
+   Get either backwards and inserts fail in opposite directions.
+
+2. Primary keys. Of 38 PK columns, zero have a database default: @default(cuid()) is
+   also client-side. Every insert from Python would have failed on the primary key.
+   app/models_tables/ids.py generates 25-character, time-sortable ids using the same
+   alphabet and leading 'c' as Prisma, wired as default=new_id on all 19 surrogate
+   keys. Composite and natural keys are deliberately left alone - generating
+   error_tags.tag would be wrong.
+
+Both are now covered by a test that fails when a default is removed.
+
+QUERIES LAYER
+app/queries/, one module per aggregate, the only layer that imports models. Nothing
+commits: the caller owns the transaction, because a submission write and its session
+update have to land together.
+
+  sessions.py  open, close, phase, get_owned, hint_count, attempt_count
+  hints.py     record, highest_rung, and the hint cache
+  students.py  concepts, profile, mastery, lesson plan, profile_bundle
+  ai_log.py    log, track(), calls_today, over_cap, spend_today
+
+Decisions worth knowing:
+
+- get_owned() rather than get() for anything taking a sessionId from a client. A
+  session id is guessable enough that fetching by id alone would let one child read
+  another's hints and attempts.
+- highest_rung uses MAX, not COUNT. A retry logs the same rung twice and must not push
+  a student to a level they never saw.
+- Hint counting reads hint_events, not practice_sessions.hints_used. That counter is
+  denormalised and the Next.js layer increments it too, so it drifts. Events are truth.
+- close_session is idempotent. The client may fire on both "tests passed" and
+  "navigated away"; overwriting ended_at would corrupt the timing evidence.
+- Cache hits do not count against the daily cap. A student should not be penalised for
+  asking what someone else already asked.
+
+The hint cache is the primary cost lever, not an optimisation: Gemini's context caching
+targets large contexts with minimum-token thresholds a short hint prompt never reaches,
+so not calling the model is the only saving available.
+
+TESTS 133 -> 156
+tests/test_queries.py runs against a real database, inside a transaction that is always
+rolled back, and skips cleanly when none is reachable. These catch what a mocked session
+cannot: a missing default, a wrong column name, an enum that does not round-trip.
+
+Also fixes docker-compose-dev.yml to force dev mode. The same .env now carries a real
+SUPABASE_URL for the deployed box, and that alone switches auth on - which made every
+local call 401 with no obvious cause.
+
+Co-Authored-By: Ahmed Mostafa
