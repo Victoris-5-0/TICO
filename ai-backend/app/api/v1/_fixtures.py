@@ -1,7 +1,7 @@
 """Realistic sample data for the stub endpoints.
 
 Every value here is shaped exactly like the real thing: Cairo Metro, the
-`conditional_gate` mechanic from `content/worlds/cairo_metro.yaml`, and hint text in
+`compose_notice` mechanic from `content/worlds/el_forn.yaml`, and hint text in
 Egyptian Arabic with English code identifiers — so the client can test RTL rendering,
 long strings and the four-rung escalation before any of it is real.
 
@@ -90,15 +90,20 @@ def generated_mission() -> dict:
     return {
         "id": "demo-generated-1",
         "level_id": DEMO_EXERCISE_ID,
-        "world_id": "cairo_metro",
-        "scene_id": "platform_day",
-        "target_concept_id": "conditionals",
-        "carried_concept_ids": ["variables"],
-        "brief": "الرصيف زحمة والقطر جاي. افتح البوابة التانية لو المستنيين أكتر من 30.",
+        "world_id": "el_forn",
+        "scene_id": "bakery_dawn",
+        "target_concept_id": "variables",
+        "carried_concept_ids": [],
+        "title": "إشعار فتح المخبز",
+        "instructions": (
+            "اكتب دالة `opening_notice(station_name: str, loaves: int) -> str` "
+            "ترجّع رسالة الفتح."
+        ),
+        "brief": "الفرن فتح بدري والصواني طالعة. عايزين نكتب إشعار الفتح.",
         "starter_code": STARTER_CODE,
         "tests": MISSION_TESTS,
         "scaffold_plan": SCAFFOLD_PLAN,
-        "params": {"reading": "station.passengers", "threshold": 30, "comparison": ">"},
+        "params": {"fn_name": "opening_notice", "a_name": "station_name", "b_name": "loaves"},
         "validated": True,
         "reused": False,
     }

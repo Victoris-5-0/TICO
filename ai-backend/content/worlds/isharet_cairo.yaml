@@ -1,0 +1,272 @@
+# =============================================================================
+# WORLD MANIFEST — Isharet Cairo (traffic signals)
+#
+# Closed set for this world. See el_forn.yaml for what a manifest is and why the shape
+# changed on 7 September 2026.
+#
+# Traffic control is where conditionals belong: a signal is a decision, made over and
+# over, on rules a child can already picture from the street outside.
+# =============================================================================
+
+world:
+  id: isharet_cairo
+  name_en: "Isharet Cairo: Traffic Control"
+  name_ar: إشارة القاهرة
+  order: 3
+
+  track_slug: isharet-cairo
+  mentor_persona: traffic_controller
+
+  premise_ar: >
+    غرفة تحكم إشارات المرور في القاهرة. عربيات، مشاة، وعربية إسعاف مستعجلة.
+    كل إشارة قرار: تفتح ولا تقفل، وعلى أي أساس.
+
+scenes:
+  - id: traffic_establishing
+    asset: worlds/traffic/establishing-v1.webp
+    description_en: A Cairo junction from above, signals and queued traffic
+    description_ar: تقاطع في القاهرة من فوق، الإشارات والزحمة
+    supports_vocabulary: [waiting_cars, pedestrians, signal_state, junction, hour, is_emergency]
+
+characters:
+  - id: tico
+    role: mentor
+    asset: characters/tico/tico-neutral.webp
+    voice: warm, playful, encouraging; never sarcastic, never condescending
+    language: Egyptian Arabic for dialogue, English for code identifiers
+    beats: [greeting, nudge, success, failure, celebrate]
+
+vocabulary:
+  waiting_cars:
+    en: cars queued at the junction
+    ar: العربيات المستنية
+    type: int
+    plausible_range: [0, 120]
+
+  pedestrians:
+    en: people waiting to cross
+    ar: المشاة المستنيين
+    type: int
+    plausible_range: [0, 60]
+
+  signal_state:
+    en: what the light is showing
+    ar: حالة الإشارة
+    type: str
+    options: [أحمر, أصفر, أخضر]
+
+  hour:
+    en: hour of the day, 0 to 23
+    ar: الساعة
+    type: int
+    plausible_range: [0, 23]
+
+  is_emergency:
+    en: whether an emergency vehicle is approaching
+    ar: في إسعاف جاي؟
+    type: bool
+
+  junction:
+    en: which junction
+    ar: التقاطع
+    type: str
+    options: [التحرير, رمسيس, الدقي, لبنان, الهرم, العباسية]
+
+  wait_seconds:
+    en: how long the light stays green
+    ar: ثواني الانتظار
+    type: int
+    plausible_range: [10, 120]
+
+# -----------------------------------------------------------------------------
+# VISUAL — the closed vocabulary the client can draw and move.
+#
+# THE CONTRACT WITH THE FRONTEND. See el_forn.yaml for the full explanation.
+# One establishing shot, no loose props: overlays only, like El Mahatta.
+# -----------------------------------------------------------------------------
+visual:
+  backdrop: worlds/traffic/establishing-v1.webp
+  establishing: worlds/traffic/establishing-v1.webp
+
+  sprites:
+    signal:     { overlay: true, states: [red, amber, green] }
+    car:        { overlay: true, countable: true, max_shown: 10 }
+    pedestrian: { overlay: true, countable: true, max_shown: 8 }
+    ambulance:  { overlay: true }
+
+  states:
+    signal: [red, amber, green]
+
+  animations:
+    - signal_switch       # the light changes colour
+    - cars_move           # queued cars pull away
+    - ambulance_arrives   # the ambulance enters the junction
+    - count_up
+
+mechanics:
+  - id: two_way_rule
+    target_concept: conditionals
+    carried_concepts: [variables]
+    scenes: [traffic_establishing]
+    difficulty_band: 3
+    signature: "<<fn_name>>(<<a_name>>: int, <<b_name>>: int) -> str"
+    # Modelled on the signal-rules lesson that already exists.
+    goal_shape: >
+      Return one of two signal states depending on how two counts compare.
+    vocabulary_used: [waiting_cars, pedestrians, signal_state]
+    param_schema:
+      fn_name:    { type: enum, options: [signal_for, decide_signal, next_state] }
+      a_name:     { type: const, value: waiting_cars }
+      b_name:     { type: const, value: pedestrians }
+      comparison: { type: enum, options: [">", ">=", "<", "<="] }
+      yes_state:  { type: enum, options: [أخضر, أحمر] }
+      no_state:   { type: enum, options: [أحمر, أخضر] }
+    starter_template: |
+      def <<fn_name>>(<<a_name>>: int, <<b_name>>: int) -> str:
+          # <<brief_ar>>
+          <<carried_scaffold>>
+          pass
+    solution_template: |
+      def <<fn_name>>(<<a_name>>: int, <<b_name>>: int) -> str:
+          if <<a_name>> <<comparison>> <<b_name>>:
+              return "<<yes_state>>"
+          return "<<no_state>>"
+    tests:
+      - input: "<<fn_name>>(<<sample_a>>, <<sample_b>>)"
+        expected: '"<<yes_state>>"'
+      - input: "<<fn_name>>(<<sample_a2>>, <<sample_b2>>)"
+        expected: '"<<no_state>>"'
+
+  - id: priority_override
+    target_concept: conditionals
+    carried_concepts: [variables]
+    scenes: [traffic_establishing]
+    difficulty_band: 5
+    signature: "<<fn_name>>(<<a_name>>: int, <<b_name>>: bool) -> str"
+    goal_shape: >
+      One condition overrides another. An emergency wins regardless of the count.
+    vocabulary_used: [waiting_cars, is_emergency, signal_state]
+    param_schema:
+      fn_name:   { type: enum, options: [signal_with_priority, emergency_signal] }
+      a_name:    { type: const, value: waiting_cars }
+      b_name:    { type: const, value: is_emergency }
+      threshold: { type: int, min: 5, max: 40 }
+    starter_template: |
+      def <<fn_name>>(<<a_name>>: int, <<b_name>>: bool) -> str:
+          # <<brief_ar>>
+          <<carried_scaffold>>
+          pass
+    solution_template: |
+      def <<fn_name>>(<<a_name>>: int, <<b_name>>: bool) -> str:
+          if <<b_name>>:
+              return "أخضر"
+          if <<a_name>> > <<threshold>>:
+              return "أخضر"
+          return "أحمر"
+    tests:
+      - input: "<<fn_name>>(0, True)"
+        expected: '"أخضر"'
+      - input: "<<fn_name>>(<<above>>, False)"
+        expected: '"أخضر"'
+      - input: "<<fn_name>>(<<below>>, False)"
+        expected: '"أحمر"'
+
+  - id: time_window
+    target_concept: conditionals
+    carried_concepts: [variables]
+    scenes: [traffic_establishing]
+    difficulty_band: 5
+    signature: "<<fn_name>>(<<a_name>>: int) -> str"
+    goal_shape: >
+      Decide from a value falling inside or outside a range.
+    vocabulary_used: [hour, signal_state]
+    param_schema:
+      fn_name:    { type: enum, options: [night_mode, signal_by_hour] }
+      a_name:     { type: const, value: hour }
+      start_hour: { type: int, min: 22, max: 23 }
+      end_hour:   { type: int, min: 4, max: 6 }
+    starter_template: |
+      def <<fn_name>>(<<a_name>>: int) -> str:
+          # <<brief_ar>>
+          pass
+    solution_template: |
+      def <<fn_name>>(<<a_name>>: int) -> str:
+          if <<a_name>> >= <<start_hour>> or <<a_name>> <= <<end_hour>>:
+              return "أصفر"
+          return "أخضر"
+    tests:
+      - input: "<<fn_name>>(<<night_sample>>)"
+        expected: '"أصفر"'
+      - input: "<<fn_name>>(<<day_sample>>)"
+        expected: '"أخضر"'
+
+  - id: cycle_junctions
+    target_concept: loops
+    carried_concepts: [conditionals, variables]
+    scenes: [traffic_establishing]
+    difficulty_band: 7
+    signature: "<<fn_name>>(<<a_name>>: list, <<b_name>>: int) -> int"
+    goal_shape: >
+      Walk a list of junctions and count how many need attention.
+    vocabulary_used: [junction, waiting_cars]
+    param_schema:
+      fn_name:   { type: enum, options: [busy_junctions, needs_attention, count_congested] }
+      a_name:    { type: const, value: counts }
+      b_name:    { type: const, value: threshold }
+    starter_template: |
+      def <<fn_name>>(<<a_name>>: list, <<b_name>>: int) -> int:
+          # <<brief_ar>>
+          <<carried_scaffold>>
+          pass
+    solution_template: |
+      def <<fn_name>>(<<a_name>>: list, <<b_name>>: int) -> int:
+          busy = 0
+          for count in <<a_name>>:
+              if count > <<b_name>>:
+                  busy = busy + 1
+          return busy
+    tests:
+      - input: "<<fn_name>>([<<sample_numbers>>], <<threshold>>)"
+        expected: "<<busy_count>>"
+      - input: "<<fn_name>>([], <<threshold>>)"
+        expected: "0"
+
+carried_scaffold:
+  variables:
+    FULL:    "# القيم جاهزة ليك في البارامترات"
+    PARTIAL: "# فاضل تسمي المتغير اللي هتحتاجه"
+    NONE:    ""
+  conditionals:
+    FULL:    "# الشرط الأول مكتوب لك"
+    PARTIAL: "# فاضل تكمل الشرط التاني"
+    NONE:    ""
+
+constraints:
+  may_vary:
+    - scene
+    - params
+    - brief_wording
+    - npc_lines
+    - carried_scaffold
+    - function_name
+  may_not_vary:
+    - world
+    - target_concept
+    - mechanic
+    - signature_shape
+    - solution_shape
+  locale: ar-EG
+  reading_age: 10-17
+  max_starter_lines: 12
+
+  must_hold:
+    - solution_passes_all_tests
+    - starter_fails_at_least_one_test
+    - identifiers_within_manifest
+    - at_least_two_tests
+
+  # Arabic string returns are compared literally by Pyodide, so a generated mission
+  # must use the exact forms in vocabulary.signal_state — "اخضر" without the hamza
+  # would fail a test the student cannot see.
+  exact_strings:
+    - signal_state
