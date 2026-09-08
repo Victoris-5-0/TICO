@@ -114,7 +114,7 @@ small — but a rename in Prisma breaks Python at runtime, not at migration time
 | **Student model** — weighted mastery over target + carried | `services/student_model.py`, `rules/mastery.py` | summary only |
 | **Path planner** — required/optional lessons from the diagnostic | `services/planner.py`, `rules/plan.py` | reviews every skip |
 | **Adaptive composer** — scaffold plan, difficulty, reps, advance/hold | `rules/composer.py` | reviews conflicts only |
-| **Mission generation** — compose a scenario from the world inventory | `ai/graphs/mission_gen.py` | yes, validated |
+| **Mission generation** — compose six phases from the world vocabulary | `ai/chains/mission_gen.py`, `rules/mission_builder.py` | yes, validated |
 
 ### Rules propose, the model reviews
 
@@ -130,8 +130,15 @@ character service.
 ## World manifests
 
 `content/worlds/*.yaml` lists everything a mission in that world may use: scenes,
-characters, props, mechanics, constraints. **If it is not in the manifest, the AI may not
-put it in a mission.** Generation is selection from a closed set, never invention.
+characters, mechanics, the function signatures a student writes against, the Arabic
+vocabulary the prose may use, and the sprites and animations the client can actually draw.
+**If it is not in the manifest, the AI may not put it in a mission.** Generation is
+selection from a closed set, never invention.
+
+An earlier version of this described props with verbs — `gate.open()`, `station.passengers`
+— as though a mission drove game objects through an API. The real content is plain Python
+functions (`calculate_loaves(trays)`), so the manifests describe signatures instead. The
+generator built for the props model was deleted in the `ai/foundations` merge.
 
 The `verbs` and `reads` on each prop are the real code API the student writes against. A
 Python validator re-reads the manifest after generation and rejects any mission that

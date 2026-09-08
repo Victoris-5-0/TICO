@@ -25,6 +25,17 @@ def hint_body(session_id: str, **over) -> dict:
     }
 
 
+# `/v1/submissions/analyze` and `/v1/tico/messages` used to be stubbed here. Both are
+# real now — they check session ownership, call a model and write to Postgres — so they
+# need a database and cannot be tested alongside the stubs.
+#
+# Their behaviour is covered by:
+#   test_classify_error.py   the classifier and its escalation, offline
+#   test_moderation.py       what chat blocks before any model call, offline
+#   test_tico_chat.py        the chat graph's nodes and leak guard, offline
+#   test_contract.py         that the response shapes still match the client
+
+
 def test_open_session(client):
     r = client.post("/v1/sessions", json=SESSION)
     assert r.status_code == 201
@@ -51,24 +62,6 @@ def test_close_session(client):
 # Its behaviour is covered by:
 #   test_hint_ladder.py    the ladder and both guards, offline
 #   test_hints_live.py     the whole pipeline, against a real database
-
-
-def test_analyze_recognises_the_classic_mistake(client):
-    r = client.post(
-        "/v1/submissions/analyze",
-        json={"session_id": "s1", "code": "if station.passengers = 30:\n    gate.open()"},
-    )
-    assert r.status_code == 200
-    body = data(r)
-    assert body["errorFamily"] == "LOGIC"
-    assert body["errorTag"] == "assignment_vs_comparison"
-
-
-def test_analyze_falls_back_for_anything_else(client):
-    r = client.post("/v1/submissions/analyze", json={"session_id": "s1", "code": "pass"})
-    body = data(r)
-    assert body["errorFamily"] == "UNKNOWN"
-    assert body["isNewTag"] is True
 
 
 def test_refresh_reports_who_decided(client):
@@ -124,29 +117,6 @@ def _sse_frames(text: str) -> list[dict]:
         for line in text.splitlines()
         if line.startswith("data: ")
     ]
-
-
-def test_tico_streams_sse_not_json(client):
-    r = client.post("/v1/tico/messages", json={"session_id": "s1", "message": "ليه == ؟"})
-    assert r.status_code == 200
-    assert r.headers["content-type"].startswith("text/event-stream")
-    frames = _sse_frames(r.text)
-    assert len(frames) > 1
-    assert frames[-1]["done"] is True
-    assert "".join(f["delta"] for f in frames)
-
-
-def test_tico_refuses_to_hand_over_the_answer(client):
-    r = client.post("/v1/tico/messages", json={"session_id": "s1", "message": "عايز الحل"})
-    frames = _sse_frames(r.text)
-    assert frames[0]["offeredHintRung"] == 3
-    assert "gate.open()" not in "".join(f["delta"] for f in frames)
-
-
-def test_moderation_blocks_before_any_model_call(client):
-    r = client.post("/v1/tico/messages", json={"session_id": "s1", "message": "you stupid"})
-    frames = _sse_frames(r.text)
-    assert frames[0]["blocked"] is True
 
 
 def test_unknown_field_is_rejected(client):

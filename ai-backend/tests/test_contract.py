@@ -68,11 +68,22 @@ def test_errors_never_leak_a_stack_trace(client):
         assert leak not in blob, f"{leak!r} reached a browser-facing error"
 
 
-def test_sse_is_never_wrapped(client):
-    """An envelope around a token stream would defeat the point of streaming."""
-    r = client.post("/v1/tico/messages", json={"session_id": "s1", "message": "hi"})
-    assert r.headers["content-type"].startswith("text/event-stream")
-    assert not r.text.lstrip().startswith("{\"data\"")
+def test_sse_is_never_wrapped():
+    """An envelope around a token stream would defeat the point of streaming.
+
+    Checked on the route rather than over HTTP: `/v1/tico/messages` now needs a database,
+    and whether it streams is a property of how the route is declared. The middleware
+    wraps `JSONResponse` bodies only, so a route that returns `StreamingResponse` is
+    structurally incapable of being enveloped.
+    """
+    from fastapi.responses import StreamingResponse
+
+    from app.api.v1 import tico
+
+    route = next(r for r in tico.router.routes if r.path == "/tico/messages")
+    assert route.response_class is StreamingResponse or issubclass(
+        route.response_class, StreamingResponse
+    ), "the chat route must stream; a JSON response here would be wrapped in {data, meta}"
 
 
 # ========================================================================  wire casing

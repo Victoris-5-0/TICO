@@ -19,7 +19,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from langchain_core.messages import AIMessage
 
-from app.ai.chains.tico_hint import generate_tico_hint
+from app.ai.chains.tico_hint import write_hint
 from app.ai.guards import (
     contains_any_term,
     contains_fenced_code_block,
@@ -31,7 +31,8 @@ from app.rules.hint_ladder import (
     TEMPLATED_FALLBACK_PATTERNS,
     get_authored_fallback,
 )
-from app.schemas.common import HintRung
+from app.config import settings
+from app.schemas.common import HintRung, Phase
 
 # ---------------------------------------------------------------------------
 # Realistic Mission Benchmark Scenarios for CI Grading
@@ -310,56 +311,53 @@ class TestRung4WalkLeakGrading:
 # ---------------------------------------------------------------------------
 
 
-def test_tico_hint_chain_prevents_leaks_on_all_rungs():
-    """Verify that generate_tico_hint prevents leaks on every rung.
+def test_the_chain_never_lets_a_leak_through_on_any_rung():
+    """A model that leaks twice must produce authored text, not its second attempt.
 
-    If the model generates leaking content, the chain catches it via guards.py,
-    retries once with violation feedback, and if the leak persists, falls back
-    to an authored hint. Under NO circumstance does a leak reach the caller.
+    Rewritten from `generate_tico_hint` to `write_hint` when the two hint chains became
+    one. What it asserts is unchanged, and it is the point of the whole design: under no
+    circumstance does a leak reach the caller.
     """
     scenario = MISSION_SCENARIOS[0]
 
-    # Matrix of leaking model responses by rung
-    leaking_responses = {
-        0: "```python\ngate.open()\n```",  # Rung 1
-        1: "Did you check if waiting is 30?",  # Rung 2
-        2: "Here is how you do it with waiting == 30",  # Rung 3
-        3: "Write this line: gate.open()",  # Rung 4
+    # One leaking reply per rung, in the shape a model actually produces.
+    leaking = {
+        HintRung.ORIENT: "```python\ngate.open()\n```",
+        HintRung.QUESTION: "Did you check if waiting is 30?",
+        HintRung.NAME_IT: "Here is how you do it with waiting == 30",
+        HintRung.WALK: "Write this line: gate.open()",
     }
 
-    for prior_count, leak_text in leaking_responses.items():
-        mock_model = MagicMock()
-        # Both attempts emit leaking text
-        mock_model.invoke.side_effect = [
-            AIMessage(content=leak_text),
-            AIMessage(content=leak_text),
-        ]
+    for rung, leak_text in leaking.items():
+        model = MagicMock()
+        # Both attempts leak, so the chain has to give up and use authored text.
+        model.invoke.side_effect = [AIMessage(content=leak_text), AIMessage(content=leak_text)]
 
-        with patch("app.ai.chains.tico_hint.get_model", return_value=mock_model):
-            result = generate_tico_hint(
-                prior_count=prior_count,
-                code="waiting = 35",
-                target_concept=scenario["concept"],
-                solution_identifiers=scenario["solution_identifiers"],
-                target_values=scenario["target_values"],
+        with patch("app.ai.chains.tico_hint.get_model", return_value=model), patch.object(
+            settings, "google_api_key", "test-key"
+        ):
+            result = write_hint(
+                rung=rung,
+                phase=Phase.GUIDED_CODING.value,
+                task_ar="افتحي البوابة",
+                student_code="waiting = 35",
+                solution_code=scenario["solution_code"],
+                blanks=scenario["target_values"],
             )
 
-        # 1. Final returned hint must pass the leak guard for this rung
-        guard_check = validate_hint_output(
-            rung=result.rung,
-            hint_text=result.hint_text,
+        verdict = validate_hint_output(
+            rung=rung,
+            hint_text=result.text,
             solution_identifiers=scenario["solution_identifiers"],
             target_values=scenario["target_values"],
         )
-        assert guard_check.passed is True, (
-            f"Returned hint leaked on rung {result.rung}: {guard_check.violations}\n"
-            f"Hint text: {result.hint_text}"
+        assert verdict.passed, (
+            f"the hint served on rung {int(rung)} leaked: {verdict.violations}\n{result.text}"
         )
 
-        # 2. Must have fallen back to authored hint
-        assert result.is_model_generated is False
-        assert result.model_name is None
-        assert mock_model.invoke.call_count == 2
+        assert result.source == "fallback", "a twice-leaking model must not be served"
+        assert result.leaked and result.leak_reason
+        assert model.invoke.call_count == 2, "one retry with feedback, then give up"
 
 
 def test_universal_invariant_no_full_solution_at_any_rung():

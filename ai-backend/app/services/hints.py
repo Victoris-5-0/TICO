@@ -149,6 +149,12 @@ def request_hint(
     # ---------------------------------------------------------------- the model
     previous = [h.text for h in hint_q.for_session(db, session_id) if h.text]
 
+    # docs/08 requires that a student under 13 gets reviewed authored text rather than a
+    # model call. `write_hint(static_only=True)` does exactly that, and nothing passes it:
+    # neither `users` nor `student_profiles` records an age or a date of birth, so there is
+    # no field to decide it from. Adding one is a Prisma migration and a product decision
+    # about collecting a child's age at all — until then the rule cannot fire, and saying so
+    # here is better than a query that always answers False.
     result = tico_hint.write_hint(
         rung=position.rung,
         phase=phase.value,
