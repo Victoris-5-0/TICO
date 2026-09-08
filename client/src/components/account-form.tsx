@@ -48,7 +48,7 @@ export function AccountForm({ locale, mode }: { locale: Locale; mode: "login" | 
   return <main className={styles.page}>
     <section className={styles.story} aria-labelledby="story-title">
       <Link href={`/${locale}`} className={styles.brand} aria-label={ar ? "الرئيسية" : "TICO home"}>
-        <Image src="/assets/landing/logo.png" alt="TICO" width={140} height={47} preload />
+        <Image src="/assets/landing/logo.svg" alt="TICO" width={140} height={49} preload />
       </Link>
       <div className={styles.storyCopy}>
         <p className={styles.eyebrow}>{ar ? "مغامرتك الجاية بتبدأ هنا" : "YOUR NEXT CHAPTER STARTS HERE"}</p>
@@ -61,7 +61,7 @@ export function AccountForm({ locale, mode }: { locale: Locale; mode: "login" | 
         </div>
         <div className={styles.codeNote} dir="ltr" lang="en">
           <div><span aria-hidden="true" /><span aria-hidden="true" /><span aria-hidden="true" /><b>hello_world.py</b></div>
-          <code><span>print</span>{'("Let’s try something new!")'}</code>
+          <code><span>print</span>(&quot;Let’s try something new!&quot;)</code>
         </div>
         <Image className={styles.mascot} src="/assets/characters/tico/tico-neutral.webp" alt={ar ? "تيكو، رفيقك في البرمجة" : "TICO, your coding companion"} width={421} height={734} preload />
         <div className={styles.sceneCaption}><span>{ar ? "أول محطة" : "FIRST STOP"}</span><strong>{ar ? "فرن الحي" : "The neighborhood bakery"}</strong></div>
