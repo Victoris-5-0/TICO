@@ -68,11 +68,22 @@ def test_errors_never_leak_a_stack_trace(client):
         assert leak not in blob, f"{leak!r} reached a browser-facing error"
 
 
-def test_sse_is_never_wrapped(client):
-    """An envelope around a token stream would defeat the point of streaming."""
-    r = client.post("/v1/tico/messages", json={"session_id": "s1", "message": "hi"})
-    assert r.headers["content-type"].startswith("text/event-stream")
-    assert not r.text.lstrip().startswith("{\"data\"")
+def test_sse_is_never_wrapped():
+    """An envelope around a token stream would defeat the point of streaming.
+
+    Checked on the route rather than over HTTP: `/v1/tico/messages` now needs a database,
+    and whether it streams is a property of how the route is declared. The middleware
+    wraps `JSONResponse` bodies only, so a route that returns `StreamingResponse` is
+    structurally incapable of being enveloped.
+    """
+    from fastapi.responses import StreamingResponse
+
+    from app.api.v1 import tico
+
+    route = next(r for r in tico.router.routes if r.path == "/tico/messages")
+    assert route.response_class is StreamingResponse or issubclass(
+        route.response_class, StreamingResponse
+    ), "the chat route must stream; a JSON response here would be wrapped in {data, meta}"
 
 
 # ========================================================================  wire casing
@@ -99,19 +110,23 @@ def test_no_snake_case_reaches_the_wire(client):
     )
 
 
-def test_python_callers_may_still_use_snake_case(client):
-    """`populate_by_name` — so internal callers and fixtures are not forced to shout."""
-    r = client.post(
-        "/v1/hints",
-        json={
-            "session_id": "snake-in",
-            "mission_id": "m1",
-            "code_excerpt": "x = 1",
-            "last_result": "FAILED",
-        },
+def test_python_callers_may_still_use_snake_case():
+    """`populate_by_name` — so internal callers and fixtures are not forced to shout.
+
+    Checked against the model rather than over HTTP: `/v1/hints` now needs a database,
+    and whether a DTO accepts snake_case is a question about the DTO.
+    """
+    from app.schemas.hints import HintRequest
+
+    body = HintRequest(
+        session_id="snake-in",
+        mission_id="m1",
+        code_excerpt="x = 1",
+        last_result="FAILED",
     )
-    assert r.status_code == 200
-    assert "hint" in data(r)
+    assert body.session_id == "snake-in"
+    # And it still goes out camelCase, whichever way it came in.
+    assert "sessionId" in body.model_dump(by_alias=True)
 
 
 # =====================================================  the client calls what exists
@@ -148,24 +163,28 @@ def test_every_path_the_client_calls_exists(client):
 
 
 @pytestmark_client
-def test_the_clients_hint_call_is_accepted_verbatim(client):
-    """The exact body `hint.service.ts` builds. This is the call that used to 422."""
-    r = client.post(
-        "/v1/hints",
-        json={
+def test_the_clients_hint_call_is_accepted_verbatim():
+    """The exact body `hint.service.ts` builds. This is the call that used to 422.
+
+    Validated against the DTO rather than over HTTP — the endpoint now needs a database,
+    and the question here is whether the client's field names still fit the contract.
+    """
+    from app.schemas.hints import HintRequest, HintResponse
+
+    body = HintRequest.model_validate(
+        {
             "sessionId": "demo-session-1",
             "missionId": "demo-exercise-conditional-gate",
             "codeExcerpt": "if x = 5:\n    print('hi')",
             "lastResult": "ERROR",
             "locale": "ar-EG",
-        },
+        }
     )
-    assert r.status_code == 200, r.text
+    assert body.mission_id == "demo-exercise-conditional-gate"
 
-    # `hint.service.ts` reads exactly these two off the unwrapped body.
-    body = data(r)
-    assert isinstance(body["hint"], str) and body["hint"]
-    assert isinstance(body["cached"], bool)
+    # And the two fields `hint.service.ts` reads back are still on the response.
+    fields = HintResponse.model_fields
+    assert "hint" in fields and "cached" in fields
 
 
 # ==============================================================  the new endpoints

@@ -15,7 +15,6 @@ from datetime import datetime, timedelta, timezone
 
 from app.schemas.common import (
     DecidedBy,
-    ErrorFamily,
     HintRung,
     LessonRequirement,
     Phase,
@@ -197,28 +196,6 @@ def session(session_id: str = DEMO_SESSION_ID) -> dict:
     }
 
 
-# ------------------------------------------------------------------------ analysis
-def analysis() -> dict:
-    return {
-        "error_family": ErrorFamily.LOGIC,
-        "error_tag": "assignment_vs_comparison",
-        "misconception": "The student believes a single `=` compares two values.",
-        "confidence": 0.93,
-        "is_new_tag": False,
-        "escalated": False,
-        "in_scaffolded_region": False,
-    }
-
-
-# ---------------------------------------------------------------------- tico chat
-TICO_REPLY_CHUNKS = [
-    "سؤال حلو! ",
-    "في Python، الـ `=` الواحدة معناها ",
-    "«خزّن القيمة دي»، ",
-    "لكن الـ `==` معناها «قارن الاتنين دول». ",
-    "الشرط بتاعك عايز يقارن، مش يخزّن. ",
-]
-
 __all__ = [
     "DEMO_USER_ID",
     "DEMO_SESSION_ID",
@@ -236,7 +213,5 @@ __all__ = [
     "profile",
     "lesson_plan",
     "session",
-    "analysis",
-    "TICO_REPLY_CHUNKS",
     "HintRung",
 ]

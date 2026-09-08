@@ -53,7 +53,21 @@ def test_streaming_resolution_matrix(capability, streaming_arg, expected_streami
     assert model.streaming is expected_streaming
 
 
-def test_api_key_fail_fast_production(monkeypatch):
+
+@pytest.fixture
+def no_dotenv(monkeypatch):
+    """Stop `Settings` reading the developer's own `.env` during these tests.
+
+    `delenv("GOOGLE_API_KEY")` is not enough on a machine that has a real `.env`: pydantic
+    reads the file as well as the environment, so the key comes straight back and the
+    production fail-fast test finds a key where it expected none. It passes in CI, where
+    there is no `.env`, and fails on every developer's machine — which is the wrong way
+    round for a test about a missing key.
+    """
+    monkeypatch.setitem(Settings.model_config, "env_file", None)
+
+
+def test_api_key_fail_fast_production(monkeypatch, no_dotenv):
     """Simulate a production-like environment with GOOGLE_API_KEY unset."""
     monkeypatch.setenv("ENVIRONMENT", "production")
     monkeypatch.delenv("GOOGLE_API_KEY", raising=False)
@@ -72,7 +86,7 @@ def test_api_key_fail_fast_production(monkeypatch):
         get_settings()
 
 
-def test_get_settings_dev_fallback_no_raise(monkeypatch):
+def test_get_settings_dev_fallback_no_raise(monkeypatch, no_dotenv):
     """Verify get_settings() in development does not raise when GOOGLE_API_KEY is unset."""
     monkeypatch.setenv("ENVIRONMENT", "development")
     monkeypatch.delenv("GOOGLE_API_KEY", raising=False)
@@ -128,7 +142,7 @@ def test_tico_persona_prompt():
     )
 
     # Must contain persona identity
-    assert "طيكو" in prompt
+    assert "تيكو" in prompt
     assert "TICO" in prompt
 
     # Must contain Egyptian phrasing

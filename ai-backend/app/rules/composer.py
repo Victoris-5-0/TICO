@@ -1,245 +1,312 @@
-"""Compose a concrete mission from a mechanic and a scaffold plan.
+"""The adaptive composer domain rule (M4 — P0).
 
-Pure, deterministic given a seed, and does no I/O. That is what makes generation testable
-without a database, an API key, or a network — and it is why the model is optional here
-rather than load-bearing.
+Pure Python, zero I/O, zero DB, zero LangChain imports.
 
-## What "generation" actually is
-
-The interesting claim in the design is that the AI fills in variations and never invents
-mechanics. This module is where that stops being a claim:
-
-    mechanic (authored)  +  params (chosen from bounds)  ->  a real mission
-
-The model's whole job is prose — the Arabic brief, the title, an NPC line. Take it away
-and you still get a correct, playable, solvable mission with passing tests. That is the
-right dependency direction: a model outage should cost you variety, not the product.
-
-## Where the expected outputs come from
-
-They are not written, and they are certainly not asked of a model. The composer renders
-the reference solution, runs it against the sample inputs, and records what came back.
-A test built that way cannot disagree with its own solution.
+The composer adapts a mission within a lesson using exactly three levers:
+  1. Scaffold plan: How much of each carried concept is pre-scaffolded.
+     - Strong mastery (>= 0.7): FULL scaffolding (pre-written in starter code,
+       freeing the student to focus on the new target concept).
+     - Moderate mastery (0.4..0.7): PARTIAL scaffolding (skeleton provided).
+     - Weak mastery (< 0.4): NONE (learner must write it; sanity rule: a weak
+       carried concept is NEVER scaffolded away entirely).
+     - Challenge Arena: NONE across all carried concepts.
+  2. Difficulty band: 1..10 scale adjusted by skill band and attempt history.
+  3. Rep number: 1 on first attempt, higher on repeated practice reps.
+  4. Advance or Hold: Gate decision comparing mastery against threshold,
+     flagging conflicting evidence for escalation review.
 """
 
 from __future__ import annotations
 
-import random
-import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass
+from typing import Final
 
-from app.ai import sandbox
-from app.manifests.models import Mechanic, World
+from app.schemas.common import DecidedBy, ScaffoldLevel, SkillBand
+from app.schemas.missions import ScaffoldPlan
 
-#: Composer placeholders are `<<name>>`, NOT `{name}`.
-#:
-#: Solution templates contain real Python f-strings — `f"مخبز {station_name} جاهز"` — and
-#: `{name}` substitution would eat them. A delimiter Python has no opinion about keeps the
-#: two syntaxes independent.
-_SAMPLE_PATTERN = re.compile(r"<<(\w+)>>")
+# NEEDS DECISION: Threshold values (0.7 / 0.4) are implementation defaults mapped
+# from qualitative documentation tiers ("Strong" / "Shaky"). They are not currently
+# grounded in empirical mastery data or curriculum specification.
+# See docs/06-data-model-and-contracts.md and docs/08-ai-generation-and-companion.md.
+GATE_MASTERY_THRESHOLD: Final[float] = 0.7
+STRONG_MASTERY_THRESHOLD: Final[float] = 0.7
+WEAK_MASTERY_THRESHOLD: Final[float] = 0.4
 
-
-@dataclass
-class ComposedMission:
-    """Everything a mission needs except the prose."""
-
-    world_id: str
-    mechanic_id: str
-    scene_id: str
-    target_concept: str
-    carried_concepts: list[str]
-    signature: str
-    starter_code: str
-    solution_code: str
-    #: Egyptian Arabic, from the prose layer. Empty when the model was unavailable —
-    #: the mission is still complete and solvable without it.
-    brief_ar: str = ""
-    #: [(call expression, expected repr)] — derived by running `solution_code`.
-    tests: list[tuple[str, str]] = field(default_factory=list)
-    params: dict = field(default_factory=dict)
-    scaffold: dict[str, str] = field(default_factory=dict)
-    difficulty_band: int = 5
-    #: Filled by validation, never by the composer asserting its own work.
-    validated: bool = False
-    problems: list[str] = field(default_factory=list)
+MIN_DIFFICULTY: Final[int] = 1
+MAX_DIFFICULTY: Final[int] = 10
 
 
-class CompositionError(RuntimeError):
-    """The mechanic could not be turned into a mission."""
+class ComposerInvariantError(RuntimeError):
+    """Raised when an internal composer invariant is violated (e.g. weak carried concept given FULL scaffolding).
 
-
-# --------------------------------------------------------------------------- params
-
-
-def choose_params(mechanic: Mechanic, rng: random.Random) -> dict:
-    """Pick one concrete value for every entry in `param_schema`.
-
-    Three kinds, and nothing else is allowed — a manifest cannot smuggle in a free-text
-    field for the model to fill, which is precisely the point.
+    This exception signals a structural bug in composer logic or invalid threshold configuration,
+    not a caller input error.
     """
-    chosen: dict = {}
-    for name, spec in (mechanic.param_schema or {}).items():
-        kind = spec.get("type")
-        if kind == "const":
-            chosen[name] = spec["value"]
-        elif kind == "enum":
-            options = spec.get("options") or []
-            if not options:
-                raise CompositionError(f"{mechanic.id}: param '{name}' is an enum with no options")
-            chosen[name] = rng.choice(options)
-        elif kind == "int":
-            lo, hi = spec.get("min", 1), spec.get("max", 10)
-            chosen[name] = rng.randint(lo, hi)
-        else:
-            raise CompositionError(
-                f"{mechanic.id}: param '{name}' has unsupported type '{kind}' "
-                "(expected const, enum or int)"
+
+
+@dataclass(frozen=True, slots=True)
+class AdvanceOrHoldDecision:
+    """Decision on whether a student advances past the concept gate or holds."""
+
+    advanced: bool
+    decided_by: DecidedBy
+    confidence: float
+    has_conflict: bool
+    reason: str
+    conflict_type: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class ComposerPlanResult:
+    """Full composition result containing scaffold plan and conflict metadata."""
+
+    scaffold_plan: ScaffoldPlan
+    confidence: float
+    has_conflict: bool
+    reason: str
+    conflict_type: str | None = None
+
+
+def compute_scaffold_level(mastery: float, *, is_arena: bool = False) -> ScaffoldLevel:
+    """Compute scaffolding for a carried concept based on learner mastery.
+
+    Pedagogical contract (docs/08, ai-architecture.html):
+      - Strong mastery (>= 0.7): FULL (pre-declared so student focuses on new target).
+      - Moderate mastery (0.4..0.7): PARTIAL (skeleton provided).
+      - Shaky / Weak mastery (< 0.4): NONE (student writes it; weak concept is NEVER
+        scaffolded away entirely).
+      - Challenge Arena: NONE (no scaffolding in the arena).
+    """
+    if is_arena:
+        return ScaffoldLevel.NONE
+
+    if mastery >= STRONG_MASTERY_THRESHOLD:
+        return ScaffoldLevel.FULL
+    if mastery >= WEAK_MASTERY_THRESHOLD:
+        return ScaffoldLevel.PARTIAL
+    return ScaffoldLevel.NONE
+
+
+def compute_difficulty_band(
+    *,
+    skill_band: SkillBand = SkillBand.ON_LEVEL,
+    target_mastery: float = 0.5,
+    prior_attempts: int = 0,
+    is_arena: bool = False,
+) -> int:
+    """Calculate integer difficulty band from 1 to 10."""
+    if is_arena:
+        # Arena stretches students: base 8 + mastery bonus, min 7, max 10
+        base = 8 + int(target_mastery * 2)
+        return max(7, min(MAX_DIFFICULTY, base))
+
+    # Base difficulty by coarse skill band
+    if skill_band == SkillBand.STRUGGLING:
+        base = 3
+    elif skill_band == SkillBand.READY_TO_STRETCH:
+        base = 7
+    else:  # ON_LEVEL
+        base = 5
+
+    # Slight adjustment based on target concept mastery
+    if target_mastery >= STRONG_MASTERY_THRESHOLD:
+        base += 1
+    elif target_mastery < WEAK_MASTERY_THRESHOLD:
+        base -= 1
+
+    # Reduce slightly on repeated attempts to relieve frustration
+    if prior_attempts > 0:
+        base -= min(prior_attempts, 2)
+
+    return max(MIN_DIFFICULTY, min(MAX_DIFFICULTY, base))
+
+
+def _assert_no_weak_full_scaffold(
+    scaffold_map: dict[str, ScaffoldLevel], masteries: dict[str, float]
+) -> None:
+    """Assert sanity invariant: weak carried concepts (< WEAK_MASTERY_THRESHOLD) must never be assigned FULL scaffolding.
+
+    This invariant is structurally guaranteed by compute_scaffold_level() as long as
+    STRONG_MASTERY_THRESHOLD >= WEAK_MASTERY_THRESHOLD. This check provides defense-in-depth
+    against future configuration errors or threshold drift.
+    """
+    for cid, level in scaffold_map.items():
+        if masteries.get(cid, 0.5) < WEAK_MASTERY_THRESHOLD and level == ScaffoldLevel.FULL:
+            raise ComposerInvariantError(
+                f"Weak carried concept '{cid}' (mastery={masteries.get(cid)}) was "
+                f"assigned FULL scaffolding — this should be structurally "
+                f"impossible given current thresholds; check "
+                f"STRONG_MASTERY_THRESHOLD/WEAK_MASTERY_THRESHOLD configuration."
             )
-    return chosen
-
-
-def sample_values(mechanic: Mechanic, world: World, params: dict, rng: random.Random) -> dict:
-    """Concrete arguments for the test calls.
-
-    Drawn from the world's vocabulary where possible, so a bakery test asks about 240
-    loaves rather than 7,000,000. `plausible_range` exists for exactly this.
-    """
-    ints = [
-        v for v in world.vocabulary.values()
-        if v.type == "int" and v.plausible_range
-    ]
-    default_lo, default_hi = (1, 50)
-    if ints:
-        default_lo = min(v.plausible_range[0] for v in ints)
-        default_hi = max(v.plausible_range[1] for v in ints)
-
-    strings = [v for v in world.vocabulary.values() if v.type == "str" and v.options]
-    words = strings[0].options if strings else ["القاهرة"]
-
-    def an_int(lo: int = default_lo, hi: int = default_hi) -> int:
-        return rng.randint(max(lo, 1), max(hi, 2))
-
-    threshold = params.get("threshold", an_int(5, 40))
-    numbers = sorted(an_int(1, 60) for _ in range(rng.randint(3, 5)))
-
-    return {
-        "sample_a": an_int(2, 30),
-        "sample_b": an_int(2, 30),
-        "sample_a2": an_int(2, 30),
-        "sample_b2": an_int(2, 30),
-        "sample_number": an_int(),
-        "single_number": an_int(),
-        "threshold": threshold,
-        "limit": threshold,
-        "above": threshold + rng.randint(1, 10),
-        "below": max(0, threshold - rng.randint(1, 5)),
-        "night_sample": rng.choice([23, 0, 2, 3]),
-        "day_sample": rng.choice([9, 12, 15, 18]),
-        "sample_numbers": ", ".join(str(n) for n in numbers),
-        "sample_list": ", ".join(str(n) for n in numbers),
-        "sample_destination": rng.choice(words),
-        "sample_place2": rng.choice(words),
-        "sample_queue": ", ".join(
-            f'"{rng.choice(words)}"' for _ in range(rng.randint(3, 6))
-        ),
-    }
-
-
-# ------------------------------------------------------------------------ rendering
-
-
-def _substitute(template: str, values: dict) -> str:
-    """Fill `{placeholders}`, leaving unknown ones alone rather than crashing.
-
-    Leaving them is deliberate: an unfilled placeholder shows up in validation as a
-    visible `{like_this}` in the mission, which is far easier to diagnose than a
-    KeyError three layers down.
-    """
-    def replace(m: re.Match) -> str:
-        key = m.group(1)
-        return str(values[key]) if key in values else m.group(0)
-
-    return _SAMPLE_PATTERN.sub(replace, template)
 
 
 def compose(
-    world: World,
-    mechanic: Mechanic,
     *,
-    scaffold: dict[str, str] | None = None,
-    seed: int | None = None,
-    brief_ar: str | None = None,
-) -> ComposedMission:
-    """Turn a mechanic into a concrete, runnable mission.
+    target_concept_id: str,
+    carried_concept_ids: list[str] | None = None,
+    carried_concept_masteries: dict[str, float] | None = None,
+    target_concept_mastery: float = 0.5,
+    prior_attempts: int = 0,
+    skill_band: SkillBand = SkillBand.ON_LEVEL,
+    is_arena: bool = False,
+) -> ComposerPlanResult:
+    """Generate the adaptive scaffold plan, difficulty, and reps for next mission.
 
-    `scaffold` maps a carried concept to NONE / PARTIAL / FULL. A concept the student is
-    already strong on gets pre-filled, so a loops mission is about loops rather than about
-    remembering how to open a variable.
+    Args:
+        target_concept_id: The primary concept being taught (never scaffolded away).
+        carried_concept_ids: Concepts previously introduced and carried in this mission.
+        carried_concept_masteries: Mapping of carried concept_id to mastery float (0.0..1.0).
+        target_concept_mastery: Current student mastery on target concept.
+        prior_attempts: Monotonic count of prior attempts on this lesson/mission.
+        skill_band: Coarse student skill band.
+        is_arena: Whether this composition is for the challenge arena.
 
-    `seed` makes this reproducible — the same seed gives the same mission, which is what
-    lets a test assert on generated output at all.
+    Returns:
+        ComposerPlanResult with ScaffoldPlan, confidence score, and conflict metadata.
     """
-    rng = random.Random(seed)
-    scaffold = scaffold or {}
+    if carried_concept_ids and target_concept_id in carried_concept_ids:
+        raise ValueError(
+            f"target_concept_id '{target_concept_id}' cannot also be in carried_concept_ids: "
+            f"target concepts are newly taught and must not be treated as carried scaffolding."
+        )
+    if carried_concept_masteries and target_concept_id in carried_concept_masteries:
+        raise ValueError(
+            f"target_concept_id '{target_concept_id}' cannot also be in carried_concept_masteries: "
+            f"pass target concept mastery via target_concept_mastery."
+        )
 
-    params = choose_params(mechanic, rng)
-    samples = sample_values(mechanic, world, params, rng)
+    carried_ids = carried_concept_ids or []
+    masteries = carried_concept_masteries or {}
 
-    scene_id = rng.choice(mechanic.scenes)
+    scaffold_map: dict[str, ScaffoldLevel] = {}
+    for cid in carried_ids:
+        c_mastery = masteries.get(cid, 0.5)
+        scaffold_map[cid] = compute_scaffold_level(c_mastery, is_arena=is_arena)
 
-    # One scaffold line per carried concept, in the manifest's own words.
-    scaffold_lines = [
-        world.scaffold_for(concept, level)
-        for concept, level in scaffold.items()
-        if world.scaffold_for(concept, level)
-    ]
-    values = {
-        **samples,
-        **params,
-        "carried_scaffold": "\n    ".join(scaffold_lines),
-        # The prose layer supplies this. Empty is a valid mission — the code is
-        # complete and solvable without it, which is the point of keeping the model
-        # optional.
-        "brief_ar": (brief_ar or "").strip(),
-    }
+    # Sanity invariant assertion (docs/roadmap.html, ai-architecture.html):
+    # A weak carried concept must NEVER be scaffolded away entirely (FULL)
+    _assert_no_weak_full_scaffold(scaffold_map, masteries)
 
-    solution_code = _substitute(mechanic.solution_template, values).strip()
-    starter_code = _substitute(mechanic.starter_template, values).strip()
-
-    # With no brief, the template leaves a bare `#` behind. A dangling empty comment in
-    # the first thing a child reads looks like a bug, so drop the line entirely.
-    starter_code = "\n".join(
-        line for line in starter_code.splitlines() if line.strip() != "#"
+    difficulty = compute_difficulty_band(
+        skill_band=skill_band,
+        target_mastery=target_concept_mastery,
+        prior_attempts=prior_attempts,
+        is_arena=is_arena,
     )
-    signature = _substitute(mechanic.signature, values)
+    rep_number = prior_attempts + 1
 
-    # Derive the expected outputs by running the solution.
-    call_exprs = [_substitute(t.input, values) for t in mechanic.tests]
-    run = sandbox.run(solution_code, call_exprs)
+    # Conflict detection on composition inputs
+    has_conflict = False
+    conflict_type = None
+    reason = "Deterministic rule applied without conflicting signals."
+    confidence = 0.95
 
-    mission = ComposedMission(
-        world_id=world.id,
-        mechanic_id=mechanic.id,
-        scene_id=scene_id,
-        brief_ar=(brief_ar or "").strip(),
-        target_concept=mechanic.target_concept,
-        carried_concepts=list(mechanic.carried_concepts),
-        signature=signature,
-        starter_code=starter_code,
-        solution_code=solution_code,
-        params=params,
-        scaffold=dict(scaffold),
-        difficulty_band=mechanic.difficulty_band,
+    # Example conflict: SkillBand is READY_TO_STRETCH but carried concepts are very weak
+    weak_carried = [cid for cid, s in scaffold_map.items() if s == ScaffoldLevel.NONE and masteries.get(cid, 0.5) < WEAK_MASTERY_THRESHOLD]
+    if skill_band == SkillBand.READY_TO_STRETCH and len(weak_carried) >= 2:
+        has_conflict = True
+        conflict_type = "ADVANCED_BAND_WEAK_CARRIED"
+        confidence = 0.55
+        reason = "Learner is in READY_TO_STRETCH band but multiple carried concepts show shaky mastery."
+    elif skill_band == SkillBand.STRUGGLING and target_concept_mastery >= STRONG_MASTERY_THRESHOLD:
+        has_conflict = True
+        conflict_type = "STRUGGLING_BAND_HIGH_TARGET"
+        confidence = 0.55
+        reason = "Learner is marked STRUGGLING but has already demonstrated strong mastery on target concept."
+
+    plan = ScaffoldPlan(
+        scaffold=scaffold_map,
+        difficulty_band=difficulty,
+        rep_number=rep_number,
     )
 
-    if not run.ok:
-        mission.problems.append(f"the reference solution did not run: {run.error}")
-        return mission
+    return ComposerPlanResult(
+        scaffold_plan=plan,
+        confidence=confidence,
+        has_conflict=has_conflict,
+        reason=reason,
+        conflict_type=conflict_type,
+    )
 
-    for call in run.results:
-        if not call.ok:
-            mission.problems.append(f"{call.expression} raised {call.error}")
-            continue
-        mission.tests.append((call.expression, call.value or "None"))
 
-    return mission
+# NEEDS DECISION: evidence_confidence default (0.8) is an uncalibrated heuristic
+# baseline representing assumed confidence in the underlying telemetry signals.
+def advance_or_hold(
+    *,
+    target_mastery: float,
+    hints_used: int,
+    attempt_number: int,
+    evidence_confidence: float = 0.8,
+    gate_threshold: float = GATE_MASTERY_THRESHOLD,
+) -> AdvanceOrHoldDecision:
+    """Evaluate whether learner should advance past the concept gate or hold.
+
+    When the evidence conflicts (e.g. solved it but leaned on every hint, or fast
+    but multiple failed attempts), returns has_conflict = True and confidence < 0.6
+    so the escalation model review chain can confirm or override with a written reason.
+    """
+    passed_threshold = target_mastery >= gate_threshold
+
+    # Case 1: High mastery but heavy hint reliance (leaned on every hint)
+    if passed_threshold and hints_used >= 3:
+        return AdvanceOrHoldDecision(
+            advanced=True,  # Propose advance but with low confidence
+            decided_by=DecidedBy.RULE,
+            confidence=0.45,
+            has_conflict=True,
+            conflict_type="HIGH_MASTERY_HEAVY_HINTS",
+            reason=f"Mastery {target_mastery:.2f} exceeds gate {gate_threshold:.2f}, but student used {hints_used} hints.",
+        )
+
+    # Case 2: Below threshold but passed on first attempt with 0 hints
+    if not passed_threshold and attempt_number == 1 and hints_used == 0 and target_mastery >= 0.5:
+        return AdvanceOrHoldDecision(
+            advanced=False,  # Propose hold but with low confidence
+            decided_by=DecidedBy.RULE,
+            confidence=0.50,
+            has_conflict=True,
+            conflict_type="MODERATE_MASTERY_CLEAN_PASS",
+            reason=f"Mastery {target_mastery:.2f} is below gate {gate_threshold:.2f}, but student solved attempt 1 with 0 hints.",
+        )
+
+    # Case 3: High mastery but high attempt count (3+ attempts to pass)
+    if passed_threshold and attempt_number >= 3:
+        return AdvanceOrHoldDecision(
+            advanced=True,
+            decided_by=DecidedBy.RULE,
+            confidence=0.55,
+            has_conflict=True,
+            conflict_type="HIGH_MASTERY_MANY_ATTEMPTS",
+            reason=f"Mastery {target_mastery:.2f} meets gate, but required {attempt_number} attempts.",
+        )
+
+    # Case 4: Borderline mastery with low evidence confidence
+    if abs(target_mastery - gate_threshold) <= 0.05 and evidence_confidence < 0.5:
+        return AdvanceOrHoldDecision(
+            advanced=passed_threshold,
+            decided_by=DecidedBy.RULE,
+            confidence=0.50,
+            has_conflict=True,
+            conflict_type="BORDERLINE_LOW_CONFIDENCE",
+            reason=f"Mastery {target_mastery:.2f} is on the threshold boundary with low evidence confidence ({evidence_confidence:.2f}).",
+        )
+
+    # Clear-cut cases:
+    if passed_threshold:
+        return AdvanceOrHoldDecision(
+            advanced=True,
+            decided_by=DecidedBy.RULE,
+            confidence=0.90,
+            has_conflict=False,
+            conflict_type=None,
+            reason=f"Mastery {target_mastery:.2f} decisively meets gate threshold {gate_threshold:.2f} with clean completion.",
+        )
+
+    return AdvanceOrHoldDecision(
+        advanced=False,
+        decided_by=DecidedBy.RULE,
+        confidence=0.90,
+        has_conflict=False,
+        conflict_type=None,
+        reason=f"Mastery {target_mastery:.2f} is below gate threshold {gate_threshold:.2f}. Holding for additional practice.",
+    )

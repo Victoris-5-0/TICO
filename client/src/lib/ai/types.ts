@@ -242,6 +242,10 @@ export interface HintRequest {
   /** Outcome of the most recent run, from the engine. The AI service never executes code. */
   lastResult?: LastResult | null;
   locale?: string;
+  /** Where the student is. Only GUIDED_CODING, ADAPT_REMIX and INDEPENDENT have a hint ladder — the earlier phases have no blank to be stuck on, and asking for a hint there returns 409. The phase also decides how much help is appropriate: the ladder starts at rung 2 in ADAPT_REMIX because they have already seen this code work. */
+  phase?: Phase;
+  /** Which guided step they are on, when the phase is GUIDED_CODING. Without it a hint for step 2 may talk about step 1. */
+  guidedStep?: number | null;
   /** The actual failing message. `lastResult` says *that* it failed; this says how, which is what separates a useful hint from a generic one. */
   errorText?: string | null;
   /** From /submissions/analyze if it has already run, e.g. 'assignment_vs_comparison'. Sharpens the hint and forms part of the cache key. */
