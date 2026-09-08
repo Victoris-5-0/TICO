@@ -41,18 +41,22 @@ def open_session(
     db: Session,
     *,
     user_id: str,
-    lesson_id: str | None = None,
+    exercise_id: str | None = None,
     generated_mission_id: str | None = None,
     kind: SessionKind = SessionKind.LESSON,
 ) -> PracticeSession:
     """Start a session. `id` and `started_at` fill themselves in.
 
-    Either `lesson_id` or `generated_mission_id` should be set, depending on whether the
-    mission was authored or composed at runtime.
+    Either `exercise_id` or `generated_mission_id` should be set, depending on whether
+    the mission was authored or composed at runtime.
+
+    `exercise_id`, not `lesson_id` — the column is a foreign key to `exercises`, and a
+    lesson id passed here fails on that constraint. The parameter used to be called
+    `lesson_id`, which invited exactly that mistake.
     """
     session = PracticeSession(
         user_id=user_id,
-        exercise_id=lesson_id,
+        exercise_id=exercise_id,
         generated_mission_id=generated_mission_id,
         kind=kind,
         phase=Phase.ENCOUNTER,

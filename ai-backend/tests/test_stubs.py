@@ -44,24 +44,13 @@ def test_close_session(client):
     assert data(r)["endedAt"] is not None
 
 
-def test_hint_ladder_escalates_and_never_exceeds_four(client):
-    seen = []
-    for _ in range(6):
-        r = client.post("/v1/hints", json=hint_body("ladder-test"))
-        assert r.status_code == 200
-        seen.append(data(r)["rung"])
-    assert seen == [1, 2, 3, 4, 4, 4], seen
-
-
-def test_final_rung_offers_practice_not_the_answer(client):
-    for _ in range(4):
-        r = client.post("/v1/hints", json=hint_body("final-test"))
-    body = data(r)
-    assert body["rung"] == 4
-    assert body["isFinal"] is True
-    assert body["nextStep"] == "mini_practice"
-    # the safety property: no rung hands over runnable solution code
-    assert "gate.open()" not in body["hint"]
+# The hint ladder used to be stubbed here. It is real now — it counts prior hint
+# events, calls Gemini for the rung it decided, and runs two leak guards over the
+# reply — so it needs a database and cannot be tested alongside the stubs.
+#
+# Its behaviour is covered by:
+#   test_hint_ladder.py    the ladder and both guards, offline
+#   test_hints_live.py     the whole pipeline, against a real database
 
 
 def test_analyze_recognises_the_classic_mistake(client):

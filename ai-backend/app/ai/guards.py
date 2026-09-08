@@ -274,6 +274,43 @@ def _check_scene_exists(mission: ComposedMission, world: World, report: Validati
 _ANSWER_MARKERS = ("الحل هو", "الإجابة", "اكتب بالظبط", "الكود الصح", "the answer is")
 
 
+def hint_leaks_blank(hint: str, blanks: list[str] | None) -> tuple[bool, str | None]:
+    """Does this hint state what belongs in the blank?
+
+    Separate from `hint_leaks_answer`, and the one that actually matters during guided
+    coding. That function looks for whole solution *lines*; in a fill-in-the-blank the
+    line never appears, and the model can hand over the answer with a single token.
+
+    A real rung-4 hint that got through the line check:
+
+        "كل اللي ناقصك دلوقتي تكتبي رقم `12`"
+
+    The blank was `12`. Nothing was left for the student to work out, and it was cached
+    and served to everyone who hit the same step.
+
+    Matched on token boundaries so a hint may still say "the second tray" when the
+    answer happens to be 2, and short answers are checked more strictly than long ones.
+    """
+    if not blanks:
+        return False, None
+
+    # Strip formatting the model wraps answers in, so `12` and 12 compare the same.
+    cleaned = re.sub(r"[`’“”\"']", " ", hint)
+
+    for answer in blanks:
+        token = str(answer).strip().strip("\"'`")
+        if not token:
+            continue
+
+        # A bare digit or a very short name can appear innocently in prose, so require
+        # it to stand alone rather than merely occur.
+        pattern = rf"(?<![\w.]){re.escape(token)}(?![\w.])"
+        if re.search(pattern, cleaned):
+            return True, f"the hint states the blank's answer ({token!r}) outright"
+
+    return False, None
+
+
 def hint_leaks_answer(hint: str, solution_code: str) -> tuple[bool, str | None]:
     """Does this hint hand over the solution?
 
