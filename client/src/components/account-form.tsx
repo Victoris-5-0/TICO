@@ -61,7 +61,7 @@ export function AccountForm({ locale, mode }: { locale: Locale; mode: "login" | 
         </div>
         <div className={styles.codeNote} dir="ltr" lang="en">
           <div><span aria-hidden="true" /><span aria-hidden="true" /><span aria-hidden="true" /><b>hello_world.py</b></div>
-          <code><span>print</span>("Let’s try something new!")</code>
+          <code><span>print</span>{'("Let’s try something new!")'}</code>
         </div>
         <Image className={styles.mascot} src="/assets/characters/tico/tico-neutral.webp" alt={ar ? "تيكو، رفيقك في البرمجة" : "TICO, your coding companion"} width={421} height={734} preload />
         <div className={styles.sceneCaption}><span>{ar ? "أول محطة" : "FIRST STOP"}</span><strong>{ar ? "فرن الحي" : "The neighborhood bakery"}</strong></div>
