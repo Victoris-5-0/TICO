@@ -1,0 +1,80 @@
+.page { --account-peach: #FDF1EC; --account-orange: #A64022; --account-teal: #174E58; --account-border: #E5DDD5; min-block-size: 100svh; display: grid; grid-template-columns: 1.08fr 1fr; gap: 24px; padding: 24px; background: var(--paper); }
+.story { display: flex; flex-direction: column; position: relative; isolation: isolate; min-inline-size: 0; overflow: hidden; border-radius: 32px; padding: 32px 40px 24px; background: var(--account-peach); }
+.brand { display: inline-flex; inline-size: 140px; min-block-size: 47px; }
+.brand img { inline-size: 140px; block-size: 47px; object-fit: contain; }
+.storyCopy { position: relative; z-index: 2; margin-block: 46px 24px; max-inline-size: 510px; }
+.eyebrow { color: var(--account-orange); font-size: 11px; font-weight: 750; letter-spacing: .14em; margin: 0 0 18px; }
+.storyCopy h2 { font-size: clamp(36px, 3.7vw, 54px); line-height: 1.12; letter-spacing: -.055em; font-weight: 750; margin: 0 0 22px; }
+.storyCopy h2 span { color: var(--account-orange); }
+.storyCopy > p:last-child { max-inline-size: 440px; color: var(--muted); font-size: 15px; line-height: 1.8; margin: 0; }
+.scene { position: relative; flex: 1; min-block-size: 330px; margin-block-start: 32px; }
+.sceneWindow { position: absolute; inset: 24px -40px 0; overflow: hidden; }
+.sceneWindow img { object-fit: cover; object-position: 40% center; opacity: .8; mask-image: linear-gradient(transparent, black 30%); }
+.scene::after { content: ""; position: absolute; inset: 50% -40px 0; background: linear-gradient(transparent, var(--account-peach)); z-index: 1; }
+.mascot { position: absolute; z-index: 3; inline-size: 195px; block-size: 340px; object-fit: contain; inset-inline-end: 12px; inset-block-end: 8px; filter: drop-shadow(0 14px 10px rgb(31 24 32 / 10%)); }
+.codeNote { position: relative; z-index: 4; inline-size: min(330px, 90%); margin-inline-start: -8px; padding: 16px; border: 1px solid rgb(255 255 255 / 80%); border-radius: 14px; background: rgb(255 253 249 / 96%); box-shadow: 0 10px 28px rgb(31 24 32 / 8%); transform: rotate(-3deg); }
+.codeNote > div { display: flex; align-items: center; gap: 5px; margin-block-end: 16px; }
+.codeNote > div > span { inline-size: 6px; block-size: 6px; border-radius: 50%; background: var(--coral); }
+.codeNote > div > span:nth-child(2) { background: var(--gold); }
+.codeNote > div > span:nth-child(3) { background: var(--teal); }
+.codeNote b { margin-inline-start: 8px; color: var(--muted); font-size: 10px; font-weight: 500; }
+.codeNote code { white-space: nowrap; font: 11px var(--font-code), monospace; }
+.codeNote code span { color: var(--account-orange); }
+.sceneCaption { position: absolute; z-index: 4; inset-inline-start: 0; inset-block-end: 25px; display: grid; gap: 8px; max-inline-size: 200px; }
+.sceneCaption span { color: var(--account-orange); font-size: 10px; letter-spacing: .12em; font-weight: 700; }
+.sceneCaption strong { font-size: 18px; line-height: 1.4; }
+.storyFooter { position: relative; z-index: 3; font-size: 11px; color: var(--muted); margin: 20px 0 0; }
+.formSide { min-inline-size: 0; display: flex; flex-direction: column; padding: 8px clamp(20px, 4vw, 64px); }
+.topLinks { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.topLinks a { min-block-size: 44px; display: inline-flex; align-items: center; gap: 10px; font-size: 12px; color: var(--muted); }
+.topLinks a:hover { color: var(--account-orange); }
+.card { inline-size: min(100%, 410px); margin: auto; padding-block: 64px; }
+.card h1 { margin: 0 0 16px; font-size: clamp(34px, 3.2vw, 46px); line-height: 1.16; font-weight: 750; letter-spacing: -.045em; }
+.titleDot { color: var(--coral); }
+.intro { color: var(--muted); font-size: 15px; line-height: 1.75; margin: 0; max-inline-size: 350px; }
+.card form { display: grid; gap: 24px; margin-block: 36px 24px; }
+.card label { display: grid; gap: 10px; font-size: 13px; font-weight: 650; }
+.card input { inline-size: 100%; min-block-size: 54px; border: 1px solid var(--account-border); border-radius: 12px; padding: 14px 16px; background: var(--paper); color: var(--ink); font-size: 14px; transition: border-color .16s, background .16s; }
+.card input::placeholder { color: var(--muted); opacity: .85; }
+.card input:focus { border-color: var(--account-teal); background: white; }
+.passwordField { display: grid; gap: 10px; }
+.passwordInput { position: relative; }
+.passwordInput input { padding-inline-end: 54px; }
+.revealPassword { position: absolute; inset-inline-end: 5px; inset-block-start: 5px; display: grid; place-items: center; inline-size: 44px; block-size: 44px; border: 0; border-radius: 8px; background: transparent; color: var(--muted); cursor: pointer; }
+.revealPassword:hover { background: var(--account-peach); }
+.submit { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-block-size: 54px; border: 0; border-radius: 12px; padding-inline: 22px; background: var(--coral); color: var(--ink); font-size: 15px; font-weight: 700; cursor: pointer; }
+.submit:hover { background: var(--gold); }
+.card button:disabled { opacity: .6; cursor: not-allowed; }
+.switch { text-align: center; font-size: 13px; color: var(--muted); line-height: 1.7; }
+.switch a { display: inline-flex; align-items: center; min-block-size: 44px; font-weight: 700; color: var(--account-orange); text-decoration: underline; text-underline-offset: 3px; }
+.reassurance { display: flex; align-items: center; gap: 14px; padding-block-start: 28px; margin-block-start: 28px; border-top: 1px solid var(--account-border); }
+.reassurance > span { display: grid; place-items: center; flex: 0 0 36px; block-size: 36px; border-radius: 10px; background: var(--account-peach); color: var(--account-orange); font: 700 12px var(--font-code), monospace; }
+.reassurance p { color: var(--muted); font-size: 12px; line-height: 1.7; margin: 0; max-inline-size: 270px; }
+.formFooter { color: var(--muted); font-size: 10px; line-height: 1.7; text-align: center; margin: 0 0 8px; }
+.formFooter span { margin-inline: 6px; }
+.error, .success { padding: 12px 14px; border-radius: 10px; font-size: 13px; line-height: 1.6; margin: 0; }
+.error { color: #B9383A; background: #F9E3E3; }
+.success { color: #2B7A4B; background: #E0F2E7; }
+.fieldHint { margin: 0; font-size: 12px; color: var(--muted); }
+.page:dir(rtl) .eyebrow, .page:dir(rtl) .sceneCaption span { letter-spacing: 0; }
+.page:dir(rtl) h1, .page:dir(rtl) h2 { letter-spacing: 0; line-height: 1.4; }
+@media (min-width: 1600px) { .page { max-inline-size: 1600px; margin-inline: auto; } }
+@media (max-width: 1100px) { .page { gap: 8px; padding: 16px; } .story { padding-inline: 28px; } .formSide { padding-inline: 24px; } .mascot { inline-size: 170px; block-size: 296px; inset-inline-end: -12px; } .sceneCaption { max-inline-size: 145px; } .sceneCaption strong { font-size: 16px; } .codeNote { padding: 12px; } .codeNote code { font-size: 9px; } }
+@media (max-width: 800px) {
+  .page { grid-template-columns: 1fr; padding: 12px; gap: 0; }
+  .story { padding: 20px 24px; min-block-size: 150px; border-radius: 24px; }
+  .brand, .brand img { inline-size: 110px; block-size: 37px; min-block-size: 37px; }
+  .storyCopy { margin: 16px 0 0; max-inline-size: 65%; }
+  .storyCopy h2 { font-size: 24px; margin: 0; line-height: 1.2; }
+  .storyCopy .eyebrow, .storyCopy > p:last-child, .storyFooter, .sceneWindow, .sceneCaption, .codeNote { display: none; }
+  .scene { position: absolute; inset: 0; margin: 0; min-block-size: 0; }
+  .scene::after { display: none; }
+  .mascot { inline-size: 88px; block-size: 154px; inset-inline-end: 20px; inset-block-end: -12px; }
+  .formSide { padding: 12px 20px; }
+  .card { padding-block: 32px; }
+  .card h1 { font-size: 34px; }
+  .card form { margin-block-start: 28px; gap: 20px; }
+  .reassurance { margin-block-start: 20px; padding-block-start: 20px; }
+  .formFooter { margin-block: 16px; }
+}
+@media (prefers-reduced-motion: reduce) { .page * { transition: none; } }
