@@ -8,6 +8,11 @@ import { FaqAccordion } from "@/components/motion/faq-accordion";
 import { Interactive, CompassRotate, ArrowShift } from "@/components/motion/interactive";
 import {
   HeroArtMotion,
+  HeroTextMotion,
+  KineticButton,
+  KineticBadge,
+  KineticWords,
+  KineticParagraph,
   HeroFloatingCardMotion,
   LiveBadgeMotion,
   CardMotion,
@@ -58,12 +63,12 @@ export function LandingPage({ locale }: { locale: Locale }) {
             <Interactive hoverScale={1.06} tapScale={0.95} hoverY={0}>
               <Link className={styles.language} href={`/${alternate}`} lang={alternate} hrefLang={alternate}>{locale === "en" ? "عربي" : "EN"}</Link>
             </Interactive>
-            <Interactive hoverY={-2} hoverScale={1.02} tapScale={0.98}>
+            <KineticButton delay={0.08} hoverY={-2} hoverScale={1.04} tapScale={0.95}>
               <Link className={styles.primary} href={`/${locale}/signup`}>{copy.signUp}</Link>
-            </Interactive>
-            <Interactive hoverY={-2} hoverScale={1.02} tapScale={0.98}>
+            </KineticButton>
+            <KineticButton delay={0.14} hoverY={-2} hoverScale={1.03} tapScale={0.95}>
               <Link className={styles.login} href={`/${locale}/login`}>{copy.login}</Link>
-            </Interactive>
+            </KineticButton>
           </div>
         </div>
       </LandingHeader>
@@ -74,21 +79,14 @@ export function LandingPage({ locale }: { locale: Locale }) {
           </HeroArtMotion>
           <div className={styles.heroInner}>
             <div className={styles.heroCopy}>
-              <h1 id="hero-title">
-                {copy.title[0]}<br />
-                {copy.title[1]}<br />
-                {copy.title[2]}{" "}
-                <span>TICO</span>
-              </h1>
-              <p className={styles.subtitle}>{copy.subtitle}</p>
-              <p className={styles.heroBody}>{copy.body}</p>
+              <HeroTextMotion title={copy.title} subtitle={copy.subtitle} body={copy.body} />
               <div className={styles.actions}>
-                <Interactive hoverY={-3} hoverScale={1.02} tapScale={0.98}>
+                <KineticButton delay={0.38} hoverY={-3} hoverScale={1.03} tapScale={0.95}>
                   <Link className={styles.primary} href={learnHref}>{copy.start}</Link>
-                </Interactive>
-                <Interactive hoverY={-2} hoverScale={1.01} tapScale={0.98}>
+                </KineticButton>
+                <KineticButton delay={0.44} hoverY={-2} hoverScale={1.02} tapScale={0.95}>
                   <a className={styles.secondary} href="#method">{copy.how}</a>
-                </Interactive>
+                </KineticButton>
               </div>
             </div>
           </div>
@@ -96,11 +94,15 @@ export function LandingPage({ locale }: { locale: Locale }) {
         </section>
 
         <section id="method" className={`${styles.section} ${styles.method}`} aria-labelledby="method-title">
-          <Reveal>
-            <h2 id="method-title" className={styles.sectionTitle}>
-              <span aria-hidden="true">… </span>{copy.howBefore}{" "}<span>TICO</span>{" "}{copy.howAfter}<span aria-hidden="true"> …</span>
-            </h2>
-          </Reveal>
+          <KineticWords
+            as="h2"
+            id="method-title"
+            className={styles.sectionTitle}
+            prefix="… "
+            text={`${copy.howBefore} TICO ${copy.howAfter}`}
+            suffix=" …"
+            accentWord="TICO"
+          />
           <ol className={styles.steps}>
             {copy.steps.map((step, index) => (
               <li key={step.title}>
@@ -113,8 +115,8 @@ export function LandingPage({ locale }: { locale: Locale }) {
                           {new Intl.NumberFormat(locale).format(index + 1)}
                         </StepNumberMotion>
                       </div>
-                      <h3>{step.title}</h3>
-                      <p>{step.body}</p>
+                      <KineticWords as="h3" text={step.title} delay={0.06} />
+                      <KineticParagraph text={step.body} delay={0.12} />
                     </div>
                   </CardMotion>
                 </Reveal>
@@ -124,11 +126,9 @@ export function LandingPage({ locale }: { locale: Locale }) {
         </section>
 
         <section className={`${styles.section} ${styles.preview}`} aria-labelledby="preview-title">
-          <Reveal>
-            <h2 id="preview-title" className={styles.sectionTitle}>{copy.previewTitle}</h2>
-            <p className={styles.intro}>{copy.previewBody}</p>
-          </Reveal>
-          <Reveal delay={0.1}>
+          <KineticWords as="h2" id="preview-title" className={styles.sectionTitle} text={copy.previewTitle} />
+          <KineticParagraph className={styles.intro} text={copy.previewBody} delay={0.08} />
+          <Reveal delay={0.12}>
             <CardMotion hoverY={-6}>
               <Link className={styles.previewLink} href={`/${locale}/worlds/el-forn/missions/opening-message`}>
                 <LiveBadgeMotion label={isRtl ? "معاينة المهمة الأولى" : "Live Mission Preview"} />
@@ -140,14 +140,12 @@ export function LandingPage({ locale }: { locale: Locale }) {
               </Link>
             </CardMotion>
           </Reveal>
-          <p className={styles.deviceNote}>{copy.deviceNote}</p>
+          <KineticParagraph className={styles.deviceNote} text={copy.deviceNote} delay={0.16} />
         </section>
 
         <section id="worlds" className={`${styles.section} ${styles.worlds}`} aria-labelledby="worlds-title">
-          <Reveal>
-            <h2 id="worlds-title" className={`${styles.sectionTitle} ${styles.accentTitle}`}>{copy.worldsTitle}</h2>
-            <p className={styles.intro}>{dict.worlds.body}</p>
-          </Reveal>
+          <KineticWords as="h2" id="worlds-title" className={`${styles.sectionTitle} ${styles.accentTitle}`} text={copy.worldsTitle} accentWord="Challenges" />
+          <KineticParagraph className={styles.intro} text={dict.worlds.body} delay={0.08} />
           <div className={styles.worldGrid}>
             {worlds.map((world, index) => (
               <Reveal key={world.slug} delay={index * 0.08}>
@@ -159,9 +157,9 @@ export function LandingPage({ locale }: { locale: Locale }) {
                       <span className={styles.missionBadge}>{`${new Intl.NumberFormat(locale).format(world.missions.length)} ${dict.worlds.missions}`}</span>
                     </div>
                     <div className={styles.worldBody}>
-                      <p className={styles.kicker}>{world.kicker[locale]}</p>
-                      <h3>{world.title[locale]}</h3>
-                      <p>{world.description[locale]}</p>
+                      <KineticWords as="p" className={styles.kicker} text={world.kicker[locale]} delay={0.04} />
+                      <KineticWords as="h3" text={world.title[locale]} delay={0.08} />
+                      <KineticParagraph text={world.description[locale]} delay={0.12} />
                       <span className={styles.worldAction}>
                         {dict.worlds.enter}
                         <ArrowShift isRtl={isRtl}>{arrow}</ArrowShift>
@@ -175,44 +173,38 @@ export function LandingPage({ locale }: { locale: Locale }) {
         </section>
 
         <section className={`${styles.section} ${styles.cta}`} aria-labelledby="cta-title">
-          <Reveal>
-            <p className={styles.tag}>{copy.quest}</p>
-            <h2 id="cta-title" className={`${styles.sectionTitle} ${styles.accentTitle}`}>{copy.ctaTitle}</h2>
-            <p className={styles.intro}>{copy.ctaBody}</p>
-            <div className={styles.actions}>
-              <Interactive hoverY={-3} hoverScale={1.03} tapScale={0.98}>
-                <Link className={styles.tealButton} href={learnHref}>{copy.start}</Link>
-              </Interactive>
-              <Interactive hoverY={-3} hoverScale={1.02} tapScale={0.98}>
-                <Link className={styles.secondary} href={learnHref}>
-                  <CompassRotate>
-                    <Image className={styles.compass} src="/assets/landing/compass.svg" alt="" width={17} height={17} />
-                  </CompassRotate>
-                  {copy.explore}
-                </Link>
-              </Interactive>
-            </div>
-          </Reveal>
+          <KineticBadge className={styles.tag}>{copy.quest}</KineticBadge>
+          <KineticWords as="h2" id="cta-title" className={`${styles.sectionTitle} ${styles.accentTitle}`} text={copy.ctaTitle} delay={0.06} />
+          <KineticParagraph className={styles.intro} text={copy.ctaBody} delay={0.12} />
+          <div className={styles.actions}>
+            <KineticButton inView delay={0.18} hoverY={-3} hoverScale={1.03} tapScale={0.96}>
+              <Link className={styles.tealButton} href={learnHref}>{copy.start}</Link>
+            </KineticButton>
+            <KineticButton inView delay={0.24} hoverY={-3} hoverScale={1.02} tapScale={0.96}>
+              <Link className={styles.secondary} href={learnHref}>
+                <CompassRotate>
+                  <Image className={styles.compass} src="/assets/landing/compass.svg" alt="" width={17} height={17} />
+                </CompassRotate>
+                {copy.explore}
+              </Link>
+            </KineticButton>
+          </div>
         </section>
 
         <div className={`${styles.section} ${styles.supportGrid}`}>
           <section id="questions" className={styles.questions} aria-labelledby="questions-title">
-            <Reveal>
-              <h2 id="questions-title" className={styles.sectionTitle}>{copy.questionsTitle}</h2>
-            </Reveal>
+            <KineticWords as="h2" id="questions-title" className={styles.sectionTitle} text={copy.questionsTitle} />
             <FaqAccordion faqs={copy.faqs} />
           </section>
 
           <section id="contact" className={styles.contact} aria-labelledby="contact-title">
-            <Reveal delay={0.1}>
-              <p className={styles.contactEyebrow}>{copy.furtherQuestions}</p>
-              <h2 id="contact-title">{copy.contact}</h2>
-              <p>{copy.contactIntro}{" "}<a href="#questions">{copy.helpCenter}</a>.</p>
-              <details className={styles.contactDetails}>
-                <summary className={styles.primary}>{copy.contact}</summary>
-                <p>{copy.contactPending}</p>
-              </details>
-            </Reveal>
+            <KineticWords as="p" className={styles.contactEyebrow} text={copy.furtherQuestions} />
+            <KineticWords as="h2" id="contact-title" text={copy.contact} delay={0.06} />
+            <KineticParagraph text={`${copy.contactIntro} ${copy.helpCenter}.`} delay={0.12} />
+            <details className={styles.contactDetails}>
+              <summary className={styles.primary}>{copy.contact}</summary>
+              <p>{copy.contactPending}</p>
+            </details>
           </section>
         </div>
       </main>

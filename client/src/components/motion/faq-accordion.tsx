@@ -18,7 +18,18 @@ export function FaqAccordion({ faqs }: { faqs: readonly FaqItem[] }) {
       {faqs.map((faq, index) => {
         const isOpen = openIndex === index;
         return (
-          <div key={faq.question} className={styles.faqItem}>
+          <motion.div
+            key={faq.question}
+            className={styles.faqItem}
+            initial={reducedMotion ? { opacity: 0 } : { opacity: 0, y: 14 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, amount: 0.15 }}
+            transition={
+              reducedMotion
+                ? { duration: 0.15, delay: index * 0.06 }
+                : { type: "spring" as const, stiffness: 450, damping: 26, delay: index * 0.06 }
+            }
+          >
             <button
               type="button"
               className={styles.faqButton}
@@ -50,7 +61,7 @@ export function FaqAccordion({ faqs }: { faqs: readonly FaqItem[] }) {
                 </motion.div>
               )}
             </AnimatePresence>
-          </div>
+          </motion.div>
         );
       })}
     </div>
