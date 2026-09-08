@@ -13,10 +13,20 @@
       "width": 2031,
       "height": 682
     },
+    "logo.svg": {
+      "node": "2:55",
+      "displayWidth": 200,
+      "displayHeight": 70
+    },
     "logo-light.png": {
       "node": "2:71",
       "width": 2031,
       "height": 682
+    },
+    "logo-light.svg": {
+      "node": "2:71",
+      "displayWidth": 174,
+      "displayHeight": 61
     },
     "step-start.png": {
       "node": "2:127",

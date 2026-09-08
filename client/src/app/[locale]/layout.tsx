@@ -13,6 +13,18 @@ const jetbrains = JetBrains_Mono({ subsets: ["latin"], variable: "--font-code", 
 export const metadata: Metadata = {
   title: { default: "TICO — Learn Python through Egypt", template: "%s · TICO" },
   description: "Learn real Python by solving familiar, meaningful problems across contemporary Egypt.",
+  icons: {
+    icon: [
+      { url: "/icon.svg", type: "image/svg+xml" },
+      { url: "/favicon.ico", sizes: "any" },
+      { url: "/favicon-32x32.png", type: "image/png", sizes: "32x32" },
+      { url: "/favicon-16x16.png", type: "image/png", sizes: "16x16" },
+    ],
+    apple: [
+      { url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" },
+    ],
+  },
+  manifest: "/site.webmanifest",
 };
 
 export function generateStaticParams() {
