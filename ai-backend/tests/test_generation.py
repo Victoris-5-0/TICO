@@ -15,7 +15,7 @@ import pytest
 
 from app import manifests as M
 from app.ai import guards, sandbox
-from app.rules import composer
+from app.rules import mission_builder as composer
 
 ALL_MECHANICS = [
     pytest.param(world, mech, id=f"{world.id}/{mech.id}")
