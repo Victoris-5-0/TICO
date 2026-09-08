@@ -1,0 +1,82 @@
+{
+  "fileKey": "mYA52DN0D9UfDUJzB4PQsX",
+  "frame": "2:42",
+  "exportedAt": "2026-09-08",
+  "assets": {
+    "hero.png": {
+      "node": "2:43",
+      "width": 2752,
+      "height": 1536
+    },
+    "logo.png": {
+      "node": "2:55",
+      "width": 2031,
+      "height": 682
+    },
+    "logo-light.png": {
+      "node": "2:71",
+      "width": 2031,
+      "height": 682
+    },
+    "step-start.png": {
+      "node": "2:127",
+      "width": 2048,
+      "height": 2048
+    },
+    "step-solve.png": {
+      "node": "2:137",
+      "width": 2048,
+      "height": 2048
+    },
+    "step-help.png": {
+      "node": "2:148",
+      "width": 2048,
+      "height": 2048
+    },
+    "step-progress.png": {
+      "node": "2:160",
+      "width": 2048,
+      "height": 2048
+    },
+    "facebook.svg": {
+      "node": "2:91",
+      "displayWidth": 32,
+      "displayHeight": 32
+    },
+    "linkedin.svg": {
+      "node": "2:93",
+      "displayWidth": 32,
+      "displayHeight": 32
+    },
+    "instagram.svg": {
+      "node": "2:96",
+      "displayWidth": 24,
+      "displayHeight": 24
+    },
+    "mastercard.svg": {
+      "node": "2:104",
+      "displayWidth": 32,
+      "displayHeight": 32
+    },
+    "instapay.svg": {
+      "node": "2:107",
+      "displayWidth": 32,
+      "displayHeight": 32
+    },
+    "visa.svg": {
+      "node": "2:110",
+      "displayWidth": 32,
+      "displayHeight": 28
+    },
+    "paypal.svg": {
+      "node": "2:112",
+      "displayWidth": 32,
+      "displayHeight": 32
+    },
+    "compass.svg": {
+      "node": "2:274",
+      "displayWidth": 16.667,
+      "displayHeight": 16.667
+    }
+  }
+}

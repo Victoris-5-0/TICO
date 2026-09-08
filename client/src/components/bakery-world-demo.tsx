@@ -1,16 +1,21 @@
 "use client";
 import Image from "next/image";
 import { motion, useAnimationFrame, useReducedMotion } from "motion/react";
-import { useCallback, useEffect, useReducer, useRef, useState } from "react";
+import { useCallback, useEffect, useReducer, useRef, useState, useSyncExternalStore } from "react";
 import type { Locale } from "@/i18n/config";
 import { BakeryScene } from "./bakery/scene";
 import { sceneAssetUrls } from "@/lib/bakery/scene-manifest";
 import { bakeryReducer, initialBakeryState, isBusy, readyLoaves, type Phase } from "@/lib/bakery/simulation";
 import styles from "./bakery/bakery.module.css";
 
+const subscribeToHydration = () => () => {};
+
 export function BakeryWorldDemo({ locale }: { locale: Locale }) {
   const ar = locale === "ar-EG";
-  const reduced = Boolean(useReducedMotion());
+  const motionPreference = useReducedMotion();
+  // Match server markup first, then apply the browser preference before playback.
+  const hydrated = useSyncExternalStore(subscribeToHydration, () => true, () => false);
+  const reduced = hydrated && Boolean(motionPreference);
   const [state, dispatch] = useReducer(bakeryReducer, undefined, initialBakeryState);
   const [assets, setAssets] = useState<"loading" | "ready" | "error">("loading");
   const [retry, setRetry] = useState(0);
@@ -58,7 +63,7 @@ export function BakeryWorldDemo({ locale }: { locale: Locale }) {
       </div>
     </div>
     <div className={`${styles.stage} ${counterView ? styles.counterView : ""}`} dir="ltr">
-      <BakeryScene state={state} reducedMotion={reduced} counterView={counterView} label={ar ? "فرن عيش بلدي مصري: حسن بيخبز ويقدّم العيش، والزبائن واقفين في طابور منظم." : "An Egyptian baladi bakery: Hassan bakes and serves bread to an orderly queue."} />
+      <BakeryScene state={state} reducedMotion={reduced} counterView={counterView} label={ar ? "فرن الحارة للعيش البلدي: حسن بيخبز على نار الفرن، وراديو على الرف. فريد بجلابيته وعمّته الصعيدي واقف مع الجيران في الطابور. يافطة صغيرة بتقول صباح الخير." : "Forn El Hara, the neighborhood baladi bakery: an Arabic shop sign, a warm oven fire and a radio on the shelf. Farid wears a Sa‘idi galabeya and turban among the waiting neighbors. A small sign wishes everyone good morning."} />
       {assets !== "ready" && <div className={styles.loading}>{message}{assets === "error" && <button type="button" onClick={() => { setAssets("loading"); setRetry((n) => n + 1); }}>{ar ? "حاول تاني" : "Retry assets"}</button>}</div>}
       {(state.paused || state.hidden) && <span className={styles.paused}>{ar ? "متوقف" : "Paused"}</span>}
     </div>

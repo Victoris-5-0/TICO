@@ -294,3 +294,9 @@ html[lang="ar-EG"] .hero h1 { font-size: clamp(3rem, 5.3vw, 5.4rem); letter-spac
   html { scroll-behavior: auto; }
   *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; }
 }
+
+/* Match the public landing canvas while retaining a usable native scrollbar. */
+html:has([data-landing-page]) { scrollbar-width: thin; scrollbar-color: #C69C85 #FDF1EC; scrollbar-gutter: stable; }
+html:has([data-landing-page])::-webkit-scrollbar { width: 8px; }
+html:has([data-landing-page])::-webkit-scrollbar-track { background: #FDF1EC; }
+html:has([data-landing-page])::-webkit-scrollbar-thumb { background: #C69C85; border: 2px solid #FDF1EC; border-radius: 999px; }

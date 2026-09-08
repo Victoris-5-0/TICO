@@ -1,0 +1,12 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="arcticons:instapay">
+<path id="Vector" d="M14.24 10.5793L17.2707 15.8373L11.0853 21.3853M9.836 10.5787L12.8673 15.8373L6.682 21.3853M20.748 11.4433H26.168C28.0413 11.4433 29.2807 12.75 28.9453 14.3747C28.6093 15.9987 26.83 17.306 24.956 17.306H18.448L17.184 21.4213M6.25533 10.6773L5.63133 12.7353M4.968 14.9267L3 21.4213" stroke="url(#paint0_linear_0_19)" stroke-width="0.5" stroke-linecap="round" stroke-linejoin="round"/>
+</g>
+<defs>
+<linearGradient id="paint0_linear_0_19" x1="26.5142" y1="11.5671" x2="17.7111" y2="27.7978" gradientUnits="userSpaceOnUse">
+<stop stop-color="#FDF1EC"/>
+<stop offset="0.475962" stop-color="white"/>
+<stop offset="1" stop-color="#FDF1EC"/>
+</linearGradient>
+</defs>
+</svg>

@@ -675,3 +675,36 @@ Route groups organize code but do not change URLs. Component names should expres
 ## 19. External implementation reference
 
 Use the current official [Motion for React documentation](https://motion.dev/docs/react) for API details. The required accessibility baseline is [MotionConfig with user reduced motion](https://motion.dev/docs/react-motion-config) plus targeted [`useReducedMotion`](https://motion.dev/docs/react-use-reduced-motion) behavior. Installed Next.js documentation remains authoritative for React and rendering boundaries.
+
+## 20. Figma landing-page implementation
+
+The public landing page at `/en` and `/ar-EG` follows the composition in
+[Figma node 2:42](https://www.figma.com/design/mYA52DN0D9UfDUJzB4PQsX/Untitled?node-id=2-42):
+illustrated hero, four numbered learning steps, world cards, centered call to action,
+and rounded teal footer. Its styles are scoped in `landing-page.module.css`.
+The supplied hero and logo artwork are retained as the explicit landing-page reference;
+this does not change the contemporary-Egypt direction for gameplay assets.
+Landing-only supporting colors are `#FDF1EC` (illustration transition) and `#174E58`
+(footer and secondary actions). Existing brand anchors remain. Per the requested Figma fidelity correction, the landing page uses Inter, with Outfit for world-card titles; Arabic retains Alexandria. Other app screens retain Plus Jakarta Sans.
+
+The reference's unverified testimonials, student-count claim, pricing, and fourth world
+are not published. Social and payment marks are restored from the exact Figma SVG exports
+as requested. Payment marks are presentation only; this change adds no checkout. The three approved worlds retain their existing
+content and art. The unfinished video block becomes a linked first-mission preview;
+the external help-center link becomes local, keyboard-operable FAQ disclosures.
+Sign Up and Log In link to bilingual account forms consuming the existing auth actions.
+Contact Us and social destinations await owner-supplied contact details; until then the
+contact disclosure explains availability and social marks are non-interactive.
+Orange buttons use ink text for contrast. Arabic mirrors content and navigation without
+flipping the illustration. Phone layouts stack the artwork below the hero copy.
+
+Exact Figma PNG exports are stored in `client/public/assets/landing/`; Next.js optimizes
+them at delivery. `client/public/assets/landing/sources.json` records their source nodes.
+
+The revised header is a 76 px floating pill on desktop. An IntersectionObserver applies
+backdrop blur once the top marker scrolls out of view, with cleanup on unmount. The hero
+uses a transparent mask ending at the same solid peach canvas as the following section,
+so its bottom edge cannot create a color seam. Native scrolling retains a thin warm thumb.
+Header, artwork, and typography reflow at tablet and phone widths; anchors allow room for
+the fixed header. Account forms expose required fields, pending, failure, and email-confirmation
+states; successful live authentication still depends on the configured Supabase service.
