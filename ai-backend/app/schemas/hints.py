@@ -11,7 +11,14 @@ from datetime import datetime
 
 from pydantic import Field
 
-from app.schemas.common import HintRung, LastResult, ORMSchema, ScaffoldLevel, Schema
+from app.schemas.common import (
+    HintRung,
+    LastResult,
+    ORMSchema,
+    Phase,
+    ScaffoldLevel,
+    Schema,
+)
 
 
 class HintRequest(Schema):
@@ -36,6 +43,21 @@ class HintRequest(Schema):
         "never executes code.",
     )
     locale: str = Field(default="ar-EG")
+
+    phase: Phase = Field(
+        default=Phase.GUIDED_CODING,
+        description="Where the student is. Only GUIDED_CODING, ADAPT_REMIX and "
+        "INDEPENDENT have a hint ladder — the earlier phases have no blank to be stuck "
+        "on, and asking for a hint there returns 409. The phase also decides how much "
+        "help is appropriate: the ladder starts at rung 2 in ADAPT_REMIX because they "
+        "have already seen this code work.",
+    )
+    guided_step: int | None = Field(
+        default=None,
+        ge=0,
+        description="Which guided step they are on, when the phase is GUIDED_CODING. "
+        "Without it a hint for step 2 may talk about step 1.",
+    )
 
     # --- optional sharpeners; the client may omit both ------------------------------
     error_text: str | None = Field(

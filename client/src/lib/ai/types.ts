@@ -179,33 +179,6 @@ export interface GenerateMissionResponse {
   engineVersion: string;
 }
 
-export interface GeneratedMissionOut {
-  id: string;
-  levelId: string;
-  /** Fixed by the roadmap. Generation never changes the world. */
-  worldId: string;
-  /** Chosen from the manifest's scene list. */
-  sceneId: string;
-  targetConceptId: string;
-  carriedConceptIds?: Array<string>;
-  /** Short mission name, shown on the card and the results screen. */
-  title: string;
-  /** What to actually write, including the required function signature. This is what the student reads above the editor. */
-  instructions: string;
-  /** The situation, in TICO's voice. Flavour; `instructions` is the task. */
-  brief: string;
-  /** Python, with the scaffold plan already applied. */
-  starterCode: string;
-  tests?: Array<app__schemas__missions__MissionTest>;
-  scaffoldPlan: ScaffoldPlan;
-  /** What generation filled in, bounded by param_schema. */
-  params?: Record<string, unknown>;
-  /** Set by the validator function, never by the model. An unvalidated mission is never returned. */
-  validated: boolean;
-  /** An equivalent params + scaffold combination already existed and was reused. */
-  reused?: boolean;
-}
-
 /**
  * The same code with something taken out. Step A takes one value; step B takes more.
  */
@@ -242,6 +215,10 @@ export interface HintRequest {
   /** Outcome of the most recent run, from the engine. The AI service never executes code. */
   lastResult?: LastResult | null;
   locale?: string;
+  /** Where the student is. Only GUIDED_CODING, ADAPT_REMIX and INDEPENDENT have a hint ladder — the earlier phases have no blank to be stuck on, and asking for a hint there returns 409. The phase also decides how much help is appropriate: the ladder starts at rung 2 in ADAPT_REMIX because they have already seen this code work. */
+  phase?: Phase;
+  /** Which guided step they are on, when the phase is GUIDED_CODING. Without it a hint for step 2 may talk about step 1. */
+  guidedStep?: number | null;
   /** The actual failing message. `lastResult` says *that* it failed; this says how, which is what separates a useful hint from a generic one. */
   errorText?: string | null;
   /** From /submissions/analyze if it has already run, e.g. 'assignment_vs_comparison'. Sharpens the hint and forms part of the cache key. */
@@ -317,6 +294,16 @@ export interface MissionPhases {
 }
 
 /**
+ * One check the runner performs. `expected` is derived by running the solution.
+ */
+export interface MissionTest {
+  call: string;
+  expected: string;
+  name?: string | null;
+  hidden?: boolean;
+}
+
+/**
  * docs/06 endpoint 5: "learner profile, lesson, world manifest version".
  *
  * The *learner* half is deliberately absent. The student comes from the verified JWT,
@@ -378,7 +365,7 @@ export interface PhaseGuided {
   steps: Array<GuidedStep>;
   /** Used to check their attempt, never shown. */
   solutionCode: string;
-  tests: Array<app__schemas__phases__MissionTest>;
+  tests: Array<MissionTest>;
   onRun: WorldChange;
 }
 
@@ -401,7 +388,7 @@ export interface PhaseRemix {
   /** What it needs to become. */
   solutionCode: string;
   /** Old tests plus new ones. Their earlier behaviour must not break. */
-  tests: Array<app__schemas__phases__MissionTest>;
+  tests: Array<MissionTest>;
   onRun: WorldChange;
 }
 
@@ -469,6 +456,8 @@ export interface PlanResponse {
 export interface RefreshRequest {
   /** Newest submission or progress id the caller has already accounted for. */
   watermark?: string | null;
+  /** The session that just closed. The gate decision — advance or hold — is about one specific attempt, so naming it is more precise than letting the server guess. Omit it and the server uses the student's most recently closed session. */
+  sessionId?: string | null;
 }
 
 export interface RefreshResponse {
@@ -485,18 +474,6 @@ export interface RefreshResponse {
 
 /** How much of a carried concept is pre-filled in the starter code. */
 export type ScaffoldLevel = "NONE" | "PARTIAL" | "FULL";
-
-/**
- * What the composer decided, per carried concept. Also part of the hint cache key —
- * TICO must not hint about a concept that was scaffolded away.
- */
-export interface ScaffoldPlan {
-  /** concept_id -> how much is pre-filled. */
-  scaffold?: Record<string, ScaffoldLevel>;
-  difficultyBand: number;
-  /** 1 on a first attempt, higher when the composer scheduled extra practice. */
-  repNumber: number;
-}
 
 export interface SessionClose {
   outcome: SessionOutcome;
@@ -537,7 +514,8 @@ export interface SessionDebriefResponse {
 export interface SessionOut {
   id: string;
   userId: string;
-  levelId: string;
+  /** The lesson, when the session can be traced to one. `practice_sessions` links to an exercise or a generated mission, and only the exercise carries a lesson — so a runtime-generated mission returns null here. Send it on create; do not rely on getting it back. */
+  levelId?: string | null;
   generatedMissionId?: string | null;
   phase: Phase;
   outcome: SessionOutcome;
@@ -611,25 +589,4 @@ export interface WorldChange {
 export interface WorldState {
   /** e.g. {"tray": 5, "loaf": 0, "oven": "cold"} */
   props?: Record<string, number | string>;
-}
-
-/**
- * One check the engine runs against the student's code. The validator asserts the
- * generated solution passes all of these before the mission ships.
- */
-export interface app__schemas__missions__MissionTest {
-  name: string;
-  /** Python expression to evaluate, using only manifest verbs. */
-  call: string;
-  expected: string;
-}
-
-/**
- * One check the runner performs. `expected` is derived by running the solution.
- */
-export interface app__schemas__phases__MissionTest {
-  call: string;
-  expected: string;
-  name?: string | null;
-  hidden?: boolean;
 }

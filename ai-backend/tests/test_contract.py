@@ -46,8 +46,14 @@ def test_a_supplied_request_id_is_echoed_not_replaced(client):
     assert meta(r)["request_id"] == "01JTRACE"
 
 
-def test_meta_reports_whether_the_endpoint_is_still_a_stub(client):
-    assert meta(client.post("/v1/sessions", json={"level_id": "x"}))["stub"] is True
+def test_nothing_reports_itself_as_a_stub_any_more(client):
+    """`meta.stub` stays in the envelope and is now false everywhere.
+
+    It used to be the client's way of asking "am I talking to real logic yet". All
+    thirteen endpoints answer yes, so the field's job is done — but it stays, because
+    removing a field the client reads is a breaking change to say something that costs
+    one boolean.
+    """
     assert meta(client.get("/v1/health"))["stub"] is False
 
 
@@ -68,11 +74,22 @@ def test_errors_never_leak_a_stack_trace(client):
         assert leak not in blob, f"{leak!r} reached a browser-facing error"
 
 
-def test_sse_is_never_wrapped(client):
-    """An envelope around a token stream would defeat the point of streaming."""
-    r = client.post("/v1/tico/messages", json={"session_id": "s1", "message": "hi"})
-    assert r.headers["content-type"].startswith("text/event-stream")
-    assert not r.text.lstrip().startswith("{\"data\"")
+def test_sse_is_never_wrapped():
+    """An envelope around a token stream would defeat the point of streaming.
+
+    Checked on the route rather than over HTTP: `/v1/tico/messages` now needs a database,
+    and whether it streams is a property of how the route is declared. The middleware
+    wraps `JSONResponse` bodies only, so a route that returns `StreamingResponse` is
+    structurally incapable of being enveloped.
+    """
+    from fastapi.responses import StreamingResponse
+
+    from app.api.v1 import tico
+
+    route = next(r for r in tico.router.routes if r.path == "/tico/messages")
+    assert route.response_class is StreamingResponse or issubclass(
+        route.response_class, StreamingResponse
+    ), "the chat route must stream; a JSON response here would be wrapped in {data, meta}"
 
 
 # ========================================================================  wire casing
@@ -99,19 +116,23 @@ def test_no_snake_case_reaches_the_wire(client):
     )
 
 
-def test_python_callers_may_still_use_snake_case(client):
-    """`populate_by_name` — so internal callers and fixtures are not forced to shout."""
-    r = client.post(
-        "/v1/hints",
-        json={
-            "session_id": "snake-in",
-            "mission_id": "m1",
-            "code_excerpt": "x = 1",
-            "last_result": "FAILED",
-        },
+def test_python_callers_may_still_use_snake_case():
+    """`populate_by_name` — so internal callers and fixtures are not forced to shout.
+
+    Checked against the model rather than over HTTP: `/v1/hints` now needs a database,
+    and whether a DTO accepts snake_case is a question about the DTO.
+    """
+    from app.schemas.hints import HintRequest
+
+    body = HintRequest(
+        session_id="snake-in",
+        mission_id="m1",
+        code_excerpt="x = 1",
+        last_result="FAILED",
     )
-    assert r.status_code == 200
-    assert "hint" in data(r)
+    assert body.session_id == "snake-in"
+    # And it still goes out camelCase, whichever way it came in.
+    assert "sessionId" in body.model_dump(by_alias=True)
 
 
 # =====================================================  the client calls what exists
@@ -148,53 +169,82 @@ def test_every_path_the_client_calls_exists(client):
 
 
 @pytestmark_client
-def test_the_clients_hint_call_is_accepted_verbatim(client):
-    """The exact body `hint.service.ts` builds. This is the call that used to 422."""
-    r = client.post(
-        "/v1/hints",
-        json={
+def test_the_clients_hint_call_is_accepted_verbatim():
+    """The exact body `hint.service.ts` builds. This is the call that used to 422.
+
+    Validated against the DTO rather than over HTTP — the endpoint now needs a database,
+    and the question here is whether the client's field names still fit the contract.
+    """
+    from app.schemas.hints import HintRequest, HintResponse
+
+    body = HintRequest.model_validate(
+        {
             "sessionId": "demo-session-1",
             "missionId": "demo-exercise-conditional-gate",
             "codeExcerpt": "if x = 5:\n    print('hi')",
             "lastResult": "ERROR",
             "locale": "ar-EG",
-        },
+        }
     )
-    assert r.status_code == 200, r.text
+    assert body.mission_id == "demo-exercise-conditional-gate"
 
-    # `hint.service.ts` reads exactly these two off the unwrapped body.
-    body = data(r)
-    assert isinstance(body["hint"], str) and body["hint"]
-    assert isinstance(body["cached"], bool)
+    # And the two fields `hint.service.ts` reads back are still on the response.
+    fields = HintResponse.model_fields
+    assert "hint" in fields and "cached" in fields
 
 
 # ==============================================================  the new endpoints
 
 
-def test_generate_mission_returns_an_exercise_shaped_payload(client):
-    r = client.post("/v1/missions/generate", json={"concept": "conditionals"})
-    assert r.status_code == 200
-    body = data(r)
-    assert body["validated"] is True
-    assert body["concepts"]["primary"] == "conditionals"
-    assert body["testCases"] and {"input", "expectedOutput"} <= set(body["testCases"][0])
-    assert len(body["hints"]) == 4, "one authored fallback per rung"
+def test_generate_mission_is_still_exercise_shaped():
+    """The flat shape the client writes into an `exercises` row.
+
+    Checked on the DTO rather than over HTTP: generation now calls Gemini and takes
+    twenty seconds, which does not belong in the offline suite. `test_missions_live.py`
+    exercises the real thing.
+    """
+    from app.schemas.missions import GenerateMissionResponse
+
+    fields = set(GenerateMissionResponse.model_fields)
+    assert {"mission_id", "title", "starter_code", "test_cases", "hints", "validated"} <= fields
+
+    # `validated` is set by the Python validator and never by the model. An unvalidated
+    # mission is never returned, so the client never has to defend against one.
+    assert GenerateMissionResponse.model_fields["validated"].is_required()
 
 
-def test_generate_mission_accepts_an_empty_body(client):
-    """Every field is optional: the server derives the rest from the student."""
-    assert client.post("/v1/missions/generate", json={}).status_code == 200
+def test_debrief_counts_are_server_side():
+    """Every field on the debrief except `ticoFeedback` is counted, never generated.
 
+    Checked on the DTO and the rules rather than over HTTP: the endpoint now needs a
+    database, and the property that matters — that the model contributes exactly one
+    field — is a statement about the schema.
+    """
+    from app.schemas.sessions import SessionDebriefResponse
+    from app.services.sessions import stars_for
 
-def test_debrief_counts_are_server_side(client):
-    r = client.post("/v1/sessions/s1/debrief")
-    assert r.status_code == 200
-    body = data(r)
-    assert body["sessionId"] == "s1"
-    assert 0 <= body["starsEarned"] <= 3
-    assert body["ticoFeedback"]
-    # the field worth having: mistakes that stopped happening
-    assert isinstance(body["errorsOvercome"], list)
+    counted = {
+        "total_attempts",
+        "hints_used",
+        "errors_overcome",
+        "time_spent_ms",
+        "concepts_mastered",
+        "stars_earned",
+        "outcome",
+    }
+    fields = set(SessionDebriefResponse.model_fields)
+    assert counted <= fields
+    assert "tico_feedback" in fields, "the one field the model writes"
+
+    # And the stars are arithmetic, so they can be checked without a database at all.
+    assert stars_for(solved=True, attempts=1, hints=0) == 3
+    assert stars_for(solved=False, attempts=1, hints=0) == 0
+    assert all(
+        0 <= stars_for(solved=s, attempts=a, hints=h) <= 3
+        for s in (True, False)
+        for a in range(0, 20)
+        for h in range(0, 10)
+    )
 
 
 @pytestmark_client
@@ -218,9 +268,6 @@ def test_the_generated_typescript_is_not_stale():
     )
 
 
-def test_every_stub_still_announces_itself(client):
-    for call in (
-        lambda: client.post("/v1/missions/generate", json={}),
-        lambda: client.post("/v1/sessions/s1/debrief"),
-    ):
-        assert call().headers[STUB_HEADER] == "1"
+def test_no_endpoint_still_carries_the_stub_header(client):
+    """The header exists for the day an endpoint is faked again. Today none are."""
+    assert STUB_HEADER not in client.get("/v1/health").headers

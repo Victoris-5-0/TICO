@@ -80,6 +80,12 @@ class RefreshRequest(Schema):
         default=None,
         description="Newest submission or progress id the caller has already accounted for.",
     )
+    session_id: str | None = Field(
+        default=None,
+        description="The session that just closed. The gate decision — advance or hold — is "
+        "about one specific attempt, so naming it is more precise than letting the server "
+        "guess. Omit it and the server uses the student's most recently closed session.",
+    )
 
 
 class RefreshResponse(Schema):

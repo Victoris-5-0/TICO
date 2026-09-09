@@ -1,7 +1,5 @@
 """TICO's chat mode — endpoint 6, streamed over Server-Sent Events.
 
-STUB. Shapes are final; behaviour is fake. Real implementation lands in M6.
-
 **This endpoint does NOT return JSON.** It streams SSE frames. The client needs a
 streaming reader, not `await res.json()`. Each frame is one `TicoChunk`:
 
@@ -9,102 +7,58 @@ streaming reader, not `await res.json()`. Each frame is one `TicoChunk`:
 
     data: {"delta": "", "done": true}
 
-Same character and persona as the hint mode; what differs is conversation state and
-streaming, which is why they are one service and not two.
+Same character and persona as the hint mode; what differs is conversation state and the
+freedom to explain, which is why they are one persona and two services.
 """
 
 from __future__ import annotations
 
-import asyncio
-import json
-from collections.abc import AsyncIterator
-
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import StreamingResponse
+from sqlalchemy.orm import Session
 
-from app.api.v1 import _fixtures as fx
-from app.api.v1._stub import STUB_HEADER
 from app.core.auth import CurrentUser, get_current_user
-from app.schemas.tico import TicoChunk, TicoMessageRequest
+from app.database import get_db
+from app.schemas.tico import TicoMessageRequest
+from app.services import tico_chat as chat_service
 
 router = APIRouter(prefix="/tico", tags=["tico"])
-
-# Words that mean "just tell me the answer". TICO refuses in character and offers
-# the next hint rung instead — it never simply complies.
-_ANSWER_BEGGING = ("الاجابة", "الإجابة", "الحل", "answer", "solution", "just tell me")
-
-# Words the moderation filter blocks before any prompt is built.
-_BLOCKED = ("stupid", "غبي", "احا")
-
-
-def _frame(chunk: TicoChunk) -> str:
-    return f"data: {json.dumps(chunk.model_dump(), ensure_ascii=False)}\n\n"
-
-
-async def _stream(message: str) -> AsyncIterator[str]:
-    lowered = message.lower()
-
-    # 1. Moderation runs BEFORE any prompt is built. No model is called.
-    if any(word in lowered for word in _BLOCKED):
-        yield _frame(
-            TicoChunk(
-                delta="خلينا نركّز على الكود بتاعنا 🙂 إيه اللي واقف قدامك دلوقتي؟",
-                done=False,
-                blocked=True,
-            )
-        )
-        yield _frame(TicoChunk(delta="", done=True, blocked=True))
-        return
-
-    # 2. Asking outright for the answer: refuse in character, offer the next rung.
-    if any(word in lowered for word in _ANSWER_BEGGING):
-        yield _frame(
-            TicoChunk(
-                delta="مش هديك الحل جاهز — بس ممكن أقرّبك خطوة كمان. تحب؟",
-                done=False,
-                offered_hint_rung=3,
-            )
-        )
-        yield _frame(TicoChunk(delta="", done=True, offered_hint_rung=3))
-        return
-
-    # 3. Normal reply, streamed in fragments the way a real model would.
-    for piece in fx.TICO_REPLY_CHUNKS:
-        yield _frame(TicoChunk(delta=piece, done=False))
-        await asyncio.sleep(0.12)
-    yield _frame(TicoChunk(delta="", done=True))
 
 
 @router.post(
     "/messages",
-    summary="Talk to TICO (SSE stream)",
+    summary="Chat with TICO (SSE stream)",
+    response_class=StreamingResponse,
     description=(
-        "**Streams Server-Sent Events — this is not a JSON response.** Read it with an "
-        "`EventSource` or a streaming fetch reader and append each `delta` as it "
-        "arrives.\n\n"
-        "Three behaviours the stub reproduces: a normal streamed reply; a `blocked` "
-        "frame when moderation rejects the input, with no model called; and an "
-        "`offered_hint_rung` frame when the student asks outright for the answer, which "
-        "TICO refuses in character.\n\n"
-        "Try sending `عايز الحل` to see the refusal path."
+        "**Streams SSE, not JSON.** Read it with `EventSource` or a streaming fetch; "
+        "`await res.json()` will hang.\n\n"
+        "Each frame is a `TicoChunk`: append `delta` until `done` is true.\n\n"
+        "Chat may explain a concept freely — that is the difference from `/v1/hints`, "
+        "which is rationed by rung. What it may not do is write the student's own "
+        "solution, and a guard checks every reply against the mission's code before it "
+        "is streamed.\n\n"
+        "`blocked: true` means moderation stopped the message and no model was called; "
+        "`delta` carries an in-character redirect. `offeredHintRung` is set when the "
+        "student asked outright for the answer — TICO refuses and offers the next rung."
     ),
-    responses={
-        200: {
-            "content": {"text/event-stream": {}},
-            "description": "A stream of TicoChunk frames.",
-        }
-    },
 )
-async def send_message(
+def send_message(
     body: TicoMessageRequest,
     user: CurrentUser = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ) -> StreamingResponse:
+    try:
+        frames = chat_service.reply(
+            db, user_id=user.id, session_id=body.session_id, message=body.message
+        )
+    except chat_service.SessionNotFound as exc:
+        # 404 rather than 403, for the same reason as /v1/hints.
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+
     return StreamingResponse(
-        _stream(body.message),
+        frames,
         media_type="text/event-stream",
-        headers={
-            STUB_HEADER: "1",
-            "Cache-Control": "no-cache",
-            "X-Accel-Buffering": "no",  # stops Nginx buffering the stream in prod
-        },
+        # Nginx buffers proxied responses by default, which turns a stream into one
+        # delivery at the end. This is the header that stops it.
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )

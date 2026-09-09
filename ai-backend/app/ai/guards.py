@@ -27,9 +27,12 @@ import ast
 import re
 from dataclasses import dataclass, field
 
+from typing import Final
+
 from app.ai import sandbox
 from app.manifests.models import World
-from app.rules.composer import ComposedMission
+from app.schemas.common import HintRung
+from app.rules.mission_builder import ComposedMission
 
 #: Python builtins and keywords a generated solution may legitimately use. Anything else
 #: has to come from the manifest or the parameters.
@@ -274,6 +277,43 @@ def _check_scene_exists(mission: ComposedMission, world: World, report: Validati
 _ANSWER_MARKERS = ("الحل هو", "الإجابة", "اكتب بالظبط", "الكود الصح", "the answer is")
 
 
+def hint_leaks_blank(hint: str, blanks: list[str] | None) -> tuple[bool, str | None]:
+    """Does this hint state what belongs in the blank?
+
+    Separate from `hint_leaks_answer`, and the one that actually matters during guided
+    coding. That function looks for whole solution *lines*; in a fill-in-the-blank the
+    line never appears, and the model can hand over the answer with a single token.
+
+    A real rung-4 hint that got through the line check:
+
+        "كل اللي ناقصك دلوقتي تكتبي رقم `12`"
+
+    The blank was `12`. Nothing was left for the student to work out, and it was cached
+    and served to everyone who hit the same step.
+
+    Matched on token boundaries so a hint may still say "the second tray" when the
+    answer happens to be 2, and short answers are checked more strictly than long ones.
+    """
+    if not blanks:
+        return False, None
+
+    # Strip formatting the model wraps answers in, so `12` and 12 compare the same.
+    cleaned = re.sub(r"[`’“”\"']", " ", hint)
+
+    for answer in blanks:
+        token = str(answer).strip().strip("\"'`")
+        if not token:
+            continue
+
+        # A bare digit or a very short name can appear innocently in prose, so require
+        # it to stand alone rather than merely occur.
+        pattern = rf"(?<![\w.]){re.escape(token)}(?![\w.])"
+        if re.search(pattern, cleaned):
+            return True, f"the hint states the blank's answer ({token!r}) outright"
+
+    return False, None
+
+
 def hint_leaks_answer(hint: str, solution_code: str) -> tuple[bool, str | None]:
     """Does this hint hand over the solution?
 
@@ -303,3 +343,256 @@ def hint_leaks_answer(hint: str, solution_code: str) -> tuple[bool, str | None]:
             return True, f"the hint announces an answer: {marker!r}"
 
     return False, None
+
+
+# ===========================================================================================
+# From `ai/foundations` — the AI teammate's hint guards, taken because they are better than
+# what we had. `contains_runnable_python_line` parses the hint with `ast` and asks whether it
+# contains a runnable statement, instead of matching strings the way our first version did.
+#
+# Their manifest sandbox is not here. It validated the props-and-verbs world model
+# (`gate.open()`, `station.passengers`) that was replaced when the real content turned out
+# to be plain Python functions, and it was deleted with the generator that used it. Its
+# SIGALRM-based timeout went too: `app/ai/sandbox.py` runs generated code in a subprocess,
+# which is cross-platform and survives a C-level hang.
+#
+# One change to what is below: rung 4 now also runs our `hint_leaks_blank`. Their runnable-line
+# check would not have caught the leak that actually reached a student.
+# ===========================================================================================
+
+MIN_RUNG: Final[int] = 1
+MAX_RUNG: Final[int] = 4
+MIN_HINT_LENGTH: Final[int] = 10
+
+FENCED_CODE_BLOCK_PATTERN: Final[re.Pattern[str]] = re.compile(r"```", re.DOTALL)
+
+
+@dataclass(frozen=True, slots=True)
+class GuardResult:
+    """Result of hint output validation."""
+
+    passed: bool
+    violations: list[str]
+
+
+def contains_fenced_code_block(text: str) -> bool:
+    """Detect markdown-style triple-backtick fenced code blocks (```)."""
+    return bool(FENCED_CODE_BLOCK_PATTERN.search(text))
+
+
+def contains_any_term(text: str, terms: list[str]) -> bool:
+    """Case-insensitive word-boundary check against a list of forbidden terms.
+
+    Uses word boundaries (\\b) where practical to avoid false positives like
+    matching 'x' inside 'next' or 'text'.
+    """
+    if not terms:
+        return False
+
+    for term in terms:
+        term = term.strip()
+        if not term:
+            continue
+        prefix = r"\b" if re.match(r"^\w", term) else r"(?:^|\W)"
+        suffix = r"\b" if re.search(r"\w$", term) else r"(?:$|\W)"
+        pattern = re.compile(rf"{prefix}{re.escape(term)}{suffix}", re.IGNORECASE)
+        if pattern.search(text):
+            return True
+
+    return False
+
+
+def _is_non_trivial_statement(stmt: ast.stmt) -> bool:
+    """Determine whether an AST statement is non-trivial executable code.
+
+    Excludes:
+      - Bare identifiers (e.g. `x`, `condition`)
+      - Bare literals / constants (e.g. `12`, `"open"`, `True`)
+      - Unary operations on constants (e.g. `-1`)
+      - Bare tuples/lists of literals or identifiers
+    """
+    if isinstance(stmt, ast.Expr):
+        val = stmt.value
+        if isinstance(val, (ast.Name, ast.Constant)):
+            return False
+        if isinstance(val, ast.UnaryOp) and isinstance(val.operand, ast.Constant):
+            return False
+        if isinstance(val, (ast.Tuple, ast.List)):
+            if all(isinstance(elt, (ast.Name, ast.Constant)) for elt in val.elts):
+                return False
+        return True
+    return True
+
+
+def _is_runnable_line(line: str) -> bool:
+    """Attempt to parse a single line as an executable Python statement."""
+    line = line.strip()
+    if not line or line.startswith("#"):
+        return False
+
+    try:
+        tree = ast.parse(line)
+        if tree.body and any(_is_non_trivial_statement(s) for s in tree.body):
+            return True
+    except SyntaxError:
+        # Check if it is a compound statement header (e.g. `if waiting > 30:`)
+        if line.endswith(":"):
+            try:
+                tree = ast.parse(line + " pass")
+                if tree.body and any(_is_non_trivial_statement(s) for s in tree.body):
+                    return True
+            except SyntaxError:
+                pass
+
+    return False
+
+
+def contains_runnable_python_line(text: str) -> bool:
+    """Check whether text contains any complete runnable lines of Python code.
+
+    HEURISTIC IMPLEMENTATION:
+        Splits text into lines, strips markdown fencing/backticks and leading
+        bullet/comment markers (*, -, 1.), and attempts ast.parse() on each
+        remaining non-empty line individually, excluding bare identifiers,
+        bare literals, and bare comments. Also inspects inline backticked snippets.
+
+    KNOWN LIMITATIONS:
+        - False negatives: Multi-line statements broken across multiple lines
+          evade single-line AST parsing.
+        - False positives: Rare short natural-language sentences that happen to be
+          syntactically valid Python (e.g. 'check x' or 'del x').
+        This is why this heuristic serves as a defense-in-depth *guard*, not the
+        sole defense — the versioned prompt instructions from tico_persona.py
+        are the primary prevention layer.
+    """
+    for raw_line in text.splitlines():
+        line = raw_line.strip()
+        # Strip markdown bullets, blockquotes, numbered list prefixes
+        line = re.sub(r"^[>\s*\-+0-9.)]+", "", line).strip()
+        # Strip enclosing backticks
+        line = line.strip("`").strip()
+
+        if _is_runnable_line(line):
+            return True
+
+        # Check if line has a natural-language label before a colon (e.g. "اكتب السطر ده: gate.open()")
+        if ":" in line:
+            suffix = line.split(":", 1)[1].strip()
+            if suffix and _is_runnable_line(suffix):
+                return True
+
+        # Also inspect inline code segments inside backticks
+        for snippet in re.findall(r"`([^`]+)`", raw_line):
+            if _is_runnable_line(snippet):
+                return True
+
+    return False
+
+
+def validate_hint_output(
+    rung: HintRung | int,
+    hint_text: str,
+    *,
+    solution_identifiers: list[str] | None = None,
+    target_values: list[str] | None = None,
+) -> GuardResult:
+    """Validate model-generated hint prose against rung-specific pedagogical constraints.
+
+    Args:
+        rung: Hint rung (1 to 4).
+        hint_text: The prose generated by the model.
+        solution_identifiers: Optional identifiers from the mission solution (e.g.
+                              ['gate', 'open', 'waiting']). When None, this specific
+                              check is skipped (leak coverage is partial until services/
+                              wires mission metadata).
+        target_values: Optional concrete literal targets from the mission (e.g.
+                       ['30', 'open']). When None, this specific check is skipped.
+
+    Returns:
+        GuardResult with boolean passed status and list of human-readable violation reasons.
+
+    Raises:
+        ValueError: If rung is not between 1 and 4.
+    """
+    rung_int = int(rung)
+    if rung_int < MIN_RUNG or rung_int > MAX_RUNG:
+        raise ValueError(f"Invalid rung: {rung}. Expected an integer in {MIN_RUNG}..{MAX_RUNG}.")
+
+    # FIX B: Universal check for empty or trivially short hint text
+    stripped = hint_text.strip()
+    if len(stripped) < MIN_HINT_LENGTH:
+        return GuardResult(
+            passed=False,
+            violations=["hint text is empty or too short to be useful"],
+        )
+
+    violations: list[str] = []
+
+    if rung_int == 1:
+        if contains_fenced_code_block(hint_text):
+            violations.append("rung 1: contains a fenced code block")
+        if solution_identifiers and contains_any_term(hint_text, solution_identifiers):
+            violations.append("rung 1: contains solution identifiers")
+
+    elif rung_int == 2:
+        # FIX A: Rung 2 forbids fenced code, solution identifiers, AND solution values
+        if contains_fenced_code_block(hint_text):
+            violations.append("rung 2: contains a fenced code block")
+        if solution_identifiers and contains_any_term(hint_text, solution_identifiers):
+            violations.append("rung 2: contains solution identifiers")
+        if target_values and contains_any_term(hint_text, target_values):
+            violations.append("rung 2: contains solution values")
+
+    elif rung_int == 3:
+        if target_values and contains_any_term(hint_text, target_values):
+            violations.append("rung 3: contains student target values")
+        if solution_identifiers and contains_any_term(hint_text, solution_identifiers):
+            violations.append("rung 3: contains student's mission identifiers")
+
+    elif rung_int == 4:
+        if contains_runnable_python_line(hint_text):
+            violations.append("rung 4: contains a complete runnable line of Python code")
+        # Ours. The leak that actually got served said "تكتبي رقم `12`" and contained no
+        # runnable line at all, so the check above passes it. See
+        # tests/test_hint_ladder.py::test_the_real_leak_that_got_through.
+        if target_values:
+            leaked, why = hint_leaks_blank(hint_text, target_values)
+            if leaked:
+                violations.append(f"rung 4: {why}")
+
+    return GuardResult(passed=len(violations) == 0, violations=violations)
+
+
+# ---------------------------------------------------------------------------
+
+
+def contains_dunder_reference(code: str) -> bool:
+    """Detect references to double-underscore (dunder) attributes or identifiers in AST.
+
+    Mitigates sandbox escape gadget chains (e.g. `().__class__.__bases__[0].__subclasses__()`
+    or `x.__globals__`) in curriculum code. Legitimate reference solutions for Python
+    curriculum concepts (variables, conditionals, loops, functions) have zero reason
+    to reference dunder attributes or names.
+    """
+    if not code or not code.strip():
+        return False
+
+    try:
+        tree = ast.parse(code)
+    except SyntaxError:
+        # Let the existing syntax-error inspection report unparseable code
+        return False
+
+    for node in ast.walk(tree):
+        # Attribute access: e.g. obj.__class__, obj.__bases__, obj.__subclasses__
+        if isinstance(node, ast.Attribute):
+            attr = node.attr
+            if attr.startswith("__") and attr.endswith("__"):
+                return True
+        # Name lookup: e.g. __builtins__, __import__
+        elif isinstance(node, ast.Name):
+            name_id = node.id
+            if name_id.startswith("__") and name_id.endswith("__"):
+                return True
+
+    return False

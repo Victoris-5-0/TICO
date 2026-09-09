@@ -1,61 +1,86 @@
-"""TICO's hint mode — endpoint 1, the first thing worth showing.
+"""TICO's hint mode — the four-rung ladder.
 
-STUB. Shapes are final; behaviour is fake. Real implementation lands in M2.
+The server counts prior `hint_event` rows and fixes the rung **before any model is
+called**. The model writes prose for that rung only; it never sees the solution and never
+chooses how much to give away.
 
-The stub reproduces the one behaviour that matters most for the UI: the rung
-escalates. Ask repeatedly in the same session and you get rungs 1, 2, 3, 4 — and
-rung 4 sets `is_final` with `next_step = "mini_practice"`, never the solution.
+**No rung returns a complete solution**, including rung 4 — which walks the student to the
+fix in words and then offers a smaller practice problem. `guards.hint_leaks_answer` checks
+every reply against the mission's own solution and throws away anything that leaks.
+
+Only the phases with a blank to be stuck on have a ladder. Phases 1 to 4 use TICO chat
+instead: explaining what `==` does is not the answer to *their* problem, so chat may
+explain freely where a hint may not.
 """
 
 from __future__ import annotations
 
-from collections import defaultdict
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.orm import Session
 
-from fastapi import APIRouter, Depends, Response
-
-from app.api.v1 import _fixtures as fx
-from app.api.v1._stub import mark
 from app.core.auth import CurrentUser, get_current_user
-from app.schemas.common import ErrorResponse, HintRung
+from app.database import get_db
+from app.rules.hint_ladder import HintsNotAvailable
+from app.schemas.common import ErrorResponse
 from app.schemas.hints import HintRequest, HintResponse
+from app.services import hints as hints_service
 
 router = APIRouter(tags=["tico"])
-
-# In-memory only. Real rung counting reads hint_events in M2.
-_rungs: dict[str, int] = defaultdict(int)
-
-MAX_RUNG = 4
 
 
 @router.post(
     "/hints",
     response_model=HintResponse,
-    responses={401: {"model": ErrorResponse}, 403: {"model": ErrorResponse}},
+    responses={
+        401: {"model": ErrorResponse},
+        403: {"model": ErrorResponse},
+        404: {"model": ErrorResponse},
+        409: {"model": ErrorResponse},
+    },
     summary="Ask TICO for a hint",
     description=(
-        "The server decides which rung the student is on from prior hint events, then "
-        "asks the model for that rung's prose only. **No rung ever returns a complete "
-        "solution** — after rung 4 the client should offer the mini-practice.\n\n"
-        "The stub escalates per session id, so repeated calls return rungs 1 to 4."
+        "Returns the next rung of the four-rung ladder. **The client never asks for a "
+        "level** — the server counts the hints already shown in this session and decides.\n\n"
+        "| Rung | What it does |\n"
+        "|---|---|\n"
+        "| 1 ORIENT | points at the region, no diagnosis |\n"
+        "| 2 QUESTION | makes them think about the concept |\n"
+        "| 3 NAME_IT | names it, shows the pattern on a **different** example |\n"
+        "| 4 WALK | walks to the fix in words — still no code |\n\n"
+        "**No rung ever returns a solution.** When `isFinal` is true, offer `nextStep` "
+        "(a smaller practice problem), never the answer.\n\n"
+        "The ladder depends on the phase: `GUIDED_CODING` starts at rung 1, "
+        "`ADAPT_REMIX` starts at rung 2 (they have seen this code work), and "
+        "`INDEPENDENT` stops at rung 3. Asking during phases 1-4 returns **409** — those "
+        "have no blank to be stuck on, and phase 2 carries its own nudge.\n\n"
+        "`cached: true` means it was served from Postgres with no model call, which is "
+        "common on early lessons and is the main cost saving."
     ),
 )
 def get_hint(
     body: HintRequest,
-    response: Response,
     user: CurrentUser = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ) -> HintResponse:
-    mark(response)
+    try:
+        payload = hints_service.request_hint(
+            db,
+            user_id=user.id,
+            session_id=body.session_id,
+            mission_id=body.mission_id,
+            code_excerpt=body.code_excerpt,
+            phase=body.phase,
+            guided_step=body.guided_step,
+            error_text=body.error_text,
+            error_tag=body.error_tag,
+            locale=body.locale,
+        )
+    except hints_service.SessionNotFound as exc:
+        # 404 rather than 403 on purpose: confirming that someone else's session id
+        # exists is not worth distinguishing an attacker from a typo.
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    except HintsNotAvailable as exc:
+        raise HTTPException(status.HTTP_409_CONFLICT, detail=str(exc)) from exc
 
-    _rungs[body.session_id] = min(_rungs[body.session_id] + 1, MAX_RUNG)
-    rung = _rungs[body.session_id]
-    is_final = rung == MAX_RUNG
-
-    return HintResponse(
-        rung=HintRung(rung),
-        hint=fx.HINT_LADDER[rung],
-        is_final=is_final,
-        remaining_rungs=MAX_RUNG - rung,
-        next_step="mini_practice" if is_final else None,
-        hint_event_id=f"demo-hint-{body.session_id}-{rung}",
-        cached=rung > 1,  # pretend the later rungs came from the Postgres cache
-    )
+    db.commit()
+    return HintResponse(**payload)
