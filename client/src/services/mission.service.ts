@@ -1,7 +1,6 @@
 import { db } from '@/lib/db';
 import { aiClient } from '@/lib/ai/client';
-import { GeneratedMissionOut, GenerateMissionRequest, GenerateMissionResponse } from '@/lib/ai/types';
-import { Prisma } from '@prisma/client';
+import { PhasedMissionOut, GenerateMissionRequest, GenerateMissionResponse } from '@/lib/ai/types';
 
 export interface MissionPlayback {
   id: string;
@@ -78,7 +77,7 @@ export class MissionService {
 
     // 1. Attempt AI Generation
     try {
-      const aiMission: GeneratedMissionOut = await aiClient.getNextMission(token, {
+      const aiMission: PhasedMissionOut = await aiClient.getNextMission(token, {
         lessonId,
         worldManifestVersion: options.worldManifestVersion || '1.0.0',
         forceRegenerate: options.forceRegenerate ?? false,
@@ -91,46 +90,43 @@ export class MissionService {
         aiMission.sceneId
       );
 
-      const savedMission = await db.generatedMission.upsert({
+      // The Python service already wrote this row, with all six phases in `content`.
+      // Do NOT upsert `content` here: this used to overwrite it with a flattened
+      // {brief, starterCode, tests}, and whichever service wrote last won. When it was
+      // this one, `content.phases` vanished — and `app/services/hints.py` reads
+      // `content.phases.guided.solutionCode` to check hints against the solution, while
+      // `app/services/sessions.py` reads `content.targetConceptId` to move mastery. Both
+      // degrade silently: hints stop being guarded, mastery stops moving, nothing errors.
+      //
+      // The row is the AI service's. All this needs to do is make sure it is linked to
+      // the right user and template on our side.
+      const savedMission = await db.generatedMission.update({
         where: { id: aiMission.id },
-        update: {
-          sceneId: aiMission.sceneId,
-          params: (aiMission.params ?? {}) as unknown as Prisma.InputJsonValue,
-          content: {
-            brief: aiMission.brief,
-            starterCode: aiMission.starterCode,
-            tests: aiMission.tests ?? [],
-          } as unknown as Prisma.InputJsonValue,
-          scaffoldPlan: aiMission.scaffoldPlan as unknown as Prisma.InputJsonValue,
-          validated: aiMission.validated,
-        },
-        create: {
-          id: aiMission.id,
-          templateId,
-          userId,
-          sceneId: aiMission.sceneId,
-          params: (aiMission.params ?? {}) as unknown as Prisma.InputJsonValue,
-          content: {
-            brief: aiMission.brief,
-            starterCode: aiMission.starterCode,
-            tests: aiMission.tests ?? [],
-          } as unknown as Prisma.InputJsonValue,
-          scaffoldPlan: aiMission.scaffoldPlan as unknown as Prisma.InputJsonValue,
-          validated: aiMission.validated,
-          manifestVersion: options.worldManifestVersion || '1.0.0',
-        },
+        data: { userId, templateId },
       });
+
+      // A six-phase mission is a journey; this view is what a code editor can show,
+      // which is the guided phase. Anything that renders the whole loop should read
+      // `aiMission.phases` directly rather than this flattened shape.
+      const guided = aiMission.phases.guided;
 
       return {
         id: savedMission.id,
         lessonId: lesson.id,
         trackId: lesson.trackId,
-        title: `${lesson.title} · ${aiMission.sceneId || 'المهمة'}`,
-        instructions: aiMission.brief,
-        starterCode: aiMission.starterCode,
-        tests: aiMission.tests || [],
+        title: aiMission.titleAr || `${lesson.title} · ${aiMission.sceneId || 'المهمة'}`,
+        instructions: aiMission.phases.encounter.lineAr,
+        // Guided coding has no single starter: the student fills blanks step by step,
+        // so the first step's code — with its `___` still in it — is where the editor
+        // begins. A client rendering the full loop walks `guided.steps` instead.
+        starterCode: guided.steps[0]?.code ?? '',
+        tests: (guided.tests ?? []).map((t, i) => ({
+          name: t.name ?? `Test ${i + 1}`,
+          call: t.call,
+          expected: t.expected,
+        })),
         sceneId: aiMission.sceneId,
-        scaffoldPlan: aiMission.scaffoldPlan as unknown as Record<string, unknown>,
+        scaffoldPlan: {} as Record<string, unknown>,
         validated: aiMission.validated,
         isAiGenerated: true,
         isFallback: false,
@@ -185,7 +181,7 @@ export class MissionService {
     userId: string,
     worldSlug: string | null,
     token: string
-  ): Promise<GeneratedMissionOut> {
+  ): Promise<PhasedMissionOut> {
     return aiClient.getNextChallenge(token, { worldSlug });
   }
 }

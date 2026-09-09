@@ -3,7 +3,7 @@ import {
   ApiError,
   ChallengeRequest,
   Envelope,
-  GeneratedMissionOut,
+  PhasedMissionOut,
   GenerateMissionRequest, GenerateMissionResponse,
   HintRequest, HintResponse,
   NextMissionRequest,
@@ -105,8 +105,8 @@ export class AiClient {
   }
 
   /** Decides what this student should play next. Contrast `generateMission`. */
-  async getNextMission(token: string, req: NextMissionRequest): Promise<GeneratedMissionOut> {
-    return this.fetchAi<GeneratedMissionOut>('/v1/missions/next', token, req);
+  async getNextMission(token: string, req: NextMissionRequest): Promise<PhasedMissionOut> {
+    return this.fetchAi<PhasedMissionOut>('/v1/missions/next', token, req);
   }
 
   async createSession(token: string, req: SessionCreate): Promise<SessionOut> {
@@ -126,8 +126,8 @@ export class AiClient {
     return this.fetchAi<GenerateMissionResponse>('/v1/missions/generate', token, req);
   }
 
-  async getNextChallenge(token: string, req: ChallengeRequest): Promise<GeneratedMissionOut> {
-    return this.fetchAi<GeneratedMissionOut>('/v1/challenges/next', token, req);
+  async getNextChallenge(token: string, req: ChallengeRequest): Promise<PhasedMissionOut> {
+    return this.fetchAi<PhasedMissionOut>('/v1/challenges/next', token, req);
   }
 
   async getSessionDebrief(token: string, sessionId: string): Promise<SessionDebriefResponse> {
