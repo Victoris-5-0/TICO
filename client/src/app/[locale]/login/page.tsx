@@ -1,10 +1,11 @@
 import { Inter } from "next/font/google";
+import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { AccountForm } from "@/components/account-form";
 import { isLocale } from "@/i18n/config";
-import { createClient } from "@/lib/supabase/server";
-import { db } from "@/lib/db";
+import { auth } from "@/lib/better-auth";
 import { accountDestination } from "@/lib/auth/entry";
+import { ensureOnboardingState } from "@/lib/auth/account-store";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-auth", display: "swap" });
 
@@ -16,17 +17,11 @@ export default async function LoginPage({ params, searchParams }: {
   if (!isLocale(locale)) notFound();
   const { error } = await searchParams;
   let destination: string | undefined;
-  let failed = Boolean(error);
-  if (!failed && process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-    try {
-      const supabase = await createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const profile = await db.user.findUnique({ where: { id: user.id }, select: { id: true } });
-        if (profile) destination = accountDestination(locale, user.user_metadata.onboarding_required === true);
-      }
-    } catch { failed = true; }
+  const session = await auth.api.getSession({ headers: await headers() });
+  if (session?.user) {
+    const account = await ensureOnboardingState(session.user.id, locale);
+    if (account) destination = accountDestination(locale, !account.completed);
   }
   if (destination) redirect(destination);
-  return <div className={inter.variable}><AccountForm locale={locale} authFailed={failed} /></div>;
+  return <div className={inter.variable}><AccountForm locale={locale} authFailed={Boolean(error)} /></div>;
 }

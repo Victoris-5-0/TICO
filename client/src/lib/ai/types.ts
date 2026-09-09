@@ -568,6 +568,13 @@ export interface StudentProfileOut {
   syntaxVsLogic: number;
   pace?: number | null;
   locale?: string;
+  /** Coarse onboarding age band; never an exact birth date. */
+  ageBand?: string | null;
+  /** Self-reported Learner/Challenger presentation preference. */
+  learnerPreference?: string | null;
+  /** Self-reported gender selection. */
+  gender?: string | null;
+  onboardingCompletedAt?: string | null;
   lastComputedAt?: string | null;
   modelVersion?: string | null;
 }

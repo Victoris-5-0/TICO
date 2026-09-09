@@ -139,6 +139,10 @@ class StudentProfile(Base):
     syntax_vs_logic: Mapped[float] = mapped_column(Float, default=0.5)
     pace: Mapped[float | None] = mapped_column(Float)
     locale: Mapped[str] = mapped_column(Text, default="ar-EG")
+    age_band: Mapped[str | None] = mapped_column(Text)
+    learner_preference: Mapped[str | None] = mapped_column(Text)
+    gender: Mapped[str | None] = mapped_column(Text)
+    onboarding_completed_at: Mapped[datetime | None]
     last_computed_at: Mapped[datetime | None]
     model_version: Mapped[str | None] = mapped_column(Text)
 

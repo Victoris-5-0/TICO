@@ -707,7 +707,7 @@ uses a transparent mask ending at the same solid peach canvas as the following s
 so its bottom edge cannot create a color seam. Native scrolling retains a thin warm thumb.
 Header, artwork, and typography reflow at tablet and phone widths; anchors allow room for
 the fixed header. Account forms expose required fields, pending, failure, and email-confirmation
-states; successful live authentication still depends on the configured Supabase service.
+states; successful live authentication depends on the configured Better Auth and Google OAuth server credentials.
 
 ## 21. About and Pricing
 

@@ -36,7 +36,7 @@ This document defines the language-neutral integration contract. TypeScript and 
 
 | Aggregate | Important fields and invariants |
 | --- | --- |
-| `User` | Supabase subject is unique; role, locale, learner mode, coarse age band, XP |
+| `User` / `StudentProfile` | Better Auth owns the user identity plus `auth_accounts` and `auth_sessions`; role and XP live on `users`. Locale, coarse age band, onboarding completion, and the self-reported Learner/Challenger preference live in `student_profiles`. |
 | `World` / `Lesson` | fixed chapter and linear `sequenceOrder`; lesson has `isSkippable` |
 | `Concept` / `LevelConcept` | concept order; exactly one primary concept per lesson; carried weights 0–1 |
 | `Mission` | stable identity attached to one lesson and world |

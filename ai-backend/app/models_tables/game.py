@@ -39,6 +39,7 @@ class User(Base):
 
     id: Mapped[str] = mapped_column(Text, primary_key=True, default=new_id)
     email: Mapped[str] = mapped_column(Text, unique=True)
+    email_verified: Mapped[bool] = mapped_column(Boolean, default=False)
     name: Mapped[str | None] = mapped_column(Text)
     avatar_url: Mapped[str | None] = mapped_column("avatarUrl", Text)
     role: Mapped[Role] = mapped_column(ROLE, default=Role.STUDENT)
@@ -54,6 +55,9 @@ class User(Base):
     concept_mastery: Mapped[list["ConceptMastery"]] = relationship(back_populates="user")  # noqa: F821
     lesson_plans: Mapped[list["LessonPlan"]] = relationship(back_populates="user")  # noqa: F821
     profile: Mapped["StudentProfile | None"] = relationship(back_populates="user")  # noqa: F821
+    auth_sessions: Mapped[list["AuthSession"]] = relationship(back_populates="user")  # noqa: F821
+    auth_sessions: Mapped[list["AuthSession"]] = relationship(back_populates="user")  # noqa: F821
+    auth_sessions: Mapped[list["AuthSession"]] = relationship(back_populates="user")  # noqa: F821
 
     def __repr__(self) -> str:
         return f"<User {self.id} {self.email}>"

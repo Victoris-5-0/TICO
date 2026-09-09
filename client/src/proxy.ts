@@ -1,5 +1,4 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { createServerClient } from "@supabase/ssr";
 
 import { defaultLocale, locales } from "@/i18n/config";
 
@@ -10,31 +9,40 @@ function preferredLocale(request: NextRequest) {
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  const hasLocale = locales.some(
+  const matchedLocale = locales.find(
     (locale) => pathname === `/${locale}` || pathname.startsWith(`/${locale}/`),
   );
 
-  if (hasLocale) {
-    let response = NextResponse.next({ request });
-    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-    if (url && key && request.cookies.getAll().some(cookie => cookie.name.startsWith("sb-"))) {
-      const supabase = createServerClient(url, key, { cookies: {
-        getAll: () => request.cookies.getAll(),
-        setAll: cookies => {
-          cookies.forEach(({ name, value }) => request.cookies.set(name, value));
-          response = NextResponse.next({ request });
-          cookies.forEach(({ name, value, options }) => response.cookies.set(name, value, options));
-        },
-      } });
-      try { await supabase.auth.getUser(); } catch { /* Protected pages verify identity independently. */ }
-    }
-    return response;
+  if (!matchedLocale) {
+    const url = request.nextUrl.clone();
+    url.pathname = `/${preferredLocale(request)}${pathname}`;
+    return NextResponse.redirect(url);
   }
 
-  const url = request.nextUrl.clone();
-  url.pathname = `/${preferredLocale(request)}${pathname}`;
-  return NextResponse.redirect(url);
+  const subPath = pathname.slice(`/${matchedLocale}`.length) || "/";
+  const isProtected =
+    subPath === "/learn" ||
+    subPath.startsWith("/learn/") ||
+    (subPath.startsWith("/onboarding") && !subPath.startsWith("/onboarding/preview")) ||
+    subPath === "/worlds" ||
+    subPath.startsWith("/worlds/") ||
+    subPath === "/challenges" ||
+    subPath.startsWith("/challenges/");
+
+  if (isProtected) {
+    const sessionToken =
+      request.cookies.get("better-auth.session_token")?.value ||
+      request.cookies.get("__Secure-better-auth.session_token")?.value;
+
+    if (!sessionToken) {
+      const loginUrl = request.nextUrl.clone();
+      loginUrl.pathname = `/${matchedLocale}/login`;
+      loginUrl.searchParams.set("redirect", pathname);
+      return NextResponse.redirect(loginUrl);
+    }
+  }
+
+  return NextResponse.next({ request });
 }
 
 export const config = {

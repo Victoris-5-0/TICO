@@ -3,18 +3,25 @@ import Link from "next/link";
 
 import { Reveal } from "@/components/motion/reveal";
 import { TicoFloat } from "@/components/motion/tico-float";
-import { SiteHeader } from "@/components/site-header";
+import { MarketingHeader } from "@/components/marketing-chrome";
+import type { HeaderUser } from "@/components/user-profile-menu";
 import { worlds } from "@/content/worlds";
 import type { Locale } from "@/i18n/config";
 import { getDictionary } from "@/i18n/dictionaries";
 
-export function LearningMap({ locale }: { locale: Locale }) {
+export function LearningMap({
+  locale,
+  user,
+}: {
+  locale: Locale;
+  user?: HeaderUser | null;
+}) {
   const dict = getDictionary(locale);
   const isArabic = locale === "ar-EG";
 
   return (
     <div className="map-page">
-      <SiteHeader locale={locale} compact />
+      <MarketingHeader locale={locale} currentPage="learn" user={user} />
       <main className="shell map-main">
         <header className="map-hero">
           <div>

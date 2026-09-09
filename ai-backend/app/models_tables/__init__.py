@@ -20,6 +20,7 @@ turns a silent runtime error into a red build.
 """
 
 from app.models_tables.base import Base
+from app.models_tables.auth import AuthAccount, AuthSession, AuthVerification
 from app.models_tables.enums import (
     ALL_PG_ENUMS,
     CLASSROOM_ROLE,
@@ -89,6 +90,9 @@ from app.models_tables.sessions import AiInteraction, HintEvent, PracticeSession
 
 __all__ = [
     "Base",
+    "AuthSession",
+    "AuthAccount",
+    "AuthVerification",
     # enums — Python
     "Role",
     "Difficulty",

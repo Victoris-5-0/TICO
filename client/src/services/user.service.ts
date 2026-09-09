@@ -18,6 +18,14 @@ export class UserService {
           xp: true,
           streak: true,
           createdAt: true,
+          studentProfile: {
+            select: {
+              ageBand: true,
+              learnerPreference: true,
+              locale: true,
+              onboardingCompletedAt: true,
+            },
+          },
         }
       });
 

@@ -6,9 +6,18 @@ import { KineticButton } from "@/components/motion/hero-motion";
 import { worlds } from "@/content/worlds";
 import { alternateLocale, type Locale } from "@/i18n/config";
 import { landingCopy } from "@/i18n/landing";
+import { UserProfileMenu, type HeaderUser } from "@/components/user-profile-menu";
 import styles from "./landing-page.module.css";
 
-export function MarketingHeader({ locale, currentPage = "home" }: { locale: Locale; currentPage?: "home" | "about" | "pricing" }) {
+export function MarketingHeader({
+  locale,
+  currentPage = "home",
+  user,
+}: {
+  locale: Locale;
+  currentPage?: "home" | "about" | "pricing" | "learn";
+  user?: HeaderUser | null;
+}) {
   const copy = landingCopy[locale];
   const alternate = alternateLocale(locale);
   const learnHref = `/${locale}/learn`;
@@ -22,7 +31,7 @@ export function MarketingHeader({ locale, currentPage = "home" }: { locale: Loca
           </Link>
           <nav className={styles.nav} aria-label={copy.navigation}>
             <Interactive hoverY={-1} hoverScale={1}>
-              <Link href={learnHref}>{copy.play}</Link>
+              <Link href={learnHref} aria-current={currentPage === "learn" ? "page" : undefined}>{copy.play}</Link>
             </Interactive>
             <Interactive hoverY={-1} hoverScale={1}>
               <Link href={`/${locale}#worlds`}>{copy.challenges}</Link>
@@ -38,12 +47,18 @@ export function MarketingHeader({ locale, currentPage = "home" }: { locale: Loca
             <Interactive hoverScale={1.06} tapScale={0.95} hoverY={0}>
               <Link className={styles.language} href={`/${alternate}${currentPage === "home" ? "" : `/${currentPage}`}`} lang={alternate} hrefLang={alternate}>{locale === "en" ? "عربي" : "EN"}</Link>
             </Interactive>
-            <KineticButton delay={0.08} hoverY={-2} hoverScale={1.04} tapScale={0.95}>
-              <Link className={styles.primary} href={`/${locale}/signup`}>{copy.signUp}</Link>
-            </KineticButton>
-            <KineticButton delay={0.14} hoverY={-2} hoverScale={1.03} tapScale={0.95}>
-              <Link className={styles.login} href={`/${locale}/login`}>{copy.login}</Link>
-            </KineticButton>
+            {user ? (
+              <UserProfileMenu user={user} locale={locale} />
+            ) : (
+              <>
+                <KineticButton delay={0.08} hoverY={-2} hoverScale={1.04} tapScale={0.95}>
+                  <Link className={styles.primary} href={`/${locale}/signup`}>{copy.signUp}</Link>
+                </KineticButton>
+                <KineticButton delay={0.14} hoverY={-2} hoverScale={1.03} tapScale={0.95}>
+                  <Link className={styles.login} href={`/${locale}/login`}>{copy.login}</Link>
+                </KineticButton>
+              </>
+            )}
           </div>
         </div>
       </LandingHeader>

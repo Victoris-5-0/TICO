@@ -18,7 +18,7 @@ TICO is a purpose-built educational platform combining authentic Egyptian narrat
 - **Classroom Flight Deck**: Effortless teacher cohort management with instant join codes (\`TICO-XXXX\`) and real-time student progress rosters.
 - **Resilient Hybrid Architecture**: Seamless integration with external FastAPI AI services backed by robust local fallbacks for 100% offline gameplay continuity.
 
-*Note: In local development, requests automatically authenticate as the seeded student explorer (\`student@tico.dev\`) if no Supabase Bearer token is provided.*
+Protected endpoints require a valid Better Auth session token. The session must belong to an application user in the shared PostgreSQL database.
       `,
     },
     servers: [
@@ -37,8 +37,8 @@ TICO is a purpose-built educational platform combining authentic Egyptian narrat
         bearerAuth: {
           type: 'http',
           scheme: 'bearer',
-          bearerFormat: 'JWT',
-          description: 'Bearer token. In local dev, you can enter `dev-bearer-token-tico-platform` or any token (or leave empty to auto-authenticate as student@tico.dev).',
+          bearerFormat: 'opaque',
+          description: 'Better Auth session token. Raw application user IDs and email addresses are not accepted as credentials.',
         },
       },
       schemas: {

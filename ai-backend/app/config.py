@@ -24,22 +24,6 @@ class Settings(BaseSettings):
     # service only reads and writes. Use the session pooler connection string.
     database_url: str
 
-    # --- auth ---------------------------------------------------------------
-    # We verify tokens, we never issue them. Supabase Auth owns login.
-    #
-    # Two signing modes, both supported:
-    #   A. JWT Signing Keys (asymmetric ES256) — the current Supabase default.
-    #      Set supabase_url; the public keys are fetched from its JWKS endpoint.
-    #   B. Legacy shared secret (HS256) — older projects. Set jwt_secret.
-    #
-    # Verification tries JWKS first, then the shared secret. With neither set
-    # and outside production, the service runs in dev mode.
-    supabase_url: str = ""
-    jwt_secret: str = ""
-    jwt_audience: str = "authenticated"
-    jwt_algorithms: str = "HS256"
-    supabase_service_role_key: str = ""
-
     # --- Google Gemini ------------------------------------------------------
     google_api_key: str = ""
 
@@ -84,34 +68,14 @@ class Settings(BaseSettings):
 
     # --- app ----------------------------------------------------------------
     environment: str = "development"
+    allow_demo_auth: bool = False
     log_level: str = "INFO"
     daily_model_call_cap: int = 200
     cors_origins: str = "http://localhost:3000"
 
     @property
-    def jwks_url(self) -> str:
-        """Supabase publishes the public keys here. Empty when not configured.
-
-        The path is the RFC 8615 well-known one. `/auth/v1/jwks` looks plausible and is
-        what this returned at first, but it 404s — which is silent, because a failed
-        fetch just falls through to the HS256 branch and every request then 401s with no
-        clue why. Verified against a live project before changing.
-        """
-        if not self.supabase_url:
-            return ""
-        return self.supabase_url.rstrip("/") + "/auth/v1/.well-known/jwks.json"
-
-    @property
-    def auth_configured(self) -> bool:
-        return bool(self.supabase_url or self.jwt_secret)
-
-    @property
     def is_production(self) -> bool:
         return self.environment.lower() == "production"
-
-    @property
-    def jwt_algorithm_list(self) -> list[str]:
-        return [a.strip() for a in self.jwt_algorithms.split(",") if a.strip()]
 
     @property
     def cors_origin_list(self) -> list[str]:

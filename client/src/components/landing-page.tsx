@@ -22,6 +22,7 @@ import { worlds } from "@/content/worlds";
 import { type Locale } from "@/i18n/config";
 import { getDictionary } from "@/i18n/dictionaries";
 import { landingCopy } from "@/i18n/landing";
+import type { HeaderUser } from "@/components/user-profile-menu";
 import styles from "./landing-page.module.css";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-landing", display: "swap" });
@@ -29,7 +30,13 @@ const outfit = Outfit({ subsets: ["latin"], variable: "--font-world-title", disp
 
 const stepImages = ["step-start", "step-solve", "step-help", "step-progress"];
 
-export function LandingPage({ locale }: { locale: Locale }) {
+export function LandingPage({
+  locale,
+  user,
+}: {
+  locale: Locale;
+  user?: HeaderUser | null;
+}) {
   const dict = getDictionary(locale);
   const copy = landingCopy[locale];
   const learnHref = `/${locale}/learn`;
@@ -40,7 +47,7 @@ export function LandingPage({ locale }: { locale: Locale }) {
     <div data-landing-page className={`${styles.page} ${inter.variable} ${outfit.variable}`}>
       <ScrollProgress />
       <a className="skip-link" href="#main-content">{dict.skip}</a>
-      <MarketingHeader locale={locale} />
+      <MarketingHeader locale={locale} user={user} />
       <main id="main-content">
         <section className={styles.hero} aria-labelledby="hero-title">
           <HeroArtMotion>

@@ -10,7 +10,7 @@ Build vertical slices that a learner can actually use. Contracts and determinist
 
 - Keep monorepo boundaries and service instructions current.
 - Establish design tokens, locale routing, typed translations, and responsive shell.
-- Integrate Supabase email/password + Google authentication; create the mapped app profile.
+- Integrate Better Auth with Google-only account entry and PostgreSQL-backed sessions; create the mapped learner profile.
 - Expand the Prisma schema and migrations around world → lesson → mission/version → session/submission/progress plus the eight AI capability tables.
 - Define Pydantic DTOs and OpenAPI fixtures before implementing AI services.
 - Add CI for client, Python, contracts, manifests, and docs.
@@ -94,7 +94,7 @@ AI-specific changes also require Pydantic structured output, router-only model s
 ## Suggested first issues
 
 1. Locale-aware visual shell and translated landing page.
-2. Supabase auth server/client utilities and protected `/learn` route.
+2. Better Auth server/client utilities and protected `/learn` route.
 3. Shared public-schema v2 design and Prisma migration for game and AI capability tables.
 4. Shared contract examples plus FastAPI Pydantic scaffold.
 5. World YAML schema and bakery manifest.
@@ -106,7 +106,7 @@ AI-specific changes also require Pydantic structured output, router-only model s
 When implementation details may have changed, use installed framework docs first and official vendor docs second:
 
 - Next.js 16: `client/node_modules/next/dist/docs/`
-- [Supabase Auth for Next.js](https://supabase.com/docs/guides/auth/server-side/nextjs)
+- [Better Auth Next.js integration](https://www.better-auth.com/docs/integrations/next)
 - [Supabase database connections](https://supabase.com/docs/guides/database/connecting-to-postgres)
 - [Prisma with Supabase](https://supabase.com/docs/guides/database/prisma)
 - [Pyodide Web Worker usage](https://pyodide.org/en/stable/usage/webworker.html)

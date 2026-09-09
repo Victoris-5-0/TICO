@@ -91,99 +91,146 @@ enum ClassroomRole {
 }
 
 model User {
-  id               String            @id @default(cuid())
-  email            String            @unique
-  name             String?
-  avatarUrl        String?
-  role             Role              @default(STUDENT)
-  bio              String?
-  xp               Int               @default(0)
-  streak           Int               @default(0)
-  createdAt        DateTime          @default(now())
-  updatedAt        DateTime          @updatedAt
+  id            String   @id @default(cuid())
+  email         String   @unique
+  emailVerified Boolean  @default(false) @map("email_verified")
+  name          String?
+  avatarUrl     String?
+  role          Role     @default(STUDENT)
+  bio           String?
+  xp            Int      @default(0)
+  streak        Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
-  progress         UserProgress[]
-  submissions      Submission[]
-  companionChats   CompanionChat[]
-  sessions         PracticeSession[]
-  aiInteractions   AiInteraction[]
-  xpEvents         XpEvent[]
-  dailyActivities  DailyActivity[]
-  heroes           UserHero[]
-  items            UserItem[]
-  achievements     UserAchievement[]
-  taughtClassrooms Classroom[]       @relation("TeacherClassrooms")
-  classroomMembers ClassroomMember[]
+  progress          UserProgress[]
+  submissions       Submission[]
+  companionChats    CompanionChat[]
+  sessions          PracticeSession[]
+  aiInteractions    AiInteraction[]
+  xpEvents          XpEvent[]
+  dailyActivities   DailyActivity[]
+  heroes            UserHero[]
+  items             UserItem[]
+  achievements      UserAchievement[]
+  taughtClassrooms  Classroom[]        @relation("TeacherClassrooms")
+  classroomMembers  ClassroomMember[]
   conceptMastery    ConceptMastery[]
   studentProfile    StudentProfile?
   lessonPlans       LessonPlan[]
   generatedMissions GeneratedMission[]
-
+  authSessions      AuthSession[]
+  authAccounts      AuthAccount[]
 
   @@map("users")
 }
 
+model AuthSession {
+  id        String   @id
+  expiresAt DateTime @map("expires_at")
+  token     String   @unique
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  ipAddress String?  @map("ip_address")
+  userAgent String?  @map("user_agent")
+  userId    String   @map("user_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("auth_sessions")
+}
+
+model AuthAccount {
+  id                    String    @id
+  accountId             String    @map("account_id")
+  providerId            String    @map("provider_id")
+  userId                String    @map("user_id")
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?   @map("access_token")
+  refreshToken          String?   @map("refresh_token")
+  idToken               String?   @map("id_token")
+  accessTokenExpiresAt  DateTime? @map("access_token_expires_at")
+  refreshTokenExpiresAt DateTime? @map("refresh_token_expires_at")
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
+
+  @@unique([providerId, accountId])
+  @@index([userId])
+  @@map("auth_accounts")
+}
+
+model AuthVerification {
+  id         String   @id
+  identifier String
+  value      String
+  expiresAt  DateTime @map("expires_at")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  @@index([identifier])
+  @@map("auth_verifications")
+}
+
 model Track {
-  id          String      @id @default(cuid())
+  id          String   @id @default(cuid())
   title       String
-  slug        String      @unique
+  slug        String   @unique
   description String
   icon        String?
-  language    String      // e.g. "typescript", "python", "javascript", "rust"
-  published   Boolean     @default(false)
-  order       Int         @default(0)
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
+  language    String // e.g. "typescript", "python", "javascript", "rust"
+  published   Boolean  @default(false)
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
-  lessons     Lesson[]
-  classrooms  Classroom[]
+  lessons          Lesson[]
+  classrooms       Classroom[]
   missionTemplates MissionTemplate[]
-
 
   @@map("tracks")
 }
 
 model Lesson {
-  id             String          @id @default(cuid())
-  trackId        String
-  track          Track           @relation(fields: [trackId], references: [id], onDelete: Cascade)
-  title          String
-  slug           String
-  description    String?
-  content        String          @db.Text
-  order          Int             @default(0)
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
+  id          String   @id @default(cuid())
+  trackId     String
+  track       Track    @relation(fields: [trackId], references: [id], onDelete: Cascade)
+  title       String
+  slug        String
+  description String?
+  content     String   @db.Text
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   exercises      Exercise[]
   progress       UserProgress[]
   companionChats CompanionChat[]
+  lessonPlans    LessonPlan[]
 
   @@unique([trackId, slug])
-  lessonPlans LessonPlan[]
-
   @@map("lessons")
 }
 
 model Exercise {
-  id           String       @id @default(cuid())
+  id           String     @id @default(cuid())
   lessonId     String
-  lesson       Lesson       @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  lesson       Lesson     @relation(fields: [lessonId], references: [id], onDelete: Cascade)
   title        String
-  instructions String       @db.Text
-  starterCode  String       @db.Text
-  solutionCode String?      @db.Text
-  testCases    Json         // Array of { input: string, expectedOutput: string, isHidden?: boolean }
+  instructions String     @db.Text
+  starterCode  String     @db.Text
+  solutionCode String?    @db.Text
+  testCases    Json // Array of { input: string, expectedOutput: string, isHidden?: boolean }
   hints        String[]
-  difficulty   Difficulty   @default(BEGINNER)
-  order        Int          @default(0)
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @updatedAt
+  difficulty   Difficulty @default(BEGINNER)
+  order        Int        @default(0)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
 
-  submissions  Submission[]
-  sessions     PracticeSession[]
-  concepts ExerciseConcept[]
-
+  submissions Submission[]
+  sessions    PracticeSession[]
+  concepts    ExerciseConcept[]
 
   @@map("exercises")
 }
@@ -206,7 +253,7 @@ model Submission {
   executionTimeMs Int?
   createdAt       DateTime         @default(now())
 
-  hintEvents      HintEvent[]
+  hintEvents HintEvent[]
 
   @@map("submissions")
 }
@@ -232,7 +279,7 @@ model CompanionChat {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   lessonId  String?
   lesson    Lesson?  @relation(fields: [lessonId], references: [id], onDelete: SetNull)
-  messages  Json     // Chat conversation history: [{ role: "user" | "assistant", content: string, timestamp: string }]
+  messages  Json // Chat conversation history: [{ role: "user" | "assistant", content: string, timestamp: string }]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -240,25 +287,25 @@ model CompanionChat {
 }
 
 model PracticeSession {
-  id                 String          @id @default(cuid())
-  userId             String          @map("user_id")
-  user               User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  exerciseId         String?         @map("exercise_id")
-  exercise           Exercise?       @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
-  generatedMissionId String?         @map("generated_mission_id")
+  id                 String            @id @default(cuid())
+  userId             String            @map("user_id")
+  user               User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  exerciseId         String?           @map("exercise_id")
+  exercise           Exercise?         @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
+  generatedMissionId String?           @map("generated_mission_id")
   generatedMission   GeneratedMission? @relation(fields: [generatedMissionId], references: [id], onDelete: SetNull)
-  kind               SessionKind     @default(LESSON)
-  phase              Phase?          @default(EXPLORE)
-  outcome            SessionOutcome  @default(IN_PROGRESS)
-  hintsUsed          Int             @default(0) @map("hints_used")
-  timeSpentMs        Int             @default(0) @map("time_spent_ms")
-  startedAt          DateTime        @default(now()) @map("started_at")
-  endedAt            DateTime?       @map("ended_at")
+  kind               SessionKind       @default(LESSON)
+  phase              Phase?            @default(EXPLORE)
+  outcome            SessionOutcome    @default(IN_PROGRESS)
+  hintsUsed          Int               @default(0) @map("hints_used")
+  timeSpentMs        Int               @default(0) @map("time_spent_ms")
+  startedAt          DateTime          @default(now()) @map("started_at")
+  endedAt            DateTime?         @map("ended_at")
 
-  submissions        Submission[]
-  hintEvents         HintEvent[]
-  aiInteractions     AiInteraction[]
-  xpEvents           XpEvent[]
+  submissions    Submission[]
+  hintEvents     HintEvent[]
+  aiInteractions AiInteraction[]
+  xpEvents       XpEvent[]
 
   @@map("practice_sessions")
 }
@@ -330,16 +377,16 @@ model DailyActivity {
 }
 
 model Hero {
-  id          String     @id @default(cuid())
-  slug        String     @unique
+  id          String   @id @default(cuid())
+  slug        String   @unique
   name        String
-  nameAr      String?    @map("name_ar")
+  nameAr      String?  @map("name_ar")
   description String?
-  spriteUrl   String?    @map("sprite_url")
-  unlockRule  Json?      @map("unlock_rule")
-  createdAt   DateTime   @default(now())
+  spriteUrl   String?  @map("sprite_url")
+  unlockRule  Json?    @map("unlock_rule")
+  createdAt   DateTime @default(now())
 
-  users       UserHero[]
+  users UserHero[]
 
   @@map("heroes")
 }
@@ -357,17 +404,17 @@ model UserHero {
 }
 
 model Item {
-  id          String     @id @default(cuid())
-  slug        String     @unique
+  id          String   @id @default(cuid())
+  slug        String   @unique
   name        String
-  nameAr      String?    @map("name_ar")
+  nameAr      String?  @map("name_ar")
   description String?
-  type        ItemType   @default(COSMETIC)
-  spriteUrl   String?    @map("sprite_url")
-  cost        Int        @default(0)
-  createdAt   DateTime   @default(now())
+  type        ItemType @default(COSMETIC)
+  spriteUrl   String?  @map("sprite_url")
+  cost        Int      @default(0)
+  createdAt   DateTime @default(now())
 
-  users       UserItem[]
+  users UserItem[]
 
   @@map("items")
 }
@@ -385,17 +432,17 @@ model UserItem {
 }
 
 model Achievement {
-  id          String            @id @default(cuid())
-  slug        String            @unique
+  id          String   @id @default(cuid())
+  slug        String   @unique
   name        String
-  nameAr      String?           @map("name_ar")
+  nameAr      String?  @map("name_ar")
   description String?
-  iconUrl     String?           @map("icon_url")
+  iconUrl     String?  @map("icon_url")
   criteria    Json?
-  xpReward    Int               @default(50) @map("xp_reward")
-  createdAt   DateTime          @default(now())
+  xpReward    Int      @default(50) @map("xp_reward")
+  createdAt   DateTime @default(now())
 
-  users       UserAchievement[]
+  users UserAchievement[]
 
   @@map("achievements")
 }
@@ -412,17 +459,17 @@ model UserAchievement {
 }
 
 model Classroom {
-  id        String            @id @default(cuid())
+  id        String   @id @default(cuid())
   name      String
-  joinCode  String            @unique @map("join_code")
-  teacherId String            @map("teacher_id")
-  teacher   User              @relation("TeacherClassrooms", fields: [teacherId], references: [id], onDelete: Cascade)
-  trackId   String?           @map("track_id")
-  track     Track?            @relation(fields: [trackId], references: [id], onDelete: SetNull)
-  createdAt DateTime          @default(now())
-  updatedAt DateTime          @updatedAt
+  joinCode  String   @unique @map("join_code")
+  teacherId String   @map("teacher_id")
+  teacher   User     @relation("TeacherClassrooms", fields: [teacherId], references: [id], onDelete: Cascade)
+  trackId   String?  @map("track_id")
+  track     Track?   @relation(fields: [trackId], references: [id], onDelete: SetNull)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  members   ClassroomMember[]
+  members ClassroomMember[]
 
   @@map("classrooms")
 }
@@ -458,7 +505,6 @@ enum SkillBand {
   ON_LEVEL
   READY_TO_STRETCH
 }
-
 
 // =============================================================================
 // THE ADAPTIVE SPINE
@@ -529,15 +575,21 @@ model StudentProfile {
   userId String @id @map("user_id")
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  selfReportedLevel String?   @map("self_reported_level")
-  skillBand         SkillBand @default(ON_LEVEL) @map("skill_band")
-  hintDependency    Float     @default(0) @map("hint_dependency")
+  selfReportedLevel     String?   @map("self_reported_level")
+  skillBand             SkillBand @default(ON_LEVEL) @map("skill_band")
+  hintDependency        Float     @default(0) @map("hint_dependency")
   /// 0 = errors are mostly syntax, 1 = mostly logic.
-  syntaxVsLogic     Float     @default(0.5) @map("syntax_vs_logic")
-  pace              Float?
-  locale            String    @default("ar-EG")
-  lastComputedAt    DateTime? @map("last_computed_at")
-  modelVersion      String?   @map("model_version")
+  syntaxVsLogic         Float     @default(0.5) @map("syntax_vs_logic")
+  pace                  Float?
+  locale                String    @default("ar-EG")
+  /// Coarse self-reported band only. Never store an exact birth date.
+  ageBand               String?   @map("age_band")
+  /// Visual path preference from onboarding; never an authorization role.
+  learnerPreference     String?   @map("learner_preference")
+  gender                String?   @map("gender")
+  onboardingCompletedAt DateTime? @map("onboarding_completed_at")
+  lastComputedAt        DateTime? @map("last_computed_at")
+  modelVersion          String?   @map("model_version")
 
   @@map("student_profiles")
 }

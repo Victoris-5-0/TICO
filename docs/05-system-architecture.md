@@ -7,9 +7,10 @@ flowchart LR
     U[Learner browser] -->|HTTPS| N[Next.js on Vercel]
     U -->|Pyodide worker| P[Local Python sandbox]
     N -->|Prisma SQL + migrations| D[(Supabase Postgres public schema)]
-    N -->|Auth SDK / JWT| A[Supabase Auth]
+    N -->|Better Auth sessions| D
+    N -->|OAuth authorization code| A[Google OAuth]
     N -->|Object access| S[Supabase Storage]
-    N -->|signed HTTPS + learner JWT context| F[FastAPI AI service]
+    N -->|signed HTTPS + opaque session context| F[FastAPI AI service]
     F -->|sync SQLAlchemy reads/writes; no migrations| D
     F -->|model API| G[Google Gemini]
 ```
@@ -18,7 +19,7 @@ flowchart LR
 
 ### Next.js client/backend
 
-`client/` owns pages, React UI, Supabase browser/server auth integration, authorization for game actions, all Prisma models and migrations in the shared `public` schema, learner progress, content publication UI, asset delivery, browser-runner integration, and the BFF boundary presented to browsers.
+`client/` owns pages, React UI, Better Auth integration, authorization for game actions, all Prisma models and migrations in the shared `public` schema, learner progress, content publication UI, asset delivery, browser-runner integration, and the BFF boundary presented to browsers.
 
 Use Server Components for reads and Server Actions for authenticated mutations. Route Handlers are reserved for auth callbacks, streaming proxy endpoints, webhooks, and service callbacks.
 
@@ -32,9 +33,9 @@ The service owns no database migrations. It maps the Prisma-owned tables in the 
 
 ## Authentication and authorization
 
-Supabase Auth provides conventional email/password registration, email verification, password reset, and Google OAuth. There is no anonymous account path. The browser receives normal Supabase session tokens; server code verifies the user and maps the Supabase subject to the application profile.
+Better Auth runs in the Next.js backend and provides the public Google OAuth entry. There is no anonymous account path. It stores users, linked Google accounts, and opaque sessions in the Prisma-owned PostgreSQL schema and sends an HTTP-only session cookie to the browser.
 
-The FastAPI service verifies the Supabase access JWT and independently checks that path/body user IDs match the token subject. Internal callbacks additionally use a timestamped HMAC signature and idempotency key. Never expose a service-role key to the browser.
+The FastAPI service validates the opaque Better Auth bearer token against the shared `auth_sessions` table and independently checks that path/body user IDs match the session user. Internal callbacks additionally use a timestamped HMAC signature and idempotency key. Google credentials and session tokens never belong in public environment variables.
 
 Roles are `STUDENT`, `TEACHER`, and `ADMIN`. Role checks occur server-side at each data access or mutation, not just in navigation.
 
@@ -69,7 +70,7 @@ Roles are `STUDENT`, `TEACHER`, and `ADMIN`. Role checks occur server-side at ea
 ## Deployment
 
 - Vercel deploys `client/` and runs server-side Prisma access.
-- Supabase hosts PostgreSQL, Auth, and Storage. Runtime database traffic uses the pooler appropriate to each client; Prisma migrations use a direct/session connection.
+- Supabase hosts PostgreSQL and Storage. Better Auth runs inside Next.js. Runtime database traffic uses the pooler appropriate to each client; Prisma migrations use a direct/session connection.
 - AWS EC2 is the AI production baseline: Nginx → Gunicorn with Uvicorn workers under systemd. A Docker image keeps Render deployment viable.
 - Static Pyodide assets are pinned and served from the application/CDN with integrity and cache headers.
 
@@ -84,14 +85,17 @@ Roles are `STUDENT`, `TEACHER`, and `ADMIN`. Role checks occur server-side at ea
 
 ## Trust boundaries
 
-Student code is hostile input and remains in the browser worker. Model output is untrusted content and must pass schema and semantic validators. JWT claims are verified, not decoded and trusted. Asset IDs are allowlisted through manifests. Browser-reported test results are treated as formative evidence, never high-stakes proof.
+Student code is hostile input and remains in the browser worker. Model output is untrusted content and must pass schema and semantic validators. Session ownership is verified from PostgreSQL. Asset IDs are allowlisted through manifests. Browser-reported test results are treated as formative evidence, never high-stakes proof.
 
 ## Google account entry (2026-09-08)
 
-The public login UI now offers only Google OAuth; signup URLs redirect to it, per
-[ADR 0003](decisions/0003-google-sign-in.md). The PKCE callback provisions by verified
-Supabase subject ID and sends new users to localized onboarding. Returning users go to
-`/[locale]/learn`; unfinished onboarding resumes. Client-selected `next` destinations
-are not accepted by the callback. Cookie refresh is propagated through the Next proxy.
-Onboarding uses Supabase user metadata for preferences/completion and the existing
-`users.name` for display name; JWT verification, Prisma schema, and AI DTOs are unchanged.
+The public login UI offers only Google OAuth; signup URLs redirect to it, per
+[ADR 0003](decisions/0003-google-sign-in.md). Better Auth handles the authorization-code
+callback at `/api/auth/callback/google`, creates the user/account/session records through
+Prisma, and sends new users to localized onboarding. Returning users go to
+`/[locale]/learn`; unfinished onboarding resumes. Google credentials stay server-side.
+Onboarding stores display name on `users` and locale, coarse age band,
+Learner/Challenger preference, and completion time on `student_profiles`. The OAuth
+Google profile metadata is presentation-only; PostgreSQL decides whether onboarding is
+complete. The additive Prisma migration is mirrored by the AI service's SQLAlchemy
+mapping and optional profile DTO fields.

@@ -10,17 +10,15 @@ Under-13 learners receive reviewed static hints and reactions. Their prompts, co
 
 ## Authentication
 
-Supabase Auth provides:
+Better Auth in the Next.js backend provides:
 
-- email/password signup with email verification;
-- password reset through a short-lived one-time link;
-- Google OAuth using authorization code/PKCE flows supported by the platform;
-- rotating access/refresh session handling;
-- explicit logout from the current device and optionally all devices.
+- Google OAuth using the authorization code flow;
+- HTTP-only cookie sessions stored in PostgreSQL;
+- explicit logout from the current device.
 
 There is no guest, anonymous, shared-classroom, magic-identity, or AI-created account. OAuth does not bypass profile completion for locale, mode, and age band.
 
-Server code validates the session on each protected read or mutation. Never trust a role, user ID, completion result, XP amount, hint rung, or lesson permission supplied by the browser. Apply rate limits to login, reset, account creation, code submissions, hints, and chat.
+Server code validates the session on each protected read or mutation. Never trust a role, user ID, completion result, XP amount, hint rung, or lesson permission supplied by the browser. Apply rate limits to login, account creation, code submissions, hints, and chat.
 
 ## Data inventory and minimization
 
@@ -58,7 +56,7 @@ Automated integration tests prove deletion across all linked game and AI tables.
 | --- | --- |
 | Account takeover | verified email, secure OAuth, rate limiting, breached-password/provider protections, session revocation |
 | IDOR between learners | derive subject from verified session; ownership checks on every query/action |
-| Forged AI request | verify JWT, compare subject IDs, signed internal calls, strict DTOs |
+| Forged AI request | validate the opaque session token against PostgreSQL, compare user IDs, signed internal calls, strict DTOs |
 | Prompt injection in code/chat | capability-bounded prompts, treat learner content as data, no model tools, closed manifest, output validators |
 | Generated answer leakage | rung policy, deterministic leak tests, educator review, production sampling |
 | Malicious Python | isolated worker, no credentials, import allowlist, caps, termination, CSP |

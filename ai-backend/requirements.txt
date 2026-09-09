@@ -20,10 +20,6 @@ pydantic-settings>=2.3,<3.0
 SQLAlchemy>=2.0,<3.0
 psycopg2-binary>=2.9,<3.0
 
-# --- auth: verify tokens, never issue them ---
-python-jose[cryptography]>=3.3,<4.0
-httpx>=0.27,<1.0   # fetching the Supabase JWKS
-
 # --- AI: Google Gemini via LangChain ---
 langchain>=0.3,<1.0
 langchain-core>=0.3,<1.0

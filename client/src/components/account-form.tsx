@@ -4,8 +4,8 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { motion, useReducedMotion } from "motion/react";
-import { createClient } from "@/lib/supabase/client";
 import type { Locale } from "@/i18n/config";
+import { authClient } from "@/lib/auth-client";
 import styles from "./account-form.module.css";
 
 export function AccountForm({ locale, authFailed = false }: { locale: Locale; authFailed?: boolean }) {
@@ -16,25 +16,23 @@ export function AccountForm({ locale, authFailed = false }: { locale: Locale; au
 
   useEffect(() => {
     const reset = () => setPending(false);
-    window.addEventListener('pageshow', reset);
-    return () => window.removeEventListener('pageshow', reset);
+    window.addEventListener("pageshow", reset);
+    return () => window.removeEventListener("pageshow", reset);
   }, []);
 
   async function signIn() {
     if (pending) return;
     setPending(true);
     setFailed(false);
-    try {
-      if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) throw new Error('Auth unavailable');
-      const callback = new URL('/auth/callback', window.location.origin);
-      callback.searchParams.set('locale', locale);
-      const { data, error } = await createClient().auth.signInWithOAuth({
-        provider: 'google',
-        options: { redirectTo: callback.toString(), skipBrowserRedirect: true },
-      });
-      if (error || !data.url) throw new Error('Auth unavailable');
-      window.location.assign(data.url);
-    } catch {
+    const callbackURL = `/${locale}/login`;
+    const result = await authClient.signIn.social({
+      provider: "google",
+      callbackURL,
+      newUserCallbackURL: callbackURL,
+      errorCallbackURL: `${callbackURL}?error=auth_failed`,
+    });
+    if (result.error) {
+      console.error("Google sign-in failed:", result.error.message);
       setFailed(true);
       setPending(false);
     }

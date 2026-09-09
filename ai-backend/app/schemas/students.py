@@ -48,6 +48,19 @@ class StudentProfileOut(ORMSchema):
     )
     pace: float | None = None
     locale: str = Field(default="ar-EG")
+    age_band: str | None = Field(
+        default=None,
+        description="Coarse onboarding age band; never an exact birth date.",
+    )
+    learner_preference: str | None = Field(
+        default=None,
+        description="Self-reported Learner/Challenger presentation preference.",
+    )
+    gender: str | None = Field(
+        default=None,
+        description="Self-reported gender selection.",
+    )
+    onboarding_completed_at: datetime | None = None
     last_computed_at: datetime | None = None
     model_version: str | None = None
 

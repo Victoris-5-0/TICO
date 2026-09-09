@@ -1,19 +1,16 @@
-"""User lookup, and just-in-time provisioning.
+"""User lookup and defensive provisioning for internal service calls.
 
 ## Why this service provisions users at all
 
-Supabase Auth owns identity; `users` is our own table. A token can therefore be entirely
-valid for someone who has no row yet — they signed up thirty seconds ago and their first
-request happened to land here rather than on the Next.js side.
+Better Auth owns identity and stores it directly in `users`. A valid public session
+therefore always has a user row. The provisioning helper remains for internal mission
+service calls and tests that run below the HTTP authentication boundary.
 
 Every write this service makes hangs off `user_id`: `ai_interactions`, `generated_missions`,
 `concept_mastery`, `practice_sessions`. Without a row, all of them fail on a foreign key,
 and the student sees a 500 for having been new.
 
-The client does the same thing on its side (`feat(auth): just-in-time user provisioning`).
-Both services need it because either can be the first one a new student touches.
-
-It also fixes dev mode, where `demo-student-1` is a fiction until something inserts it.
+Public HTTP requests must never rely on this helper as authentication.
 """
 
 from __future__ import annotations
@@ -40,9 +37,8 @@ def by_email(db: Session, email: str) -> User | None:
 def ensure(db: Session, user_id: str, *, email: str | None = None, name: str | None = None) -> User:
     """Return the user, creating a minimal row if this is their first contact.
 
-    The id is the Supabase subject, passed straight through — the two systems must agree
-    on who someone is, and generating our own id here would guarantee they eventually
-    disagree.
+    The ID is supplied by the authenticated/internal caller; generating another ID here
+    would detach the learning records from the application account.
 
     Deliberately minimal: an id and an email placeholder. Names, avatars and roles are
     the client's to fill in from the OAuth profile, which this service never sees.
@@ -53,8 +49,8 @@ def ensure(db: Session, user_id: str, *, email: str | None = None, name: str | N
 
     user = User(
         id=user_id,
-        # A real address is not available here; the token carries a subject, not always
-        # an email. Unique and obviously synthetic beats null on a NOT NULL column.
+        # Internal callers may lack an email. Unique and visibly synthetic is safer than
+        # null on the required column.
         email=email or f"{user_id}@provisioned.tico",
         name=name,
         role=Role.STUDENT,

@@ -153,11 +153,11 @@ footer{border-top:1px solid var(--line);padding-top:22px;font-family:var(--mono)
       <text class="dtxt-s" x="440" y="204" text-anchor="middle">UI &middot; game engine &middot; API routes</text>
       <text class="dtxt-s" x="440" y="222" text-anchor="middle">TS backend &middot; code execution</text>
       <line class="ln" x1="440" y1="242" x2="440" y2="292" marker-end="url(#ar)"/>
-      <text class="dtxt-s" x="452" y="266">HTTPS &middot; Supabase JWT &middot; JSON</text>
+      <text class="dtxt-s" x="452" y="266">HTTPS &middot; session token &middot; JSON</text>
       <rect class="bx-a" x="200" y="298" width="480" height="124" rx="3"/>
       <text class="dtxt-b" x="440" y="326" text-anchor="middle">tico-ai &mdash; FastAPI</text>
       <text class="dtxt-s" x="440" y="346" text-anchor="middle">orchestration + 6 AI capability modules</text>
-      <text class="dtxt-s" x="440" y="364" text-anchor="middle">verifies JWT &middot; reads and writes the AI tables</text>
+      <text class="dtxt-s" x="440" y="364" text-anchor="middle">verifies session &middot; reads and writes the AI tables</text>
       <text class="dtxt-s" x="440" y="382" text-anchor="middle">service-role key never leaves here</text>
       <text class="dtxt-s" x="440" y="404" text-anchor="middle">AWS EC2 &middot; Nginx &rarr; Gunicorn &rarr; systemd</text>
       <line class="ln" x1="300" y1="422" x2="300" y2="454" marker-end="url(#ar)"/>
@@ -172,12 +172,12 @@ footer{border-top:1px solid var(--line);padding-top:22px;font-family:var(--mono)
       <text class="dtxt-s" x="72" y="356">direct reads</text>
       <text class="dtxt-s" x="72" y="372">RLS-protected</text>
     </svg>
-    <figcaption><b>Two paths to the database, on purpose.</b> Next.js reads plain game data itself under RLS (the orange path) &mdash; routing every read through FastAPI would add a hop for no benefit. FastAPI uses the service-role key, which bypasses RLS, so it must re-check authorisation per request from the verified JWT.</figcaption>
+    <figcaption><b>Two paths to the database, on purpose.</b> Next.js reads game data itself (the orange path) &mdash; routing every read through FastAPI would add a hop for no benefit. FastAPI uses its server database role, so it must re-check authorisation per request from the verified Better Auth session.</figcaption>
   </figure>
 
   <div class="note warn">
     <p class="lbl">Decide this once, write it down</p>
-    <p>FastAPI holds the service-role key and therefore <strong>bypasses row-level security entirely</strong>. Every endpoint must confirm that the <code>user_id</code> in the verified JWT actually owns the session or student it is being asked about. Miss this and any logged-in student can read another student's data by changing an ID.</p>
+    <p>FastAPI connects with a server database role and therefore <strong>cannot rely on browser identity or row-level security</strong>. Every endpoint must confirm that the <code>user_id</code> from the verified Better Auth session owns the session or student it is being asked about. Miss this and any logged-in student can read another student's data by changing an ID.</p>
   </div>
 </section>
 
@@ -591,13 +591,13 @@ constraints:
       <tr><td>Process</td><td class="m">Gunicorn + uvicorn workers, systemd</td><td>Yes</td></tr>
       <tr><td>Proxy / TLS</td><td class="m">Nginx + Certbot</td><td>Yes</td></tr>
       <tr><td>Validation</td><td class="m">Pydantic v2</td><td><strong>No &mdash; course pins v1</strong></td></tr>
-      <tr><td>Auth</td><td class="m">Verify Supabase JWT</td><td><strong>No &mdash; course mints its own</strong></td></tr>
+      <tr><td>Auth</td><td class="m">Validate Better Auth session</td><td><strong>No &mdash; course mints its own</strong></td></tr>
       <tr><td>Prod host</td><td class="m">AWS EC2 Ubuntu</td><td><strong>No &mdash; course also uses Heroku</strong></td></tr>
     </tbody>
   </table></div>
   <ol class="body">
     <li><strong>Pydantic v2, not v1.</strong> LangChain and LangGraph require it. The one thing that cannot be copied.</li>
-    <li><strong>Verify JWTs, don't issue them.</strong> The course's <code>oauth2.py</code> is dropped. <em>Unconfirmed:</em> this assumes Supabase Auth; if the client issues its own sessions over Prisma, the verification changes shape.</li>
+    <li><strong>Validate sessions, do not issue them.</strong> Next.js and Better Auth issue opaque sessions; FastAPI verifies them against the shared Prisma-owned table.</li>
     <li><strong>No Heroku.</strong> Free tier is gone and the architecture diagram says AWS &mdash; so the course's Ubuntu VM recipe runs on EC2.</li>
     <li><strong>No Alembic.</strong> The course migrates with Alembic; this repo migrates with Prisma from <code>client/</code>, because the monorepo already has one source of truth and two migration tools on one database is the fastest way to lose it. SQLAlchemy stays for reads and writes.</li>
   </ol>

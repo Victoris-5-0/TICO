@@ -8,8 +8,8 @@ Tests follow the risk boundaries, not only the code layout.
 
 - Unit: locale resolution, translation completeness, runner comparisons, result normalization, progression and XP rules.
 - Component: auth forms, roadmap states, editor toolbar, hints, output/error views, RTL/LTR isolation.
-- Integration: Server Actions with Prisma test database, Supabase auth adapters, transactional completion, outbox creation.
-- End-to-end: signup/login/reset/Google callback stub, first mission, failed run, four hints, pass/reload, account deletion, staff publication.
+- Integration: Server Actions with Prisma test database, Better Auth adapters, transactional completion, outbox creation.
+- End-to-end: Google callback stub, first-login onboarding, returning login, first mission, failed run, four hints, pass/reload, account deletion, staff publication.
 - Browser: Chromium, Firefox, WebKit; desktop and landscape tablet breakpoints.
 
 ### AI backend
@@ -32,7 +32,7 @@ An MVP release proves:
 
 - exactly three worlds and 18 ordered launch lessons are available in Arabic and English;
 - each lesson supports both learner modes and passes its own solution/test validation;
-- email/password and Google login have no anonymous bypass;
+- Google login has no anonymous bypass;
 - progress survives a new session and duplicate completion never duplicates XP;
 - all 44 asset prompts map to reviewed manifest IDs or documented state edits;
 - Python timeout, output, import, and message-validation controls work;
@@ -51,7 +51,7 @@ Migration checks reject destructive changes without an explicit reviewed plan. C
 
 ## Environments
 
-- **Local:** local or isolated Supabase project, mocked email/OAuth/model by default.
+- **Local:** local or isolated PostgreSQL database, mocked Google OAuth/model by default.
 - **Preview:** Vercel preview plus ephemeral/branch data; never production minors' data.
 - **Staging:** production-like auth, storage, database, CSP, worker assets, and AI configuration with synthetic accounts.
 - **Production:** protected migrations, least-privilege service identities, audit logs, backups, alerts, and rollback artifacts.
