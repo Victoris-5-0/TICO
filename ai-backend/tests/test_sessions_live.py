@@ -241,14 +241,8 @@ def test_the_debrief_counts_real_rows(client, db, student, mission):
     assert debrief["errorsOvercome"] == ["assignment_vs_comparison"]
 
 
-def test_a_hint_can_find_the_session(client, mission):
-    """The reason this endpoint had to exist: /v1/hints 404s without a session row."""
-    session_id = body(client.post("/v1/sessions", json={
-        "levelId": "lesson-4", "generatedMissionId": mission.id,
-    }))["id"]
-    client.patch(f"/v1/sessions/{session_id}/phase", json={"phase": "GUIDED_CODING"})
-
-    r = client.post("/v1/hints", json={
+def _ask_for_a_hint(client, mission, session_id):
+    return client.post("/v1/hints", json={
         "sessionId": session_id,
         "missionId": mission.id,
         "codeExcerpt": "loaves_per_tray = ___",
@@ -256,10 +250,62 @@ def test_a_hint_can_find_the_session(client, mission):
         "guidedStep": 0,
         "lastResult": "FAILED",
     })
+
+
+def test_a_hint_can_find_the_session(client, mission):
+    """The reason this endpoint had to exist: /v1/hints 404s without a session row.
+
+    **The model does not run here.** `conftest.py` blanks `GOOGLE_API_KEY`, so the chain
+    takes its authored-fallback branch. That is deliberate — what this test is about is the
+    database and the HTTP path: session ownership, the rung counted server-side, and the
+    envelope. `test_the_hint_ladder_against_a_real_model` is the one that calls Gemini.
+    """
+    session_id = body(client.post("/v1/sessions", json={
+        "levelId": "lesson-4", "generatedMissionId": mission.id,
+    }))["id"]
+    client.patch(f"/v1/sessions/{session_id}/phase", json={"phase": "GUIDED_CODING"})
+
+    r = _ask_for_a_hint(client, mission, session_id)
     assert r.status_code == 200, r.text
 
     hint = r.json()["data"]
     assert hint["hint"], "a student always gets something"
     assert hint["rung"] == 1, "first ask, first rung — counted server-side"
-    # The whole design in one assertion.
-    assert "12" not in hint["hint"], "no rung gives away the blank"
+    assert "12" not in hint["hint"], "not even the fallback names the blank"
+
+
+@pytest.mark.slow
+def test_the_hint_ladder_against_a_real_model(client, mission, live_model):
+    """Four asks, four rungs, and Gemini never gives away the blank.
+
+    The claim the whole service rests on, checked against a model that is genuinely trying
+    to be helpful — which is exactly when it leaks. A stub cannot test this: the guards
+    exist because real models write "تكتبي رقم `12`" when they are being kind.
+
+        TICO_LIVE_MODEL=1 REAL_DATABASE_URL=... pytest tests/test_sessions_live.py -m slow
+    """
+    session_id = body(client.post("/v1/sessions", json={
+        "levelId": "lesson-4", "generatedMissionId": mission.id,
+    }))["id"]
+    client.patch(f"/v1/sessions/{session_id}/phase", json={"phase": "GUIDED_CODING"})
+
+    seen = []
+    for expected_rung in (1, 2, 3, 4):
+        hint = body(_ask_for_a_hint(client, mission, session_id))
+
+        assert hint["rung"] == expected_rung, "the ladder climbs one rung per ask"
+        assert hint["hint"].strip()
+        assert "12" not in hint["hint"], (
+            f"rung {expected_rung} gave away the blank: {hint['hint']}"
+        )
+        assert "loaves_per_tray = 12" not in hint["hint"]
+        seen.append(hint["hint"])
+
+    # Rung 4 is the top. Asking again rephrases; it must not climb or hand over the answer.
+    top = body(_ask_for_a_hint(client, mission, session_id))
+    assert top["rung"] == 4
+    assert top["isFinal"] is True
+    assert top["nextStep"] == "mini_practice", "practice, never the answer"
+    assert "12" not in top["hint"]
+
+    assert len(set(seen)) > 1, "four identical hints would make the ladder decoration"
