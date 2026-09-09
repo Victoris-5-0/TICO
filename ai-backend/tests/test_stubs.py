@@ -36,25 +36,6 @@ def hint_body(session_id: str, **over) -> dict:
 #   test_contract.py         that the response shapes still match the client
 
 
-def test_open_session(client):
-    r = client.post("/v1/sessions", json=SESSION)
-    assert r.status_code == 201
-    assert r.headers[STUB_HEADER] == "1"
-    body = data(r)
-    assert body["phase"] == "ENCOUNTER"
-    assert body["outcome"] == "IN_PROGRESS"
-    assert body["hintsUsed"] == 0
-
-
-def test_close_session(client):
-    r = client.post(
-        "/v1/sessions/s1/close", json={"outcome": "SOLVED", "time_spent_ms": 254000}
-    )
-    assert r.status_code == 200
-    assert data(r)["outcome"] == "SOLVED"
-    assert data(r)["endedAt"] is not None
-
-
 # The hint ladder used to be stubbed here. It is real now — it counts prior hint
 # events, calls Gemini for the rung it decided, and runs two leak guards over the
 # reply — so it needs a database and cannot be tested alongside the stubs.
@@ -62,6 +43,15 @@ def test_close_session(client):
 # Its behaviour is covered by:
 #   test_hint_ladder.py    the ladder and both guards, offline
 #   test_hints_live.py     the whole pipeline, against a real database
+
+
+# `/v1/sessions` used to be stubbed here. It is real now — it writes `practice_sessions`,
+# counts `submissions` and `hint_events` for the debrief, and moves `concept_mastery` on
+# close — so it needs a database and cannot be tested alongside the stubs.
+#
+# Its behaviour is covered by:
+#   test_sessions.py       the debrief arithmetic and errors-overcome, offline
+#   test_debrief.py        the one model-written field and its number guard, offline
 
 
 def test_refresh_reports_who_decided(client):

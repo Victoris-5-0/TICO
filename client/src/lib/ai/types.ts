@@ -541,7 +541,8 @@ export interface SessionDebriefResponse {
 export interface SessionOut {
   id: string;
   userId: string;
-  levelId: string;
+  /** The lesson, when the session can be traced to one. `practice_sessions` links to an exercise or a generated mission, and only the exercise carries a lesson — so a runtime-generated mission returns null here. Send it on create; do not rely on getting it back. */
+  levelId?: string | null;
   generatedMissionId?: string | null;
   phase: Phase;
   outcome: SessionOutcome;

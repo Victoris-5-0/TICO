@@ -33,7 +33,13 @@ class SessionClose(Schema):
 class SessionOut(ORMSchema):
     id: str
     user_id: str
-    level_id: str
+    level_id: str | None = Field(
+        default=None,
+        description="The lesson, when the session can be traced to one. `practice_sessions` "
+        "links to an exercise or a generated mission, and only the exercise carries a "
+        "lesson — so a runtime-generated mission returns null here. Send it on create; do "
+        "not rely on getting it back.",
+    )
     generated_mission_id: str | None = None
     phase: Phase
     outcome: SessionOutcome
