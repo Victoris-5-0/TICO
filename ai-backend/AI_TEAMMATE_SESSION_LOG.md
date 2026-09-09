@@ -196,9 +196,28 @@ This log tracks autonomous session tasks in `ai-backend/` following the pre-appr
 
 ---
 
+### Task 11: Error classification accuracy eval in CI (M3 Analysis, P2)
+
+- **CSV Notes verbatim**: `30 hand-labelled wrong submissions, accuracy measured | M3 Analysis | AI teammate | P2 | Notes: Good demo material: most teams cannot show they measure their AI.`
+- **Status**: DONE
+- **Files touched**:
+  - `ai-backend/evals/error_classification_accuracy_eval.py`
+  - `ai-backend/evals/test_error_classification_accuracy_eval.py`
+  - `ai-backend/AI_TEAMMATE_SESSION_LOG.md`
+- **Test count**: 237 -> 241 passed (+4 tests: 1 full 30-case deterministic fallback sweep + 1 dynamic report formatting verification test + 1 dataset structural integrity test + 1 zero-model-calls CI safety assertion)
+- **Plain-language summary**:
+  Implemented the error classification accuracy evaluation suite in `evals/error_classification_accuracy_eval.py` and pytest runner in `evals/test_error_classification_accuracy_eval.py`. Hand-labelled 30 synthetic wrong code submissions grounded in the launch curriculum scope (`docs/02-python-curriculum.md`: variables, arithmetic, input conversion, conditionals, loops, functions, lists, dictionaries, filtering, state transitions) covering all 7 `ErrorFamily` enum values and the `STANDARD_KNOWN_TAGS` vocabulary. Built a dual-mode evaluation architecture: (a) CI-safe, zero-cost deterministic evaluation against `_deterministic_fallback`, measuring 90.00% family accuracy (27/30) and 70.00% tag accuracy (21/30) against ground truth, exceeding the 80.0% CI pass gate; (b) gated opt-in live mode exercising `classify_error()` via Gemini when a real `GOOGLE_API_KEY` is provided. Added detailed confusion and tag mismatch analysis exposing heuristic blindspots (silent logic bugs without runner outputs, missing returns masquerading as output mismatches, and unhandled KeyError).
+- **Assumptions made**:
+  - Heuristic fallback evaluation runs purely in Python with zero network or model calls.
+  - Opt-in live mode (`live=True`) is never executed by pytest or default script run.
+- **Open questions for review**:
+  - NEEDS DECISION: `MINIMUM_FAMILY_ACCURACY_THRESHOLD = 0.80` is an empirical baseline default for the deterministic fallback heuristic; calibrate with production learner telemetry once available.
+
+---
+
 ## Session Summary
 
-- **Total Tasks Completed**: 10
+- **Total Tasks Completed**: 11
   - Task 1: `ai/guards.py — validate model output, retry once, authored fallback` (DONE in 78a8bf0)
   - Task 2: `HINT LEAK TEST in CI` (DONE in 02675f3)
   - Task 3: `Authored fallback hints for all 4 rungs` (DONE in 268ca9b)
@@ -208,15 +227,18 @@ This log tracks autonomous session tasks in `ai-backend/` following the pre-appr
   - Task 7: `ai/graphs/mission_gen.py` (DONE in 33f8251)
   - Task 8: `The validator: every id/verb exists, solution runs` (DONE in ea8e807)
   - Task 9: `Planner safety eval + composer eval` (Composer eval DONE in 0b2a17f, planner safety deferred)
-  - Task 10: `Generation legality eval in CI` (DONE)
+  - Task 10: `Generation legality eval in CI` (DONE in 75d030d)
+  - Task 11: `Error classification accuracy eval in CI` (DONE)
 - **Total Blocked Tasks**: 0
   - World manifest dependency (`content/worlds/cairo_metro.yaml`) was present and verified, allowing Tasks 7, 8, and 10 to complete without blocking.
   - Path planner skip escalation review was built with a generic contract against `gemini-3.5-flash`, with integration ready for when `rules/plan.py` unblocks.
-- **Total Open Questions Across All Tasks**: 4
+- **Total Open Questions Across All Tasks**: 5
+  - Task 4: `ESCALATION_CONFIDENCE_THRESHOLD = 0.6` is a reasonable default awaiting team confirmation.
   - Task 5: Mastery thresholds (GATE=0.7, STRONG=0.7, WEAK=0.4) are implementation defaults awaiting empirical calibration.
   - Task 6: `rules/plan.py` is owned by another lane; full end-to-end planner-skip escalation review will be connected once `rules/plan.py` is completed.
   - Task 8: `contains_dunder_reference` applies to `starter_code` (low-priority tech debt), and process-level runner isolation for server validator needs architectural decision before high-volume production.
   - Task 9: Planner safety eval deferred until `rules/plan.py` is unblocked.
+  - Task 11: `MINIMUM_FAMILY_ACCURACY_THRESHOLD = 0.80` is an empirical baseline default for the deterministic fallback heuristic.
 - **Test Suite Results**:
   - Initial tests: 80 passed
-  - Final tests: 237 passed (+157 new tests added, 0 failures, 0 skipped)
+  - Final tests: 241 passed (+161 new tests added, 0 failures, 0 skipped)
