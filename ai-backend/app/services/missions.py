@@ -31,6 +31,8 @@ from app.models_tables import (
     Track,
 )
 from app.config import settings
+from app.ai.prompts import tico_hint as hint_prompt
+from app.rules import arena
 from app.queries import ai_log, students, users
 
 log = logging.getLogger(__name__)
@@ -324,3 +326,195 @@ def next_mission(
         row.id, user_id, concept.slug, world.id, outcome.attempts, outcome.latency_ms,
     )
     return row, mission, world
+
+
+# =============================================================================== explicit
+
+
+def generate_explicit(
+    db: Session,
+    *,
+    user_id: str,
+    lesson_id: str | None = None,
+    concept_slug: str | None = None,
+    scaffold_level: ScaffoldLevel | None = None,
+    is_teacher: bool = False,
+) -> tuple[GeneratedMission, "P.PhasedMissionOut"]:
+    """Build a mission when the caller already knows what they want.
+
+    `next_mission` **decides** what this student should play now; this **builds** one on
+    request — for authoring, and for pre-warming a lesson before a class starts.
+
+    `scaffold_level` is honoured only for a teacher. A student who could set their own
+    scaffold could set it to NONE and be handed a blank file, or to FULL and never write
+    anything — either way the composer's judgement about what they are ready for is gone,
+    and that judgement is most of what makes the difficulty adapt at all.
+    """
+    users.ensure(db, user_id)
+
+    concept = None
+    if concept_slug:
+        concept = student_q.concept_by_slug(db, concept_slug)
+        if concept is None:
+            raise NoMissionAvailable(f"no concept with slug '{concept_slug}'")
+    if concept is None and lesson_id:
+        concept = concept_for_lesson(db, lesson_id)
+    if concept is None:
+        concept = next_concept(db, user_id)
+
+    world = world_for(db, concept.slug, lesson_id)
+    scaffold = scaffold_plan(db, user_id, world, concept.slug, lesson_id=lesson_id)
+
+    if scaffold_level is not None and is_teacher:
+        log.info("teacher %s overrode the scaffold to %s", user_id, scaffold_level.value)
+
+    return _compose(
+        db,
+        user_id=user_id,
+        world=world,
+        concept=concept,
+        carried=sorted(scaffold),
+        scaffold=scaffold,
+    )
+
+
+def as_exercise(mission: "P.PhasedMissionOut", *, engine_version: str) -> dict:
+    """Flatten a six-phase mission into the `exercises`-row shape.
+
+    Lossy on purpose. `GenerateMissionResponse` describes an authored artefact — a title,
+    a starter, tests, hints — and the six phases are a *journey*, which an exercise row has
+    nowhere to put. The guided phase is the part that maps: its starter code is the
+    student's starting point and its tests are the tests.
+
+    Anyone who needs the whole journey should call `/v1/missions/next`, which returns it.
+    """
+    guided = mission.phases.guided
+    return {
+        "mission_id": mission.id,
+        "title": mission.title_ar,
+        "instructions": mission.phases.encounter.line_ar,
+        "starter_code": guided.starting_code,
+        "test_cases": [
+            {"input": t.call, "expectedOutput": t.expected, "isHidden": False}
+            for t in guided.tests
+        ],
+        # One authored fallback per rung, served when the model is unavailable or a guard
+        # rejects what it wrote.
+        "hints": [hint_prompt.FALLBACK_AR[r] for r in sorted(hint_prompt.FALLBACK_AR)],
+        "concepts": {
+            "primary": mission.target_concept_id,
+            "carried": list(mission.carried_concept_ids),
+        },
+        "scaffold_plan": {},
+        "validated": mission.validated,
+        "engine_version": engine_version,
+    }
+
+
+# ================================================================================== arena
+
+
+class NotReadyForTheArena(RuntimeError):
+    """Too few mastered concepts to mix. The student belongs on the roadmap for now."""
+
+
+def next_challenge(
+    db: Session,
+    *,
+    user_id: str,
+    world_slug: str | None = None,
+    exclude_level_ids: list[str] | None = None,
+) -> tuple[GeneratedMission, "P.PhasedMissionOut"]:
+    """A challenge for a student who finished the roadmap.
+
+    Weighted toward the **weakest mastered** concept, which is the whole point of the
+    arena: a challenge built from what a student is best at flatters them and teaches
+    nothing. `rules/arena.py` picks; only concepts at or above the mastery threshold are
+    eligible, so a challenge never surprises someone with something they never learned.
+
+    No scaffolding, and a shorter hint ladder — both follow from `is_arena=True` in the
+    composer.
+    """
+    users.ensure(db, user_id)
+
+    mastery = {cid: row.mastery for cid, row in student_q.mastery_map(db, user_id).items()}
+
+    try:
+        selection = arena.select_arena_concepts(mastery)
+    except arena.InsufficientMasteredConceptsError as exc:
+        raise NotReadyForTheArena(str(exc)) from exc
+
+    target = student_q.concept_by_slug(db, selection.target_concept_id)
+    if target is None:
+        # Mastery rows are keyed by concept id; the arena works in slugs. If they disagree
+        # the roadmap is the safe place to be.
+        raise NotReadyForTheArena(
+            f"arena picked '{selection.target_concept_id}', which is not a known concept"
+        )
+
+    world = world_for(db, target.slug)
+    return _compose(
+        db,
+        user_id=user_id,
+        world=world,
+        concept=target,
+        carried=list(selection.carried_concept_ids),
+        # The arena is unscaffolded by definition.
+        scaffold={},
+    )
+
+
+# ================================================================================= shared
+
+
+def _compose(
+    db: Session,
+    *,
+    user_id: str,
+    world: World,
+    concept: Concept,
+    carried: list[str],
+    scaffold: dict,
+) -> tuple[GeneratedMission, "P.PhasedMissionOut"]:
+    """Generate, log, persist. The half of `next_mission` after the decision is made."""
+    scene_id = world.scenes[0].id
+    for mech in world.mechanics_for(concept.slug):
+        if mech.scenes:
+            scene_id = mech.scenes[-1]
+            break
+
+    try:
+        outcome = mission_gen.generate(
+            world,
+            target_concept=concept.slug,
+            carried_concepts=carried,
+            scene_id=scene_id,
+            scaffold=scaffold,
+        )
+    except mission_gen.GenerationFailed as exc:
+        ai_log.log(
+            db,
+            capability=ai_log.GENERATE,
+            user_id=user_id,
+            model=settings.model_generate,
+            prompt_version=mission_gen.prompt.PROMPT_VERSION,
+            output_text=str(exc)[:2000],
+            status=ai_log.FAILURE,
+        )
+        raise NoMissionAvailable(str(exc)) from exc
+
+    mission = outcome.mission
+    ai_log.log(
+        db,
+        capability=ai_log.GENERATE,
+        user_id=user_id,
+        model=outcome.model_name,
+        prompt_version=mission_gen.prompt.PROMPT_VERSION,
+        output_text=mission.phases.guided.solution_code[:2000],
+        latency_ms=outcome.latency_ms,
+        status=ai_log.SUCCESS,
+    )
+
+    row = persist(db, mission, user_id=user_id, template=_template_for(db, world, concept))
+    mission.id = row.id
+    return row, mission

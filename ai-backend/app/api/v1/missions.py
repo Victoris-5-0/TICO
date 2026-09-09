@@ -10,11 +10,9 @@ a Python validator checks every id and verb against that same manifest before re
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, Response, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.api.v1 import _fixtures as fx
-from app.api.v1._stub import mark
 from app.database import get_db
 from app.services import missions as missions_service
 from app.core.auth import CurrentUser, get_current_user
@@ -81,64 +79,90 @@ def next_mission(
 
 @router.post(
     "/challenges/next",
-    response_model=GeneratedMissionOut,
-    responses=RESPONSES,
+    response_model=PhasedMissionOut,
+    responses={**RESPONSES, 409: {"model": ErrorResponse}, 503: {"model": ErrorResponse}},
     summary="Get a challenge from the arena",
     description=(
-        "For students who finished the roadmap. Concepts are mixed and weighted toward "
-        "the weakest mastered one — a challenge should stretch, not flatter. No "
-        "scaffolding, shorter hint ladder."
+        "For students who finished the roadmap. Six phases, like any other mission, but "
+        "**no scaffolding** and a shorter hint ladder.\n\n"
+        "Concepts are mixed and weighted toward the **weakest mastered** one — a challenge "
+        "built from what a student is best at flatters them and teaches nothing. Only "
+        "concepts at or above the mastery threshold are eligible, so a challenge never "
+        "surprises anyone with something they were never taught.\n\n"
+        "Returns **409** when too few concepts are mastered to mix: nothing is broken, the "
+        "student belongs on the roadmap for now."
     ),
 )
 def next_challenge(
     body: ChallengeRequest,
-    response: Response,
     user: CurrentUser = Depends(get_current_user),
-) -> GeneratedMissionOut:
-    mark(response)
-    data = fx.generated_mission()
-    data["id"] = "demo-challenge-1"
-    data["carried_concept_ids"] = ["variables", "conditionals"]
-    data["scaffold_plan"] = {"scaffold": {}, "difficulty_band": 7, "rep_number": 1}
-    data["brief"] = "تحدي: افتح البوابة بس لو الرصيف زحمة والقطر جاي في نفس الوقت."
-    return GeneratedMissionOut(**data)
+    db: Session = Depends(get_db),
+) -> PhasedMissionOut:
+    try:
+        _, mission = missions_service.next_challenge(
+            db,
+            user_id=user.id,
+            world_slug=body.world_slug,
+            exclude_level_ids=body.exclude_level_ids,
+        )
+    except missions_service.NotReadyForTheArena as exc:
+        # 409, not 503: nothing is broken, the student simply belongs on the roadmap for
+        # now. A challenge built from one mastered concept is not a challenge.
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Not ready for the arena yet. {exc}",
+        ) from exc
+    except missions_service.NoMissionAvailable as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=f"Could not build a challenge right now. {exc}",
+        ) from exc
+
+    db.commit()
+    return mission
 
 
 @router.post(
     "/missions/generate",
     response_model=GenerateMissionResponse,
-    responses=RESPONSES,
+    responses={**RESPONSES, 503: {"model": ErrorResponse}},
     summary="Generate one mission explicitly",
     description=(
-        "STUB. Composes a scenario from a mission template and the world manifest.\n\n"
         "Distinct from `/missions/next`: that one **decides** what this student should "
         "play now, this one **builds** a mission when the caller already knows what they "
         "want. Used for authoring and for pre-warming a lesson.\n\n"
         "Every request field is optional — with an empty body the server derives the "
         "lesson, concept and scaffold from the student's plan. Anything supplied is "
         "still bounded against the manifest before generation runs, so a client cannot "
-        "generate a mission with a prop or verb the world does not define."
+        "generate a mission outside the world's vocabulary.\n\n"
+        "The response is **exercise-shaped and lossy**: a six-phase mission is a journey, "
+        "and an `exercises` row has nowhere to put one, so this returns the guided phase's "
+        "starter and tests. Call `/v1/missions/next` for the whole thing.\n\n"
+        "`scaffoldLevel` is honoured for a teacher and ignored for a student — a student "
+        "who could set their own scaffold could ask for none and be handed a blank file."
     ),
 )
 def generate_mission(
     body: GenerateMissionRequest,
-    response: Response,
     user: CurrentUser = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ) -> GenerateMissionResponse:
-    mark(response)
+    try:
+        _, mission = missions_service.generate_explicit(
+            db,
+            user_id=user.id,
+            lesson_id=body.lesson_id,
+            concept_slug=body.concept,
+            scaffold_level=body.scaffold_level,
+            is_teacher=user.role == "TEACHER",
+        )
+    except missions_service.NoMissionAvailable as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=f"Could not generate a mission. {exc}",
+        ) from exc
 
+    db.commit()
     return GenerateMissionResponse(
-        mission_id=fx.DEMO_EXERCISE_ID,
-        title="البوابة الشرطية",
-        instructions="الرصيف زحمة. افتح البوابة التانية لو عدد المستنيين أكتر من 30.",
-        starter_code=fx.STARTER_CODE,
-        test_cases=[
-            {"input": t["call"], "expectedOutput": t["expected"], "isHidden": False}
-            for t in fx.MISSION_TESTS
-        ],
-        hints=[fx.HINT_LADDER[r] for r in sorted(fx.HINT_LADDER)],
-        concepts={"primary": "conditionals", "carried": ["variables"]},
-        scaffold_plan=fx.SCAFFOLD_PLAN,
-        validated=True,
-        engine_version="stub-0",
+        **missions_service.as_exercise(mission, engine_version=mission_gen.prompt.PROMPT_VERSION)
     )

@@ -46,10 +46,14 @@ def test_a_supplied_request_id_is_echoed_not_replaced(client):
     assert meta(r)["request_id"] == "01JTRACE"
 
 
-def test_meta_reports_whether_the_endpoint_is_still_a_stub(client):
-    """`/v1/missions/generate` is the example because it is still one, and needs no
-    database. Sessions used to be the example, until it stopped being a stub."""
-    assert meta(client.post("/v1/missions/generate", json={}))["stub"] is True
+def test_nothing_reports_itself_as_a_stub_any_more(client):
+    """`meta.stub` stays in the envelope and is now false everywhere.
+
+    It used to be the client's way of asking "am I talking to real logic yet". All
+    thirteen endpoints answer yes, so the field's job is done — but it stays, because
+    removing a field the client reads is a breaking change to say something that costs
+    one boolean.
+    """
     assert meta(client.get("/v1/health"))["stub"] is False
 
 
@@ -192,19 +196,21 @@ def test_the_clients_hint_call_is_accepted_verbatim():
 # ==============================================================  the new endpoints
 
 
-def test_generate_mission_returns_an_exercise_shaped_payload(client):
-    r = client.post("/v1/missions/generate", json={"concept": "conditionals"})
-    assert r.status_code == 200
-    body = data(r)
-    assert body["validated"] is True
-    assert body["concepts"]["primary"] == "conditionals"
-    assert body["testCases"] and {"input", "expectedOutput"} <= set(body["testCases"][0])
-    assert len(body["hints"]) == 4, "one authored fallback per rung"
+def test_generate_mission_is_still_exercise_shaped():
+    """The flat shape the client writes into an `exercises` row.
 
+    Checked on the DTO rather than over HTTP: generation now calls Gemini and takes
+    twenty seconds, which does not belong in the offline suite. `test_missions_live.py`
+    exercises the real thing.
+    """
+    from app.schemas.missions import GenerateMissionResponse
 
-def test_generate_mission_accepts_an_empty_body(client):
-    """Every field is optional: the server derives the rest from the student."""
-    assert client.post("/v1/missions/generate", json={}).status_code == 200
+    fields = set(GenerateMissionResponse.model_fields)
+    assert {"mission_id", "title", "starter_code", "test_cases", "hints", "validated"} <= fields
+
+    # `validated` is set by the Python validator and never by the model. An unvalidated
+    # mission is never returned, so the client never has to defend against one.
+    assert GenerateMissionResponse.model_fields["validated"].is_required()
 
 
 def test_debrief_counts_are_server_side():
@@ -262,10 +268,6 @@ def test_the_generated_typescript_is_not_stale():
     )
 
 
-def test_every_stub_still_announces_itself(client):
-    """`/v1/missions/*` and `/v1/students/*` are what is left. Sessions, hints, analysis
-    and chat have all stopped being stubs; `generate` is the one that needs no database."""
-    for call in (
-        lambda: client.post("/v1/missions/generate", json={}),
-    ):
-        assert call().headers[STUB_HEADER] == "1"
+def test_no_endpoint_still_carries_the_stub_header(client):
+    """The header exists for the day an endpoint is faked again. Today none are."""
+    assert STUB_HEADER not in client.get("/v1/health").headers

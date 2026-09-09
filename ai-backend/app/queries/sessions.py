@@ -138,3 +138,21 @@ def open_sessions_for(db: Session, user_id: str) -> list[PracticeSession]:
             .order_by(PracticeSession.started_at.desc())
         ).scalars()
     )
+
+
+def latest_closed_for(db: Session, user_id: str) -> PracticeSession | None:
+    """The most recent session this student finished.
+
+    What `/v1/students/{id}/refresh` gates on when the caller does not name a session —
+    it is fired in the background right after a close, so the newest closed one is almost
+    always the one it means.
+    """
+    return db.execute(
+        select(PracticeSession)
+        .where(
+            PracticeSession.user_id == user_id,
+            PracticeSession.ended_at.is_not(None),
+        )
+        .order_by(PracticeSession.ended_at.desc())
+        .limit(1)
+    ).scalar_one_or_none()
