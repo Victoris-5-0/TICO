@@ -1,16 +1,19 @@
 """Mission sessions — the keystone of the evidence layer.
 
-STUB. Shapes are final; behaviour is fake. Real implementation lands in M1.
+Everything else attaches to the session id `POST /v1/sessions` returns: hints, submissions,
+chat, and every model call this service logs. It is also the LangGraph thread id for TICO's
+conversation, which is why the client must keep it for the whole mission rather than
+generating one per request.
 """
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, Response, status
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.orm import Session
 
-from app.api.v1 import _fixtures as fx
-from app.api.v1._stub import mark
 from app.core.auth import CurrentUser, get_current_user
-from app.schemas.common import ErrorResponse, Phase, SessionOutcome
+from app.database import get_db
+from app.schemas.common import ErrorResponse
 from app.schemas.sessions import (
     SessionClose,
     SessionCreate,
@@ -18,10 +21,30 @@ from app.schemas.sessions import (
     SessionOut,
     SessionPhaseUpdate,
 )
+from app.services import sessions as sessions_service
 
 router = APIRouter(prefix="/sessions", tags=["sessions"])
 
-RESPONSES = {401: {"model": ErrorResponse}, 403: {"model": ErrorResponse}}
+RESPONSES = {
+    401: {"model": ErrorResponse},
+    403: {"model": ErrorResponse},
+    404: {"model": ErrorResponse},
+}
+
+
+def _out(db: Session, session) -> SessionOut:
+    """`SessionOut`, with the lesson filled in where the database can supply one."""
+    out = SessionOut.model_validate(session)
+    return out.model_copy(update={"level_id": sessions_service.level_id_of(db, session)})
+
+
+def _owned_or_404(fn, **kwargs):
+    try:
+        return fn(**kwargs)
+    except sessions_service.SessionNotFound as exc:
+        # 404 rather than 403: confirming that someone else's session id exists is not
+        # worth distinguishing an attacker from a typo.
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
 
 
 @router.post(
@@ -32,25 +55,23 @@ RESPONSES = {401: {"model": ErrorResponse}, 403: {"model": ErrorResponse}}
     summary="Open a session",
     description=(
         "Call this when the student opens a mission. Everything else — hints, "
-        "submissions, model calls — attaches to the session id this returns. It is also "
-        "the LangGraph thread id for TICO's chat."
+        "submissions, model calls — attaches to the session id this returns, and it is "
+        "also the LangGraph thread id for TICO's chat, so keep it for the whole mission.\n\n"
+        "Opens at phase `ENCOUNTER` with outcome `IN_PROGRESS`."
     ),
 )
 def open_session(
     body: SessionCreate,
-    response: Response,
     user: CurrentUser = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ) -> SessionOut:
-    mark(response)
-    data = fx.session()
-    data["user_id"] = user.id
-    data["level_id"] = body.level_id
-    data["generated_mission_id"] = body.generated_mission_id
-    data["phase"] = Phase.ENCOUNTER
-    data["outcome"] = SessionOutcome.IN_PROGRESS
-    data["hints_used"] = 0
-    data["time_spent_ms"] = 0
-    return SessionOut(**data)
+    session = sessions_service.open_session(
+        db,
+        user_id=user.id,
+        level_id=body.level_id,
+        generated_mission_id=body.generated_mission_id,
+    )
+    return _out(db, session)
 
 
 @router.patch(
@@ -58,19 +79,27 @@ def open_session(
     response_model=SessionOut,
     responses=RESPONSES,
     summary="Advance the phase",
-    description="The client moves the student through the seven-phase mission loop.",
+    description=(
+        "The client drives the student through the mission loop; this records where they "
+        "are. The phase matters to `/v1/hints`, which rations help differently in each "
+        "one — `GUIDED_CODING` starts at rung 1, `ADAPT_REMIX` at rung 2, and phases 1 to "
+        "4 have no ladder at all."
+    ),
 )
 def set_phase(
     session_id: str,
     body: SessionPhaseUpdate,
-    response: Response,
     user: CurrentUser = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ) -> SessionOut:
-    mark(response)
-    data = fx.session(session_id)
-    data["user_id"] = user.id
-    data["phase"] = body.phase
-    return SessionOut(**data)
+    session = _owned_or_404(
+        sessions_service.set_phase,
+        db=db,
+        user_id=user.id,
+        session_id=session_id,
+        phase=body.phase,
+    )
+    return _out(db, session)
 
 
 @router.post(
@@ -79,23 +108,28 @@ def set_phase(
     responses=RESPONSES,
     summary="Close a session",
     description=(
-        "Records the outcome and elapsed time. Closing triggers the student-model "
-        "refresh in the background — the client does not wait for it."
+        "Records the outcome and elapsed time, and moves the student's concept mastery "
+        "on the evidence this session produced.\n\n"
+        "**Idempotent.** Closing twice keeps the first `endedAt` and applies the mastery "
+        "evidence once — the client may legitimately fire on both \"tests passed\" and "
+        "\"student navigated away\"."
     ),
 )
 def close_session(
     session_id: str,
     body: SessionClose,
-    response: Response,
     user: CurrentUser = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ) -> SessionOut:
-    mark(response)
-    data = fx.session(session_id)
-    data["user_id"] = user.id
-    data["outcome"] = body.outcome
-    data["time_spent_ms"] = body.time_spent_ms
-    data["ended_at"] = fx.NOW
-    return SessionOut(**data)
+    session = _owned_or_404(
+        sessions_service.close_session,
+        db=db,
+        user_id=user.id,
+        session_id=session_id,
+        outcome=body.outcome,
+        time_spent_ms=body.time_spent_ms,
+    )
+    return _out(db, session)
 
 
 @router.post(
@@ -104,33 +138,22 @@ def close_session(
     responses=RESPONSES,
     summary="End-of-mission debrief",
     description=(
-        "STUB. What the student actually did, ready for the results screen.\n\n"
+        "What the student actually did, ready for the results screen.\n\n"
         "Every number here is **counted in Python** from `submissions` and `hint_events`. "
         "The model contributes one field, `ticoFeedback`, and is never asked for a count — "
-        "it would guess, and a wrong attempt count in front of a child is worse than no "
-        "debrief at all.\n\n"
+        "a reply containing a figure the counts do not support is thrown away, because "
+        "\"you did it first try\" in front of a child who took nine attempts proves nobody "
+        "was watching.\n\n"
         "`errorsOvercome` is the interesting one: tags that showed up and then stopped. "
         "That is the thing a student can feel proud of."
     ),
 )
 def session_debrief(
     session_id: str,
-    response: Response,
     user: CurrentUser = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ) -> SessionDebriefResponse:
-    mark(response)
-
-    return SessionDebriefResponse(
-        session_id=session_id,
-        outcome=SessionOutcome.SOLVED,
-        total_attempts=4,
-        hints_used=2,
-        errors_overcome=["assignment_vs_comparison", "missing_colon"],
-        time_spent_ms=412_000,
-        concepts_mastered=["conditionals"],
-        tico_feedback=(
-            "برافو! غلطت في = و == مرتين وبعدين مسكتها لوحدك. "
-            "دي بالظبط الحاجة اللي بتفرق بين اللي بيحفظ واللي بيفهم."
-        ),
-        stars_earned=3,
+    payload = _owned_or_404(
+        sessions_service.debrief, db=db, user_id=user.id, session_id=session_id
     )
+    return SessionDebriefResponse(**payload)

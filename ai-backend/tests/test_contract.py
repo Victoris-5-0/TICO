@@ -47,7 +47,9 @@ def test_a_supplied_request_id_is_echoed_not_replaced(client):
 
 
 def test_meta_reports_whether_the_endpoint_is_still_a_stub(client):
-    assert meta(client.post("/v1/sessions", json={"level_id": "x"}))["stub"] is True
+    """`/v1/missions/generate` is the example because it is still one, and needs no
+    database. Sessions used to be the example, until it stopped being a stub."""
+    assert meta(client.post("/v1/missions/generate", json={}))["stub"] is True
     assert meta(client.get("/v1/health"))["stub"] is False
 
 
@@ -205,15 +207,38 @@ def test_generate_mission_accepts_an_empty_body(client):
     assert client.post("/v1/missions/generate", json={}).status_code == 200
 
 
-def test_debrief_counts_are_server_side(client):
-    r = client.post("/v1/sessions/s1/debrief")
-    assert r.status_code == 200
-    body = data(r)
-    assert body["sessionId"] == "s1"
-    assert 0 <= body["starsEarned"] <= 3
-    assert body["ticoFeedback"]
-    # the field worth having: mistakes that stopped happening
-    assert isinstance(body["errorsOvercome"], list)
+def test_debrief_counts_are_server_side():
+    """Every field on the debrief except `ticoFeedback` is counted, never generated.
+
+    Checked on the DTO and the rules rather than over HTTP: the endpoint now needs a
+    database, and the property that matters — that the model contributes exactly one
+    field — is a statement about the schema.
+    """
+    from app.schemas.sessions import SessionDebriefResponse
+    from app.services.sessions import stars_for
+
+    counted = {
+        "total_attempts",
+        "hints_used",
+        "errors_overcome",
+        "time_spent_ms",
+        "concepts_mastered",
+        "stars_earned",
+        "outcome",
+    }
+    fields = set(SessionDebriefResponse.model_fields)
+    assert counted <= fields
+    assert "tico_feedback" in fields, "the one field the model writes"
+
+    # And the stars are arithmetic, so they can be checked without a database at all.
+    assert stars_for(solved=True, attempts=1, hints=0) == 3
+    assert stars_for(solved=False, attempts=1, hints=0) == 0
+    assert all(
+        0 <= stars_for(solved=s, attempts=a, hints=h) <= 3
+        for s in (True, False)
+        for a in range(0, 20)
+        for h in range(0, 10)
+    )
 
 
 @pytestmark_client
@@ -238,8 +263,9 @@ def test_the_generated_typescript_is_not_stale():
 
 
 def test_every_stub_still_announces_itself(client):
+    """`/v1/missions/*` and `/v1/students/*` are what is left. Sessions, hints, analysis
+    and chat have all stopped being stubs; `generate` is the one that needs no database."""
     for call in (
         lambda: client.post("/v1/missions/generate", json={}),
-        lambda: client.post("/v1/sessions/s1/debrief"),
     ):
         assert call().headers[STUB_HEADER] == "1"
