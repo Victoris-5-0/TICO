@@ -113,6 +113,13 @@ jobs:
       - name: Tests
         run: python -m pytest tests -q
 
+      - name: Evals
+        # A different question from the tests: not "does the code do what it says" but
+        # "is the model any good at this". Both of these run pure-Python by default —
+        # the composer sweep has no model in it at all, and the classifier eval scores
+        # its deterministic fallback unless a key is present — so they are free here.
+        run: python -m pytest evals -q
+
       - name: Generated TypeScript is not stale
         # `client/src/lib/ai/types.ts` is generated from /openapi.json. Hand-editing it,
         # or changing a DTO without regenerating, is what let the two sides drift for
