@@ -59,38 +59,121 @@ scenes:
     description_en: Behind the counter — worktop, peel, trays going into the oven
     description_ar: ورا التسليم — الطبلية والمدرة والصواني داخلة الفرن
     supports_vocabulary: [loaves, trays, loaves_per_tray, dough, oven_temperature, orders]
-
+# -----------------------------------------------------------------------------
+# CHARACTERS — everyone the bakery-v2 scene can draw.
+#
+# Eleven, of which ten have sprite atlases. Only Hassan and Salma have a role beyond
+# queueing; the other eight are the queue, and the queue is eight long.
+#
+# Two of these used to be wrong. The manifest had Mariam running the counter and the
+# orders book, and the demo draws her waiting in the queue; it had Salma "learning the
+# trade", and she is the queue coordinator, the one person in the scene facing the other
+# way. A line addressed to a Mariam behind the counter would be spoken to someone the
+# child can see standing in the line.
+#
+# The `#` line under each is their appearance, read out of the artwork prompts. A
+# generated line describing someone must not contradict it.
+# -----------------------------------------------------------------------------
 characters:
+
   - id: tico
+    name_ar: تيكو
     role: mentor
     asset: characters/tico/tico-neutral.webp
+    description: The companion. Explains, never solves.
     voice: warm, playful, encouraging; never sarcastic, never condescending
-    language: Egyptian Arabic for dialogue, English for code identifiers
     beats: [greeting, nudge, success, failure, celebrate]
 
   - id: hassan
     name_ar: حسن
     role: npc
-    asset: characters/bakery/hassan-v1.webp
-    description: The baker at the oven. Counts everything by eye, and is usually right.
+    asset: bakery-v2/hassan.webp
+    description: The baker. Works the oven and the peel, and hands the bread over himself.
+    # Moustache, short salt-and-pepper hair, medium-brown skin, cream rolled-sleeve shirt, terracotta apron, dark trousers. Middle-aged.
     voice: gruff, kind underneath, short practical sentences
-    beats: [problem_intro, reaction]
-
-  - id: mariam
-    name_ar: مريم
-    role: npc
-    asset: characters/bakery/mariam-v1.webp
-    description: Runs the counter and the orders book.
-    voice: quick, organised, keeps a running total in her head
     beats: [problem_intro, reaction]
 
   - id: salma
     name_ar: سلمى
     role: npc
-    asset: characters/bakery/salma-v1.webp
-    description: Learning the trade. Asks the questions the student is thinking.
-    voice: curious, a little unsure, asks rather than tells
-    beats: [problem_intro]
+    asset: bakery-v2/salma.webp
+    description: Queue coordinator. Faces the queue and waves the next customer forward. Never queues, never served.
+    # Medium-brown skin, teal hijab, coral long modest tunic, dark trousers, brown shoes. Carries a small blank clipboard.
+    voice: calm, organised, keeps the line moving
+    beats: [problem_intro, reaction]
+
+  - id: mariam
+    name_ar: مريم
+    role: customer
+    asset: bakery-v2/mariam.webp
+    description: In the queue. Takes two loaves and walks off.
+    # Adult woman. Sand hijab, medium-brown skin, teal patterned dress, brown shoes.
+    voice: ordinary, unhurried; a neighbour buying bread, not a character in a lesson
+    beats: [reaction]
+
+  - id: nour
+    name_ar: نور
+    role: customer
+    asset: bakery-v2/nour.webp
+    description: In the queue. Takes two loaves and walks off.
+    # Young adult man. Curly dark hair, teal open overshirt over a cream T-shirt, navy trousers, brown sneakers, small terracotta backpack.
+    voice: ordinary, unhurried; a neighbour buying bread, not a character in a lesson
+    beats: [reaction]
+
+  - id: amina
+    name_ar: أمينة
+    role: customer
+    asset: bakery-v2/amina.webp
+    description: In the queue. Takes two loaves and walks off.
+    # Woman in her sixties. Cream hijab, olive-green long loose dress, plain brown shoes. Kind, dignified.
+    voice: ordinary, unhurried; a neighbour buying bread, not a character in a lesson
+    beats: [reaction]
+
+  - id: omar
+    name_ar: عمر
+    role: customer
+    asset: bakery-v2/omar.webp
+    description: In the queue. Takes two loaves and walks off.
+    # Man in his thirties, stocky. Dusty-blue long-sleeve workshirt with rolled cuffs, ochre-tan trousers, dark brown shoes.
+    voice: ordinary, unhurried; a neighbour buying bread, not a character in a lesson
+    beats: [reaction]
+
+  - id: dina
+    name_ar: دينا
+    role: customer
+    asset: bakery-v2/dina.webp
+    description: In the queue. Takes two loaves and walks off.
+    # University student in her twenties. Dark curly hair in a low ponytail, no headscarf, rust-terracotta blouse, navy trousers, cream sneakers.
+    voice: ordinary, unhurried; a neighbour buying bread, not a character in a lesson
+    beats: [reaction]
+
+  - id: youssef
+    name_ar: يوسف
+    role: customer
+    asset: bakery-v2/youssef.webp
+    description: In the queue. Takes two loaves and walks off.
+    # Dignified man in his late sixties. White hair and moustache, small round eyeglasses, light-taupe galabeya, brown slippers.
+    voice: ordinary, unhurried; a neighbour buying bread, not a character in a lesson
+    beats: [reaction]
+
+  - id: hoda
+    name_ar: هدى
+    role: customer
+    asset: bakery-v2/hoda.webp
+    description: In the queue. Takes two loaves and walks off.
+    # Woman in her forties. Charcoal-black hijab, mustard-ochre knee-length tunic, dark-teal trousers, black flats.
+    voice: ordinary, unhurried; a neighbour buying bread, not a character in a lesson
+    beats: [reaction]
+
+  - id: farid
+    name_ar: فريد
+    role: customer
+    asset: bakery-v2/farid-saidi.webp
+    description: In the queue. Takes two loaves and walks off.
+    # Man in his fifties, Sa'idi. Galabeya and turban. Balding with a thick black moustache, tan-brown skin.
+    voice: ordinary, unhurried; a neighbour buying bread, not a character in a lesson
+    beats: [reaction]
+
 
 vocabulary:
   loaves:
@@ -165,42 +248,94 @@ vocabulary:
     ar: وزن الشكارة بالكيلو
     type: int
     plausible_range: [10, 50]
-
-
 # -----------------------------------------------------------------------------
 # VISUAL — the closed vocabulary the client can draw and move.
 #
-# THE CONTRACT WITH THE FRONTEND. Generation may only name a sprite, a state or an
-# animation that appears here. Anything else is rejected by the validator, because a
-# mission asking for artwork nobody drew renders as a dead screen and the code would
-# still look correct.
+# The second fence. A mission asking for artwork nobody drew renders as a dead screen
+# while its code still looks perfectly correct, which is exactly the kind of failure
+# nothing else catches.
 #
 # `sprites` map to files under client/public/assets/bakery-v2/.
 # -----------------------------------------------------------------------------
 visual:
-  backdrop: worlds/bakery/gameplay/playfield-topdown-v1.webp
+  # bakery-v2 is the renderer. The old top-down still is not what the client draws: the
+  # mission route composes an SVG scene from the bakery-v2 layers, seen side-on.
+  backdrop: bakery-v2/environment.webp
   establishing: worlds/bakery/establishing-v1.webp
 
+  # `max_shown` is what the scene will actually draw, not a style preference. The tray
+  # has eight slots; a mission that puts nine loaves on it loses one with no error.
   sprites:
-    tray:     { asset: bakery-v2/tray.webp,     countable: true,  max_shown: 8 }
-    loaf:     { asset: bakery-v2/loaf.webp,     countable: true,  max_shown: 12 }
-    dough:    { asset: bakery-v2/dough.webp,    countable: true,  max_shown: 6 }
-    bag:      { asset: bakery-v2/bag.webp,      countable: true,  max_shown: 6 }
-    oven:     { asset: bakery-v2/oven.webp,     states: [cold, lit] }
-    peel:     { asset: bakery-v2/peel.webp }
-    worktop:  { asset: bakery-v2/worktop.webp }
-    counter:  { asset: bakery-v2/counter.webp }
-
-  # A tray can also be burnt — that is what phase 6 changes.
+    environment: { asset: bakery-v2/environment.webp }
+    awning:      { asset: bakery-v2/awning.webp }
+    oven:        { asset: bakery-v2/oven.webp,       states: [cold, lit] }
+    oven-fire:   { asset: bakery-v2/oven-fire.webp }
+    counter:     { asset: bakery-v2/counter.webp }
+    worktop:     { asset: bakery-v2/worktop.webp }
+    tray:        { asset: bakery-v2/tray.webp }
+    peel:        { asset: bakery-v2/peel.webp }
+    olive:       { asset: bakery-v2/olive.webp }
+    aloe:        { asset: bakery-v2/aloe.webp }
+    radio:       { asset: bakery-v2/radio.webp }
+    flour-sack:  { asset: bakery-v2/flour-sack.webp }
+    loaf:        { asset: bakery-v2/loaf.webp,       countable: true, max_shown: 8 }
+    dough:       { asset: bakery-v2/dough.webp,      countable: true, max_shown: 8 }
+    bag:         { asset: bakery-v2/bag.webp,        countable: true, max_shown: 1 }
   states:
-    tray: [normal, burnt]
     oven: [cold, lit]
 
+  # The phases the bakery-v2 state machine actually runs, in order, plus its three
+  # continuous loops. These replaced four names that read well and rendered nothing:
+  # `trays_into_oven`, `loaves_appear`, `count_up` and `tray_burns` were never
+  # implemented, and `tray_burns` has no artwork in bakery-v2 at all — which is why the
+  # burnt-tray state is gone from `states` above.
   animations:
-    - trays_into_oven     # the peel loads trays, the oven lights
-    - loaves_appear       # finished bread stacks on the counter
-    - count_up            # a number ticks up beside the counter
-    - tray_burns          # one tray blackens, smoke rises
+    - loading             # Hassan slides the dough into the oven on the peel (1800ms)
+    - baking              # the oven works; dough becomes bread 60% through (2800ms)
+    - retrieving          # he draws the hot bread out on the peel (1800ms)
+    - stocking            # loaves move from the peel onto the tray (1400ms)
+    - handover            # two loaves pass to the customer's hands (2000ms)
+    - exiting             # the served customer walks off frame left (2200ms)
+    - advancing           # the whole queue steps one place forward (1400ms)
+    - walk_cycle          # continuous, 180ms a frame
+    - oven_fire           # continuous, brightens while baking
+    - steam               # continuous, above the oven and above the counter
+
+
+# -----------------------------------------------------------------------------
+# SIMULATION — the scene's own arithmetic, and the verbs it offers.
+#
+# `visual` above says what can be DRAWN. This says what is TRUE about it once drawn,
+# which is a different constraint and the one that was missing.
+#
+# These are not suggestions. `client/src/lib/bakery/simulation.ts` bakes eight loaves a
+# batch and hands two to each customer, and the sprites are placed to match. A mission
+# teaching `loaves_per_tray = 12` is perfectly good Python — it runs, it passes its
+# tests, the validator is satisfied — and the child still watches eight loaves land on
+# the tray while being told there are twelve. Nothing else in the pipeline catches it,
+# because every part of it is individually correct.
+# -----------------------------------------------------------------------------
+simulation:
+  quantities:
+    batch_size: 8
+    order_size: 2
+    queue_length: 8
+    batches_to_clear_queue: 2
+    loaves_to_clear_queue: 16
+    tray_capacity: 8
+
+  # A mission expecting any other verb has no button to press.
+  controls:
+    - { id: bake, label_en: Bake batch, label_ar: اخبز دفعة, effect: "adds 8 loaves as dough" }
+    - { id: serve, label_en: Serve next, label_ar: قدّم للي عليه الدور, effect: "gives 2 loaves to the head of the queue" }
+    - { id: demo, label_en: Play demo, label_ar: شغّل العرض, effect: "runs the full cycle unattended" }
+    - { id: pause, label_en: Pause, label_ar: وقّف مؤقتًا, effect: "freezes the clock mid-phase" }
+    - { id: reset, label_en: Reset, label_ar: ابدأ من جديد, effect: "back to 8 waiting, 0 baked" }
+
+  rules:
+    - A bake is refused while the tray still holds bread.
+    - A serve is refused below two loaves.
+    - Two full batches clear the queue exactly. Sixteen loaves, eight customers.
 
 # -----------------------------------------------------------------------------
 # MECHANICS — authored templates. Each becomes one mission_templates row.
