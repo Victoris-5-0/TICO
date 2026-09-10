@@ -17,19 +17,17 @@ from app.rules.arena import (
     prepare_arena_composition_args,
     select_arena_concepts,
 )
-from app.rules.composer import (
-    STRONG_MASTERY_THRESHOLD,
-    compose,
-)
+from app.rules.composer import compose
+from app.rules.mastery import MASTERY_THRESHOLD
 from app.schemas.common import ScaffoldLevel, SkillBand
 
 
 def test_arena_below_threshold_never_eligible():
-    """Verify concepts below STRONG_MASTERY_THRESHOLD are never selected into the arena."""
+    """Verify concepts below MASTERY_THRESHOLD are never selected into the arena."""
     mastery_map = {
         "variables": 0.95,       # Eligible
-        "conditionals": 0.75,    # Eligible
-        "while_loops": 0.69,     # Ineligible (just below 0.70 threshold)
+        "conditionals": 0.85,    # Eligible
+        "while_loops": MASTERY_THRESHOLD - 0.01,  # Ineligible, just under the bar
         "for_loops": 0.40,       # Ineligible
         "functions": 0.15,       # Ineligible
     }
@@ -47,9 +45,9 @@ def test_arena_weighted_ascending_order_hand_computed():
     """Verify weakest-mastered concepts are prioritized to stretch the learner.
 
     Hand-computed test case:
-      Threshold: 0.70
+      Threshold: MASTERY_THRESHOLD
       Concepts:
-        - variables:    0.72  (Weakest mastered -> closest to threshold -> highest stretch)
+        - variables:    0.77  (Weakest mastered -> closest to threshold -> highest stretch)
         - conditionals: 0.85  (Moderately mastered)
         - loops:        0.99  (Rock-solid mastered -> lowest stretch)
       Expected ascending order: ['variables', 'conditionals', 'loops']
@@ -60,7 +58,7 @@ def test_arena_weighted_ascending_order_hand_computed():
     """
     mastery_map = {
         "loops": 0.99,
-        "variables": 0.72,
+        "variables": 0.77,
         "conditionals": 0.85,
     }
 
@@ -69,9 +67,9 @@ def test_arena_weighted_ascending_order_hand_computed():
     assert result.selected_concept_ids == ["variables", "conditionals"]
     assert result.target_concept_id == "variables"
     assert result.carried_concept_ids == ["conditionals"]
-    assert result.concept_masteries == {"variables": 0.72, "conditionals": 0.85}
+    assert result.concept_masteries == {"variables": 0.77, "conditionals": 0.85}
     assert "variables" in result.reason
-    assert "0.72" in result.reason
+    assert "0.77" in result.reason
 
 
 def test_arena_exact_tie_deterministic_alphabetical():
@@ -121,16 +119,23 @@ def test_arena_invalid_count_raises_value_error():
         select_arena_concepts({"variables": 0.9}, count=-1)
 
 
-def test_arena_reuses_composer_strong_mastery_threshold():
+def test_arena_entry_uses_the_one_mastery_threshold():
     """Verify arena.py uses exact same threshold constant as composer.py without drift."""
     # 1. Assert arena default threshold is strictly composer's constant
-    assert arena_module.STRONG_MASTERY_THRESHOLD == STRONG_MASTERY_THRESHOLD
-    assert STRONG_MASTERY_THRESHOLD == 0.7
+    assert arena_module.MASTERY_THRESHOLD == MASTERY_THRESHOLD
+
+    # Not a literal. Arena entry asks "has this student mastered the concept?" — the same
+    # question the gate, the mission picker and the debrief ask — so it must be the same
+    # number. It used to borrow composer.STRONG_MASTERY_THRESHOLD (0.70), a *scaffolding*
+    # threshold, and let students in on concepts the roadmap had not finished teaching.
+    from app.rules.composer import GATE_MASTERY_THRESHOLD
+
+    assert MASTERY_THRESHOLD == GATE_MASTERY_THRESHOLD
 
     # 2. Test exact boundary condition
     boundary_mastery_map = {
-        "at_boundary": STRONG_MASTERY_THRESHOLD,
-        "below_boundary": round(STRONG_MASTERY_THRESHOLD - 0.001, 4),
+        "at_boundary": MASTERY_THRESHOLD,
+        "below_boundary": round(MASTERY_THRESHOLD - 0.001, 4),
     }
 
     res = select_arena_concepts(boundary_mastery_map, count=1)
@@ -142,7 +147,7 @@ def test_arena_prepare_composition_args_integrates_with_composer():
     """Verify output of arena selection cleanly feeds into composer.compose(is_arena=True)."""
     mastery_map = {
         "variables": 0.90,
-        "conditionals": 0.72,
+        "conditionals": 0.78,
         "loops": 0.85,
     }
 
@@ -160,7 +165,7 @@ def test_arena_prepare_composition_args_integrates_with_composer():
     # In arena mode, composer enforces NONE scaffolding across all carried concepts
     for cid in selection.carried_concept_ids:
         assert plan_result.scaffold_plan.scaffold[cid] == ScaffoldLevel.NONE
-    # In arena mode, difficulty band is elevated (8 + int(0.72 * 2) = 9)
+    # In arena mode, difficulty band is elevated (8 + int(0.78 * 2) = 9)
     assert plan_result.scaffold_plan.difficulty_band == 9
 
 

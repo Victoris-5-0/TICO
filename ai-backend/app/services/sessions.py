@@ -33,7 +33,11 @@ from app.ai.chains.debrief import write_debrief
 from app.models_tables import ConceptMastery, Exercise, GeneratedMission, Lesson, Submission
 from app.models_tables.enums import SessionKind, SessionOutcome
 from app.queries import sessions as session_q, students as student_q, users
-from app.rules.mastery import compute_outcome_score, update_mastery_profile
+from app.rules.mastery import (
+    MASTERY_THRESHOLD,
+    compute_outcome_score,
+    update_mastery_profile,
+)
 from app.schemas.common import Phase
 from sqlalchemy import select
 
@@ -279,10 +283,7 @@ def debrief(db: Session, *, user_id: str, session_id: str) -> dict:
     }
 
 
-#: Where "knows this" begins. Matches `rules/mastery.STRONG_MASTERY_THRESHOLD` in spirit;
-#: kept local because the debrief's claim to a student is a softer thing than the planner's
-#: decision to skip a lesson.
-MASTERY_THRESHOLD = 0.8
+
 
 
 def _crossed_the_line(db: Session, session, target: str) -> list[str]:
