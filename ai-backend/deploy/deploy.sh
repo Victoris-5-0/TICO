@@ -39,6 +39,33 @@ git -C "$(dirname "$0")/../.." log --oneline -3
 say "running the tests that CI runs"
 ( cd "$(dirname "$0")/.." && env/python.exe -m pytest -q ) || die "tests failed; not deploying"
 
+# ------------------------------------------------------------- let ourselves back in
+# Home IPs rotate, and port 22 is deliberately not open to the world — so the first
+# symptom of a new IP is the deploy hanging for twenty seconds and dying.
+#
+# Rather than leave that as a manual step you rediscover every few weeks, authorize the
+# current IP if it is not already allowed. Adding a rule that exists is not an error worth
+# stopping for, so a duplicate is swallowed.
+#
+# Skipped entirely when the AWS CLI is absent or unauthenticated: this is a convenience,
+# and a deploy should not fail because a credential for a different tool expired.
+say "checking ssh access"
+
+MY_IP=$(curl -sf -m 10 https://checkip.amazonaws.com | tr -d '[:space:]' || true)
+
+if [ -n "$MY_IP" ] && command -v aws >/dev/null && aws sts get-caller-identity >/dev/null 2>&1; then
+  SG="${TICO_SG:-sg-0c40de5865652f214}"
+  if aws ec2 describe-security-groups --group-ids "$SG"        --query "SecurityGroups[].IpPermissions[?FromPort==\`22\`].IpRanges[].CidrIp"        --output text 2>/dev/null | tr '	' '
+' | grep -qx "$MY_IP/32"; then
+    echo "  $MY_IP already allowed"
+  else
+    echo "  adding $MY_IP to $SG"
+    aws ec2 authorize-security-group-ingress --group-id "$SG"       --protocol tcp --port 22 --cidr "$MY_IP/32"       --output text >/dev/null 2>&1 && echo "  added" || echo "  could not add (may already exist)"
+  fi
+else
+  echo "  skipped — no working aws cli. If ssh times out, allow your IP on port 22 manually."
+fi
+
 # ------------------------------------------------------------------------- the deploy
 say "deploying to $HOST"
 
