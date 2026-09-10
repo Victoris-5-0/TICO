@@ -45,22 +45,34 @@ accident. `TICO_LIVE_MODEL=1` is the deliberate exception.
 
 ## How a student progresses
 
-One threshold, `rules/mastery.MASTERY_THRESHOLD = 0.75`, imported by everything that asks
-"has this student mastered the concept?" — the advance gate, the mission picker, the
-debrief's `conceptsMastered`, and arena entry. They flip together, at the same moment.
+**The map is the contract.** A concept shows **3 stops**, and that is what the client
+draws. If mastery is still short after those three the path extends, to at most **6**. At
+six the concept ends whatever the number says — nobody is trapped on one idea, and concepts
+are carried, so a weak one keeps getting practice inside the next.
 
-Mastery is an exponential moving average over sessions, so **the outcome score is also the
-ceiling it converges to**. Every passing score therefore sits above the threshold: hints
-cost repetitions, not the possibility of finishing. Roughly six clean solves to master a
-concept from cold, twelve if every hint is used.
+    never needs a hint      3 stops
+    uses a couple           4
+    leans on every hint     6
+    fails every time        6, then moves on anyway
 
-That was not true until 2026-09-10. Passing with two hints scored 0.70 against a 0.70 gate
-and passing with three scored 0.55, so a student who leaned on hints converged *below* the
-bar and was handed the same concept forever, with nothing on screen explaining why.
+`rules/progression` owns this. `POST /v1/students/{id}/refresh` returns `progress`: one row
+per concept with `completed`, `stopsTotal`, `remaining`, `isComplete` and `extended` — enough
+to draw the path without knowing anything about mastery. `extended` exists so the client can
+say the path grew rather than silently showing more circles.
 
-When a concept is mastered, `services/missions.next_concept` returns the next one in the
-fixed order on the following `/v1/missions/next` — nothing else has to happen, and no
-model is asked.
+Mastery still decides *whether* the path extends, the scaffolding level, and arena entry —
+it just no longer decides how long the road is. One threshold,
+`rules/mastery.MASTERY_THRESHOLD = 0.75`, imported by the gate, the picker, the debrief and
+the arena, so they flip together.
+
+`DEFAULT_LEARNING_RATE = 0.40` is part of the same design, not a separate knob: three
+observations is little evidence, so each must count. At the old 0.20 a perfect student
+reached 0.488 after three clean solves and the path would have extended for *everyone*.
+
+Passing scores all sit above the threshold (1.00 / 0.95 / 0.90 / 0.85 / 0.80) because this
+score is the target of a moving average and therefore its ceiling. Until 2026-09-10 two
+hints scored 0.70 against a 0.70 gate, so a student who leaned on hints could never finish
+a concept at all.
 
 ## The three fences on generation
 

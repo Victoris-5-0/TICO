@@ -36,7 +36,17 @@ BOUNDARY_EPSILON: Final[float] = 1e-6
 # and docs/12-roadmap-and-agent-playbook.md) specify that formula, thresholds,
 # decay, and evidence requirements are "versioned deterministic configuration"
 # to be calibrated against student performance telemetry during pilot testing.
-DEFAULT_LEARNING_RATE: Final[float] = 0.20
+#: How much one session moves a concept. Tuned to `rules/progression.BASE_STOPS`: three
+#: observations is very little evidence, so each has to count for a lot.
+#:
+#: It was 0.20, which needed seven clean solves to reach the threshold — so a map promising
+#: three stops would have extended to six for *every* student, including one who never got
+#: anything wrong, and the number on the map would have been a lie. At 0.40 a clean solver
+#: finishes in exactly three and a struggling one in six:
+#:
+#:     hints 0 1 2 3 4
+#:     stops 3 4 4 5 6
+DEFAULT_LEARNING_RATE: Final[float] = 0.40
 
 # NEEDS DECISION: Outcome mapping values by hint count / rung reached before solving
 # are implementation heuristics mapped to the 4-rung progressive disclosure hint ladder

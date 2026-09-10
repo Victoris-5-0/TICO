@@ -24,6 +24,26 @@ from app.schemas.common import (
 # --------------------------------------------------------------------------- mastery
 
 
+class ConceptProgressOut(Schema):
+    """One concept's row on the map: how many stops it has and how many are walked.
+
+    This is what the path on screen is drawn from. `stopsTotal` is three for a concept a
+    student is coping with and grows to at most six while they are not, so a client can
+    render the stops without knowing anything about mastery — and `extended` lets it say
+    the path grew rather than silently showing more circles.
+    """
+
+    concept_id: str
+    completed: int = Field(ge=0, description="Missions finished on this concept.")
+    stops_total: int = Field(ge=0, description="Stops to draw. 3 normally, up to 6.")
+    remaining: int = Field(ge=0)
+    is_complete: bool = Field(description="Walk past it; the next concept is unlocked.")
+    extended: bool = Field(
+        description="The path grew beyond the usual three because mastery was still short."
+    )
+    mastery: float = Field(ge=0.0, le=1.0)
+
+
 class MasteryOut(ORMSchema):
     """Per student, per concept. Moved by the target concept at full weight and by every
     carried concept at its own `level_concept.weight`."""
@@ -91,6 +111,8 @@ class RefreshRequest(Schema):
 class RefreshResponse(Schema):
     profile: StudentProfileOut
     concepts: list[MasteryOut]
+    #: The map. One row per concept the student has touched, in curriculum order.
+    progress: list[ConceptProgressOut] = Field(default_factory=list)
     advanced: bool = Field(description="Did the gate move the student on, or hold them for another rep?")
     decided_by: DecidedBy
     reason: str | None = Field(
