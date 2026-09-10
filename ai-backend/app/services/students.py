@@ -74,8 +74,14 @@ def refresh(db: Session, *, user_id: str, session_id: str | None = None) -> dict
             "concepts": list(mastery.values()),
             "advanced": False,
             "decided_by": DecidedBy.RULE,
+            # Two different situations, and saying "no closed session" for both was
+            # misleading: a session played on an authored exercise closes perfectly well
+            # and still has no target concept, because only a generated mission records
+            # one. The gate is about a concept, so there is nothing to open.
             "reason": (
                 "No closed session to evaluate, so there was no gate to open or hold."
+                if session is None
+                else "That session has no target concept, so there is no gate to evaluate."
             ),
             "summary": None,
         }

@@ -296,3 +296,59 @@ def test_hint_guard_does_not_trip_on_short_shared_lines():
         "شيل الـ pass واكتب return مكانها.", "def f():\n    pass\n"
     )
     assert not leaked
+
+
+# ------------------------------------------------------- the exercise-shaped flattening
+
+
+def test_as_exercise_reads_fields_that_exist():
+    """`/v1/missions/generate` flattens six phases into an `exercises` row.
+
+    This exists because that endpoint shipped with two bugs that no test would have caught:
+    a `NameError` on an unimported module, and a read of `guided.starting_code`, which the
+    six-phase schema does not have. Both were found by generating a real mission, not by
+    the suite — the endpoint had no coverage at all.
+
+    Run against the committed example mission, so it costs nothing and cannot drift from
+    the shape the service actually produces.
+    """
+    import json
+    import pathlib
+
+    from app.schemas import phases as P
+    from app.schemas.missions import GenerateMissionResponse
+    from app.services.missions import ENGINE_VERSION, as_exercise
+
+    example = pathlib.Path(__file__).resolve().parents[1] / "docs" / "example-mission-response.json"
+    mission = P.PhasedMissionOut.model_validate(json.loads(example.read_text(encoding="utf-8"))["data"])
+
+    # Constructing the DTO is most of the assertion: a missing or misnamed field raises.
+    response = GenerateMissionResponse(**as_exercise(mission))
+
+    # The starter is the first guided step's code — there is no separate starting file.
+    assert response.starter_code == mission.phases.guided.steps[0].code
+    assert response.test_cases, "an exercise with no tests cannot be marked passed"
+    assert len(response.hints) == 4, "one authored fallback per rung"
+
+    # The version must match what `persist` stamps on the row, or the response describes a
+    # different artefact from the one that was stored.
+    assert response.engine_version == ENGINE_VERSION
+
+
+def test_as_exercise_keeps_hidden_tests_hidden():
+    """A hidden test shown to the student is the answer, spelled out as an assertion."""
+    import json
+    import pathlib
+
+    from app.schemas import phases as P
+    from app.services.missions import as_exercise
+
+    example = pathlib.Path(__file__).resolve().parents[1] / "docs" / "example-mission-response.json"
+    mission = P.PhasedMissionOut.model_validate(json.loads(example.read_text(encoding="utf-8"))["data"])
+    mission.phases.guided.tests[0].hidden = True
+
+    flattened = as_exercise(mission)
+    assert flattened["test_cases"][0]["isHidden"] is True
+    assert [t["isHidden"] for t in flattened["test_cases"]] == [
+        t.hidden for t in mission.phases.guided.tests
+    ]

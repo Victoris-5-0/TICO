@@ -271,3 +271,60 @@ def test_the_generated_typescript_is_not_stale():
 def test_no_endpoint_still_carries_the_stub_header(client):
     """The header exists for the day an endpoint is faked again. Today none are."""
     assert STUB_HEADER not in client.get("/v1/health").headers
+
+
+# ------------------------------------------------------------------ the endpoint doc
+
+
+def test_every_endpoint_appears_in_the_examples_doc():
+    """`docs/endpoint-examples.md` is what the client team reads. A route missing from it
+    is a route nobody outside this repo knows exists.
+
+    The doc had gone stale before: it described thirteen stubs, a `station.passengers`
+    world that was deleted, and a Supabase auth flow the client had migrated off.
+    """
+    import pathlib
+
+    from app.main import app
+
+    doc = (pathlib.Path(__file__).resolve().parents[1] / "docs" / "endpoint-examples.md").read_text(
+        encoding="utf-8"
+    )
+
+    missing = [
+        path
+        for path in app.openapi()["paths"]
+        if path.replace("{session_id}", "{sessionId}").replace("{student_id}", "{studentId}")
+        not in doc
+    ]
+    assert not missing, f"undocumented endpoints: {missing}"
+
+
+def test_every_json_example_in_the_doc_parses():
+    """A response example that is not valid JSON is worse than no example."""
+    import json
+    import pathlib
+    import re
+
+    doc = (pathlib.Path(__file__).resolve().parents[1] / "docs" / "endpoint-examples.md").read_text(
+        encoding="utf-8"
+    )
+
+    broken = []
+    for i, block in enumerate(re.findall(r"```json\n(.*?)```", doc, re.S), 1):
+        try:
+            json.loads(block)
+        except json.JSONDecodeError as exc:
+            broken.append(f"block {i}: {exc}")
+    assert not broken, "\n".join(broken)
+
+
+def test_the_doc_does_not_still_claim_everything_is_a_stub():
+    """It said "This is the only endpoint that is not a stub" for every one of them."""
+    import pathlib
+
+    doc = (pathlib.Path(__file__).resolve().parents[1] / "docs" / "endpoint-examples.md").read_text(
+        encoding="utf-8"
+    )
+    assert "the only endpoint that is not a stub" not in doc
+    assert "STUB." not in doc

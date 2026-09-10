@@ -20,6 +20,7 @@ from sqlalchemy.orm import Session
 from app import manifests
 from app.ai.chains import mission_gen
 from app.schemas import phases as P
+from app.schemas.common import ScaffoldLevel
 from app.manifests.models import World
 from app.models_tables import (
     Concept,
@@ -33,7 +34,7 @@ from app.models_tables import (
 from app.config import settings
 from app.ai.prompts import tico_hint as hint_prompt
 from app.rules import arena
-from app.queries import ai_log, students, users
+from app.queries import ai_log, students, students as student_q, users
 
 log = logging.getLogger(__name__)
 
@@ -378,13 +379,16 @@ def generate_explicit(
     )
 
 
-def as_exercise(mission: "P.PhasedMissionOut", *, engine_version: str) -> dict:
+def as_exercise(mission: "P.PhasedMissionOut", *, engine_version: str = ENGINE_VERSION) -> dict:
     """Flatten a six-phase mission into the `exercises`-row shape.
 
     Lossy on purpose. `GenerateMissionResponse` describes an authored artefact — a title,
     a starter, tests, hints — and the six phases are a *journey*, which an exercise row has
-    nowhere to put. The guided phase is the part that maps: its starter code is the
-    student's starting point and its tests are the tests.
+    nowhere to put. The guided phase is the part that maps.
+
+    The starter is the **first guided step's code**, blanks and all. There is no separate
+    starting file in the six-phase design: guided coding hands the student code with holes
+    in it and fills them one step at a time, so step one's code is where they begin.
 
     Anyone who needs the whole journey should call `/v1/missions/next`, which returns it.
     """
@@ -393,9 +397,9 @@ def as_exercise(mission: "P.PhasedMissionOut", *, engine_version: str) -> dict:
         "mission_id": mission.id,
         "title": mission.title_ar,
         "instructions": mission.phases.encounter.line_ar,
-        "starter_code": guided.starting_code,
+        "starter_code": guided.steps[0].code,
         "test_cases": [
-            {"input": t.call, "expectedOutput": t.expected, "isHidden": False}
+            {"input": t.call, "expectedOutput": t.expected, "isHidden": t.hidden}
             for t in guided.tests
         ],
         # One authored fallback per rung, served when the model is unavailable or a guard

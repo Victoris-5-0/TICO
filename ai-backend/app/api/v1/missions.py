@@ -163,6 +163,4 @@ def generate_mission(
         ) from exc
 
     db.commit()
-    return GenerateMissionResponse(
-        **missions_service.as_exercise(mission, engine_version=mission_gen.prompt.PROMPT_VERSION)
-    )
+    return GenerateMissionResponse(**missions_service.as_exercise(mission))

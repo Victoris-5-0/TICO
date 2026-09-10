@@ -15,7 +15,6 @@ from sqlalchemy.orm import Session
 
 from app.models_tables import HintEvent, PracticeSession, Submission
 from app.models_tables.enums import Phase, SessionKind, SessionOutcome
-from app.models_tables.learning import _utcnow
 
 
 def get(db: Session, session_id: str) -> PracticeSession | None:
@@ -87,13 +86,21 @@ def close_session(
     A double-close is normal: the client may fire on both "tests passed" and "student
     navigated away", and overwriting the timestamp would corrupt the timing evidence the
     student model reads.
+
+    `ended_at` is taken from the **database** clock, not this process's, because
+    `started_at` is a `server_default=func.now()`. Mixing the two produced sessions that
+    ended before they began: a laptop about a second behind the Postgres host is enough,
+    and anything computing a duration from the pair then gets a negative number.
     """
     session.outcome = outcome
     if time_spent_ms is not None:
         session.time_spent_ms = time_spent_ms
     if session.ended_at is None:
-        session.ended_at = _utcnow()
+        session.ended_at = func.now()
     db.flush()
+    # `func.now()` is SQL, so the attribute holds a pending expression until it is read
+    # back. Refresh it, or the caller serialises the expression object into the response.
+    db.refresh(session, ["ended_at"])
     return session
 
 

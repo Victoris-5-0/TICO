@@ -1,16 +1,27 @@
 # Endpoints — what you send, what you get
 
-Every request and response below was captured from the running service, not written by
-hand.
+Every request and response below was captured from the running service against the real
+database, not written by hand. Re-capture after any contract change.
 
 Base URL: `https://54-75-53-43.sslip.io` · Swagger: `/docs`
 
-**Two rules that apply to everything:**
+**Three rules that apply to everything:**
 
 1. Every success is wrapped: `{"data": {...}, "meta": {...}}`. The first example shows the
    wrapper in full; after that only the `data` half is shown, because that is what
-   `aiClient` hands back after unwrapping.
+   `aiClient` hands back after unwrapping. The exception is `/v1/tico/messages`, which
+   streams and is never wrapped.
 2. Field names are **camelCase**.
+3. Send `Authorization: Bearer <token>` on everything except `/v1/health`. The token is the
+   Better Auth session token the Next.js app already holds; this service looks it up in the
+   shared database. It never issues credentials.
+
+**Nothing here is a stub any more.** All thirteen endpoints run real logic against Postgres,
+and `meta.stub` is `false` everywhere.
+
+Three of them call Gemini and take **20–30 seconds**: `/v1/missions/next`,
+`/v1/missions/generate` and `/v1/challenges/next`. Show a progress state, and do not put
+them behind a short client timeout.
 
 ---
 
@@ -18,7 +29,7 @@ Base URL: `https://54-75-53-43.sslip.io` · Swagger: `/docs`
 
 Is the service up, and can it reach the database.
 
-**Send:** nothing.
+**Send:** nothing. No auth required.
 
 **Get:**
 ```json
@@ -26,43 +37,105 @@ Is the service up, and can it reach the database.
   "data": {
     "status": "ok",
     "environment": "production",
-    "database": "ok"
+    "database": "ok",
+    "version": "0.1.0"
   },
   "meta": {
-    "request_id": "7e862677-fd92-453e-b051-c881e54d8bfd",
+    "request_id": "3da28af9-79b0-4695-a21e-4f6e6235d5c2",
     "stub": false,
     "cached": false
   }
 }
 ```
 
-`database` is `"ok"` or `"unreachable"`. This is the only endpoint that is not a stub.
+`database` is `"ok"` or `"unreachable"`.
 
 ---
 
-## 2. `POST /v1/hints`
+## 2. `POST /v1/sessions`
 
-Ask TICO for one hint. The rung is decided by the server from how many hints this session
-has already had — you never ask for a level.
+**Open this first.** Every other endpoint hangs off the session id it returns — hints,
+submissions, chat, the debrief — and they all 404 without one. It is also the LangGraph
+thread id for TICO's conversation, so keep it for the whole mission rather than making a new
+one per request.
+
+**Send:**
+```json
+{ "levelId": "cmtr2mjrn000auejsbj1s5h7w" }
+```
+
+| Field | Required | Notes |
+| --- | --- | --- |
+| `levelId` | **yes** | The lesson the student picked |
+| `generatedMissionId` | no | Set it when the mission came from `/v1/missions/next`. Without it the debrief cannot tell which concept was practised, so mastery does not move |
+
+**Get:** `201`
+```json
+{
+  "id": "cmtut4c2oioyz0cpw7ryehcre",
+  "userId": "doc-792caea017",
+  "levelId": null,
+  "generatedMissionId": null,
+  "phase": "ENCOUNTER",
+  "outcome": "IN_PROGRESS",
+  "hintsUsed": 0,
+  "timeSpentMs": 0,
+  "startedAt": "2026-09-10T00:46:38.389000",
+  "endedAt": null
+}
+```
+
+> ⚠️ **`levelId` comes back `null`.** `practice_sessions` has no lesson column — it links to
+> an exercise or a generated mission, and only the exercise carries a lesson. Send `levelId`
+> on create; do not rely on reading it back. Closing that gap needs `lesson_id` on
+> `practice_sessions`, which is a Prisma migration.
+
+---
+
+## 3. `PATCH /v1/sessions/{sessionId}/phase`
+
+Record where the student is in the six-phase loop. The client drives the loop; this records
+it.
+
+It matters to `/v1/hints`, which rations help differently per phase: `GUIDED_CODING` starts
+at rung 1, `ADAPT_REMIX` starts at rung 2, and phases 1–4 have no ladder at all.
+
+**Send:**
+```json
+{ "phase": "GUIDED_CODING" }
+```
+
+`ENCOUNTER` · `EXPLORE` · `DISCOVER` · `UNDERSTAND` · `GUIDED_CODING` · `ADAPT_REMIX`
+
+**Get:** the full session, with `phase` updated.
+
+---
+
+## 4. `POST /v1/hints`
+
+Ask TICO for one hint. **The rung is decided by the server** from how many hints this session
+has already had — you never ask for a level, and you cannot skip ahead.
 
 **Send:**
 ```json
 {
-  "sessionId": "sess-abc",
-  "missionId": "demo-exercise-conditional-gate",
-  "codeExcerpt": "if station.passengers = 30:\n    gate.open()",
-  "lastResult": "ERROR",
-  "locale": "ar-EG"
+  "sessionId": "cmtusqkbtz2s40a306kf0dv2y",
+  "missionId": "exercise-forn-01",
+  "codeExcerpt": "loaves = trays * ___",
+  "phase": "GUIDED_CODING",
+  "guidedStep": 0,
+  "lastResult": "FAILED"
 }
 ```
 
 | Field | Required | Notes |
 | --- | --- | --- |
-| `sessionId` | **yes** | The rung counter is per session |
-| `missionId` | **yes** | The exercise id. Keys the hint cache |
+| `sessionId` | **yes** | The rung counter is per session, counted from `hint_events` |
+| `missionId` | **yes** | Keys the hint cache |
 | `codeExcerpt` | **yes** | The student's current code. Max 20,000 chars |
-| `lastResult` | no | `PASSED` · `FAILED` · `ERROR` · `TIMEOUT` · `null` |
-| `locale` | no | Defaults `"ar-EG"` |
+| `phase` | no | Decides the starting rung. Defaults to `GUIDED_CODING` |
+| `guidedStep` | no | Which blank they are on |
+| `lastResult` | no | `PASSED` · `FAILED` · `ERROR` · `TIMEOUT` |
 | `errorText` | no | The actual failing message. Sharpens the hint |
 | `errorTag` | no | From `/submissions/analyze`, e.g. `"assignment_vs_comparison"` |
 
@@ -70,409 +143,451 @@ has already had — you never ask for a level.
 ```json
 {
   "rung": 1,
-  "hint": "البوابة مش بتفتح خالص. بصّ كويس على السطر اللي بتتحقق فيه من عدد الركاب.",
+  "hint": "يا بطل، بص كويس على الحتة الفاضية بعد علامة الـ `*` وشوف إحنا محتاجين نضرب `trays` في إيه عشان نطلع الـ `loaves`. كمل كده، أنت قدها!",
   "isFinal": false,
   "nextStep": null,
-  "hintEventId": "demo-hint-sess-abc-1",
+  "remainingRungs": 3,
+  "hintEventId": "cmtusqm77z2s90a30b6sa7l5s",
   "cached": false
 }
 ```
 
-**Call it again with the same `sessionId` and the rung climbs:**
+| Rung | Gives |
+| --- | --- |
+| 1 | Points at the region. Names nothing |
+| 2 | Names the concept |
+| 3 | Walks the logic in words |
+| 4 | `isFinal: true`, and `nextStep` is one concrete action — **never the answer** |
 
-| Call | `rung` | `isFinal` | `nextStep` |
-| --- | --- | --- | --- |
-| 1st | 1 | `false` | `null` |
-| 2nd | 2 | `false` | `null` |
-| 3rd | 3 | `false` | `null` |
-| 4th | 4 | `true` | `"mini_practice"` |
-| 5th+ | 4 | `true` | `"mini_practice"` |
-
-It stops at 4. When `isFinal` is true, show a smaller practice exercise — **no rung ever
-returns the answer.**
+Two guards run over every reply before it is returned: one rejects a hint containing a
+runnable line of Python, the other rejects one that fills in the blank. A rejected hint is
+replaced with authored text, so **a student always gets something**. `cached: true` means no
+model was called.
 
 ---
 
-## 3. `POST /v1/submissions/analyze`
+## 5. `POST /v1/submissions/analyze`
 
-Classify why a submission failed.
+Classify a failure. Call it after a failed run and before asking for a hint — the `errorTag`
+it returns makes the next hint much sharper.
 
 **Send:**
 ```json
 {
-  "sessionId": "sess-abc",
+  "sessionId": "cmtusykjlyrc50280d3jdbvqc",
   "attemptNumber": 2,
-  "code": "if station.passengers = 30:\n    gate.open()",
-  "errorText": "SyntaxError: invalid syntax"
+  "code": "waiting = station_queue\nif waiting = 30:\n    open_gate()",
+  "errorText": "SyntaxError: invalid syntax. Maybe you meant '==' instead of '='?"
 }
 ```
 
-`sessionId` and `code` are required. `attemptNumber` defaults to 1. Also optional:
-`submissionId`, `expectedOutput`, `actualOutput`.
+| Field | Required | Notes |
+| --- | --- | --- |
+| `sessionId` | **yes** | |
+| `code` | **yes** | Max 20,000 chars |
+| `attemptNumber` | no | Defaults 1. Real evidence — the same error on attempt 7 means something different from attempt 1 |
+| `submissionId` | no | Pass it and the diagnosis is written onto that `submissions` row |
+| `errorText` | no | Max 8,000 chars |
+| `expectedOutput` / `actualOutput` | no | Max 4,000 each |
+
+There is no `lastResult` field here. Sending one is a `422`.
 
 **Get:**
 ```json
 {
   "errorFamily": "LOGIC",
   "errorTag": "assignment_vs_comparison",
-  "misconception": "The student believes a single `=` compares two values.",
-  "confidence": 0.93,
+  "misconception": "Used a single equals sign (=) for assignment where a double equals (==) comparison was intended.",
+  "confidence": 0.95,
   "isNewTag": false,
   "escalated": false,
   "inScaffoldedRegion": false
 }
 ```
 
-| Field | Meaning |
-| --- | --- |
-| `errorFamily` | Fixed set of 7: `SYNTAX` `NAME` `TYPE` `LOGIC` `INCOMPLETE` `RUNTIME` `UNKNOWN`. Same values as the database column |
-| `errorTag` | Open-ended snake_case tag. New ones get coined as students hit new mistakes |
-| `misconception` | What the student appears to believe. Feeds the hint |
-| `isNewTag` | `true` when this tag has not been seen before |
-| `inScaffoldedRegion` | The error is in code we pre-filled — do not blame the student |
+`errorFamily` is closed: `SYNTAX` · `NAME` · `TYPE` · `LOGIC` · `INCOMPLETE` · `RUNTIME` ·
+`UNKNOWN`. `errorTag` is **open** — the vocabulary is read from the database before each call
+and written back after, so it grows out of real students. `isNewTag: true` means this student
+produced a mistake nobody had recorded before.
 
-Unrecognised code returns `errorFamily: "UNKNOWN"`, `isNewTag: true`.
-
----
-
-## 4. `POST /v1/sessions`
-
-Open a session when a student starts a mission.
-
-**Send:**
-```json
-{ "levelId": "demo-exercise-conditional-gate" }
-```
-
-Optional: `"kind"` — `LESSON` (default) · `DIAGNOSTIC` · `CHALLENGE`.
-
-**Get — note this returns `201`, not `200`:**
-```json
-{
-  "id": "demo-session-1",
-  "userId": "demo-student-1",
-  "levelId": "demo-exercise-conditional-gate",
-  "generatedMissionId": null,
-  "phase": "ENCOUNTER",
-  "outcome": "IN_PROGRESS",
-  "hintsUsed": 0,
-  "timeSpentMs": 0,
-  "startedAt": "2026-09-06T16:09:54.684714Z",
-  "endedAt": null
-}
-```
-
-Keep the `id` — the next four endpoints need it.
-
----
-
-## 5. `PATCH /v1/sessions/{sessionId}/phase`
-
-Move the student through the seven-phase mission loop.
-
-**Send:**
-```json
-{ "phase": "GUIDED_CODING" }
-```
-
-Valid: `ENCOUNTER` → `EXPLORE` → `DISCOVER` → `UNDERSTAND` → `GUIDED_CODING` →
-`ADAPT_REMIX` → `INDEPENDENT`
-
-**Get:** the whole session object again, with `phase` updated.
+`inScaffoldedRegion: true` means the error is in code the scaffold gave them, not code they
+wrote — do not blame them for it.
 
 ---
 
 ## 6. `POST /v1/sessions/{sessionId}/close`
 
+Records the outcome and elapsed time, and **moves the student's concept mastery** on the
+evidence this session produced.
+
 **Send:**
 ```json
-{ "outcome": "SOLVED", "timeSpentMs": 254000 }
+{ "outcome": "SOLVED", "timeSpentMs": 412000 }
 ```
 
-`outcome`: `SOLVED` · `ABANDONED` · `TIMED_OUT`
+`SOLVED` · `ABANDONED` · `TIMEOUT` · `IN_PROGRESS`
 
-**Get:** the session, with `outcome` set and `endedAt` filled in:
-```json
-{
-  "id": "demo-session-1",
-  "phase": "GUIDED_CODING",
-  "outcome": "SOLVED",
-  "hintsUsed": 2,
-  "timeSpentMs": 254000,
-  "startedAt": "2026-09-06T16:09:54.684714Z",
-  "endedAt": "2026-09-06T16:14:54.684714Z"
-}
-```
+**Get:** the full session, with `outcome`, `timeSpentMs` and `endedAt` set.
+
+**Idempotent.** Closing twice keeps the first `endedAt` and applies the mastery evidence once
+— you may legitimately fire on both "tests passed" and "student navigated away".
+
+Mastery moves *here*, not on debrief, because the debrief is a screen a student may never
+open, or may open twice.
 
 ---
 
 ## 7. `POST /v1/sessions/{sessionId}/debrief`
 
-The end-of-mission results screen.
+The results screen.
 
-**Send:** nothing (empty body `{}`).
+**Send:** nothing.
 
 **Get:**
 ```json
 {
-  "sessionId": "demo-session-1",
+  "sessionId": "cmtusqkbtz2s40a306kf0dv2y",
   "outcome": "SOLVED",
-  "totalAttempts": 4,
-  "hintsUsed": 2,
-  "errorsOvercome": ["assignment_vs_comparison", "missing_colon"],
+  "totalAttempts": 3,
+  "hintsUsed": 1,
+  "errorsOvercome": ["assignment_vs_comparison"],
   "timeSpentMs": 412000,
-  "conceptsMastered": ["conditionals"],
-  "ticoFeedback": "برافو! غلطت في = و == مرتين وبعدين مسكتها لوحدك. دي بالظبط الحاجة اللي بتفرق بين اللي بيحفظ واللي بيفهم.",
-  "starsEarned": 3
+  "conceptsMastered": [],
+  "masteryDelta": {},
+  "ticoFeedback": "عجبتني شطارتك لما ميزت بين علامة التساوي الواحدة والاتنين!",
+  "starsEarned": 2
 }
 ```
 
-`errorsOvercome` is the interesting one — mistakes that appeared and then stopped. That is
-the thing a student can feel proud of. `starsEarned` is 0–3.
+**Every number here is counted in Python** from `submissions` and `hint_events`. The model
+writes one field, `ticoFeedback`, and a reply containing a figure the counts do not support
+is thrown away — "you did it first try" in front of a child who took nine attempts proves
+nobody was watching.
+
+`errorsOvercome` is the interesting one: tags that appeared on some attempt and were gone by
+the last one. That is the thing a student can feel proud of.
+
+`conceptsMastered` lists a concept only if **this** session pushed it over the line, and
+never on a single piece of evidence.
 
 ---
 
 ## 8. `POST /v1/students/{studentId}/refresh`
 
-Recompute what we know about a student. Call it in the background after a session closes.
+Recompute the student model and decide whether the concept gate opens. Fire and forget in
+the background after a session closes.
 
 **Send:**
 ```json
-{ "watermark": "submission-abc-123" }
+{ "sessionId": "cmtusqkbtz2s40a306kf0dv2y" }
 ```
-
-`watermark` is the newest submission id you have already accounted for. Optional, but
-without it a double-call counts the same attempts into mastery twice.
 
 **Get:**
 ```json
 {
   "profile": {
-    "userId": "demo-student-1",
-    "selfReportedLevel": "beginner",
+    "userId": "doc-586fbbcd33",
+    "selfReportedLevel": null,
     "skillBand": "ON_LEVEL",
-    "hintDependency": 0.38,
-    "syntaxVsLogic": 0.62,
-    "pace": 1.1,
+    "hintDependency": 0.0,
+    "syntaxVsLogic": 0.5,
+    "pace": null,
     "locale": "ar-EG",
-    "lastComputedAt": "2026-09-06T16:14:54.684714Z"
+    "ageBand": null,
+    "learnerPreference": null,
+    "gender": null,
+    "onboardingCompletedAt": null,
+    "lastComputedAt": null,
+    "modelVersion": null
   },
-  "concepts": [
-    { "conceptId": "variables",    "mastery": 0.82, "confidence": 0.71, "evidenceCount": 9 },
-    { "conceptId": "conditionals", "mastery": 0.41, "confidence": 0.48, "evidenceCount": 4 },
-    { "conceptId": "loops",        "mastery": 0.0,  "confidence": 0.0,  "evidenceCount": 0 },
-    { "conceptId": "functions",    "mastery": 0.0,  "confidence": 0.0,  "evidenceCount": 0 }
-  ],
+  "concepts": [],
   "advanced": false,
-  "decidedBy": "MODEL",
-  "reason": "Solved it, but used three of four hint rungs and took twice the expected time. Holding for one more rep rather than advancing."
+  "decidedBy": "RULE",
+  "reason": "That session has no target concept, so there is no gate to evaluate.",
+  "summary": null
 }
 ```
 
-| Field | Meaning |
-| --- | --- |
-| `skillBand` | `STRUGGLING` · `ON_LEVEL` · `READY_TO_STRETCH` |
-| `hintDependency` | 0–1. How much they lean on hints |
-| `syntaxVsLogic` | 0 = errors are mostly syntax, 1 = mostly logic |
-| `mastery` / `confidence` | 0–1 per concept |
-| `advanced` | Whether the student moved on to the next concept |
-| `decidedBy` | `RULE` or `MODEL` — who made the call |
-| `reason` | Always present. This is what you show a teacher |
+Mastery has **already moved** by the time this runs — `close` did that. What this decides is
+the separate question of whether the student advances or does another rep.
+
+`decidedBy` is `RULE` or `MODEL`. A rule proposes; a model reviews **only** when the evidence
+conflicts — solved it but leaned on every hint, or failed but was fast and clean. Clear-cut
+cases never reach a model, and `reason` always says why.
+
+A session opened without `generatedMissionId` has no target concept, so there is no gate to
+evaluate. That is the `reason` shown above, not an error.
 
 ---
 
 ## 9. `POST /v1/students/{studentId}/plan`
 
-Build the student's personal path through the fixed lesson order.
+Build the personal path through the fixed lesson order. Call once, after onboarding.
 
 **Send:**
 ```json
-{ "isBeginner": false, "diagnosticSessionId": "d1" }
+{ "isBeginner": true }
 ```
+
+| Field | Required | Notes |
+| --- | --- | --- |
+| `isBeginner` | **yes** | `true` short-circuits everything: all lessons required, no diagnostic, no model call |
+| `diagnosticSessionId` | no | The diagnostic playthrough |
+| `selfReportedLevel` | no | |
 
 **Get:**
 ```json
 {
   "lessons": [
     {
-      "levelId": "demo-lesson-1",
-      "requirement": "OPTIONAL",
-      "reason": "Solved the variables task in the diagnostic with no hints.",
-      "decidedBy": "MODEL",
-      "confidence": 0.79,
-      "decidedAt": "2026-09-06T16:14:54.658602Z"
-    },
-    {
-      "levelId": "demo-lesson-4",
+      "levelId": "cmtr2mjrn000auejsbj1s5h7w",
       "requirement": "REQUIRED",
       "reason": null,
       "decidedBy": "RULE",
       "confidence": 1.0,
-      "decidedAt": "2026-09-06T16:14:54.658602Z"
+      "decidedAt": null
     }
   ],
-  "skippedCount": 3
+  "startingLevelId": "cmtr2mjrn000auejsbj1s5h7w",
+  "skippedCount": 0,
+  "summary": "أهلاً! هنبدأ من أول درس ونمشي خطوة خطوة."
 }
 ```
 
-`requirement` is `REQUIRED` · `OPTIONAL` · `DONE` · `SKIPPED`.
+**The concept order never changes. Which lessons are in the path does.** An `OPTIONAL` lesson
+stays in the path, in order, and stays playable — skipping is a suggestion, never a lock-out,
+because the whole decision rests on one diagnostic playthrough.
 
-The lesson **order never changes** — only which ones are required. Every `OPTIONAL` lesson
-carries a `reason`, and stays in the list so the student can still play it. Skipping is a
-suggestion, not a lock-out.
+Every proposed skip is model-reviewed, and **the reviewer may only refuse a skip, never
+invent one**. A needless lesson costs ten minutes of boredom; a wrongly skipped one leaves a
+hole the student hits six lessons later with no idea why.
 
-With `isBeginner: true` you get `skippedCount: 0` and everything `REQUIRED`.
+Returns `409` when the `lessons` table is empty.
 
 ---
 
 ## 10. `POST /v1/missions/next`
 
-What should this student play now. The server picks the lesson and composes the scenario.
+Generate the mission this student should play now, as **six phases**. Gemini writes it and a
+Python validator runs the code before it is returned.
+
+⏱ **20–30 seconds.**
 
 **Send:**
 ```json
-{ "forceRegenerate": false }
+{ "lessonId": "cmtr2mjrn000auejsbj1s5h7w" }
 ```
 
-All optional: `lessonId`, `worldManifestVersion`, `forceRegenerate`. **The student is not
-a field** — it comes from the token.
+| Field | Required | Notes |
+| --- | --- | --- |
+| `lessonId` | no | An explicit choice outranks mastery. Without it the server picks the first concept they have not mastered |
+| `forceRegenerate` | no | Skip the reuse check |
 
 **Get:**
 ```json
 {
-  "id": "demo-generated-1",
-  "levelId": "demo-exercise-conditional-gate",
-  "worldId": "cairo_metro",
-  "sceneId": "platform_day",
-  "targetConceptId": "conditionals",
-  "carriedConceptIds": ["variables"],
-  "brief": "الرصيف زحمة والقطر جاي. افتح البوابة التانية لو المستنيين أكتر من 30.",
-  "starterCode": "# الرصيف زحمة...\nwaiting = station.passengers\n\n# TODO: افتح البوابة لما الشرط يتحقق\n",
-  "tests": [
-    { "name": "gate opens above the threshold",  "call": "gate.state", "expected": "open" },
-    { "name": "gate stays shut below the threshold", "call": "gate.state", "expected": "closed" }
-  ],
-  "scaffoldPlan": {
-    "scaffold": { "variables": "FULL" },
-    "difficultyBand": 4,
-    "repNumber": 1
-  },
-  "params": { "reading": "station.passengers", "threshold": 30, "comparison": ">" },
+  "id": "cmtut8xk1a3b70cpw9wm2qxyz",
+  "worldId": "el_forn",
+  "sceneId": "bakery_gameplay",
+  "targetConceptId": "variables",
+  "carriedConceptIds": [],
+  "titleAr": "حساب عيش الفرن البلدي",
+  "source": "model",
   "validated": true,
-  "reused": false
+  "difficultyBand": 5,
+  "scaffold": {},
+  "phases": {
+    "encounter": {
+      "speaker": "hassan",
+      "speakerNameAr": "الأسطى حسن",
+      "lineAr": "يا سلمى، الصواني داخلة الفرن وورايا زحمة زباين! كل صينية بنرص فيها بالظبط 12 رغيف.",
+      "ctaAr": "يلا نبدأ",
+      "world": { "props": { "tray": 4, "loaf": 12 } }
+    },
+    "explore": {
+      "ticoIntroAr": "يا هلا بيك في الفرن البلدي!",
+      "rounds": [
+        {
+          "questionAr": "لو عندنا صينية واحدة طالعة من الفرن، تفتكر هيكون عليها كام رغيف عيش؟",
+          "optionsAr": ["12 رغيف", "24 رغيف", "6 أرغفة"],
+          "correctIndex": 0,
+          "nudgeAr": "بص على الصينية كدة، الأسطى حسن قال إن الصينية الواحدة بتشيل كام."
+        }
+      ]
+    },
+    "discover": {
+      "conceptSlug": "variables",
+      "conceptNameAr": "المتغيرات (Variables)",
+      "explanationAr": "المتغير في البرمجة زي علبة بنحفظ فيها قيمة أو رقم عشان نستخدمه وننادي عليه باسمه بعدين.",
+      "ticoLineAr": "برافو عليك! كده نقدر نعمل علبة نسميها loaves_per_tray ونشيل جواها رقم 12."
+    },
+    "understand": {
+      "introAr": "بص كدة الكود ده في بايثون بيعمل إيه.",
+      "code": "def calculate_loaves(trays: int) -> int:\n    loaves_per_tray = 12\n    loaves = trays * loaves_per_tray\n    return loaves",
+      "annotations": [{ "line": 2, "textAr": "هنا عملنا متغير." }]
+    },
+    "guided": {
+      "steps": [
+        {
+          "code": "def calculate_loaves(trays: int) -> int:\n    loaves_per_tray = ___\n    loaves = trays * loaves_per_tray\n    return loaves",
+          "blanks": ["12"],
+          "promptAr": "اكتب عدد الأرغفة اللي بتشيلها الصينية الواحدة جوه المتغير",
+          "hintAr": "الأسطى حسن قال إن الصينية الواحدة بنرص عليها 12 رغيف."
+        }
+      ],
+      "solutionCode": "def calculate_loaves(trays: int) -> int:\n    loaves_per_tray = 12\n    loaves = trays * loaves_per_tray\n    return loaves",
+      "tests": [{ "call": "calculate_loaves(3)", "expected": "36" }],
+      "onRun": { "animate": "loaves_appear" }
+    },
+    "remix": {
+      "twistAr": "الفرن كبر وجبنا صواني أوسع بتشيل 20 رغيف في الصينية الواحدة!",
+      "newRequirementAr": "عدل الكود عشان المتغير loaves_per_tray يشيل القيمة الجديدة.",
+      "worldChange": { "animate": "loaves_appear", "props": { "tray": 2, "loaf": 12 } },
+      "startingCode": "def calculate_loaves(trays: int) -> int:\n    loaves_per_tray = 12\n    loaves = trays * loaves_per_tray\n    return loaves"
+    }
+  }
 }
 ```
 
-| Field | Meaning |
-| --- | --- |
-| `targetConceptId` | What this mission teaches |
-| `carriedConceptIds` | Concepts it also uses. Learning is cumulative |
-| `sceneId` | Chosen from the world manifest. Never invented |
-| `scaffoldPlan.scaffold` | Per concept: `NONE` · `PARTIAL` · `FULL`. `FULL` means it is pre-written because it is not the point of this lesson |
-| `validated` | Checked by Python, not claimed by the model. **Never `false`** |
-| `reused` | An equivalent mission already existed and was reused |
+The six phases are always all present. `source` is `"model"`. `solutionCode` is used to check
+their attempt and is **never shown**.
 
-`forceRegenerate: true` changes `sceneId` and `params` but **not** `targetConceptId` or
-`worldId` — the roadmap fixes those.
+`validated: true` means a Python validator **ran the code**: the solution passes its tests,
+each guided step genuinely fails until its blank is filled, and the remix twist really does
+break the phase-5 solution. An unvalidated mission is never returned, so you never have to
+defend against an unsolvable one.
+
+**Pass the returned `id` as `generatedMissionId`** when you open the session, or mastery
+cannot move.
+
+Returns **503** when generation cannot produce something playable — say so rather than
+showing a broken mission. A child cannot tell the difference and will blame themselves.
 
 ---
 
 ## 11. `POST /v1/missions/generate`
 
-Build a mission when you already know what you want. Contrast with `/missions/next`, which
-*decides* what is next.
+Build a mission when you already know what you want — for authoring, and for pre-warming a
+lesson before a class. `/missions/next` **decides**; this one **builds**.
 
-**Send:**
+⏱ **20–30 seconds.**
+
+**Send:** every field is optional.
 ```json
-{ "concept": "conditionals" }
+{ "lessonId": "cmtr2mjrn000auejsbj1s5h7w" }
 ```
 
-Everything is optional — `{}` works, and the server derives the rest. Also accepts
-`lessonId`, `worldManifestVersion`, `scaffoldLevel`, `locale`.
+| Field | Notes |
+| --- | --- |
+| `lessonId` | |
+| `concept` | Concept slug, e.g. `"loops"` |
+| `scaffoldLevel` | **Teachers only.** Ignored for a student — one who could set their own scaffold could ask for none and be handed a blank file |
+| `locale` | Defaults `"ar-EG"` |
 
-**Get** — flatter than `/missions/next`, shaped like an `exercises` row:
+**Get:**
 ```json
 {
-  "missionId": "demo-exercise-conditional-gate",
-  "title": "البوابة الشرطية",
-  "instructions": "الرصيف زحمة. افتح البوابة التانية لو عدد المستنيين أكتر من 30.",
-  "starterCode": "# ...\nwaiting = station.passengers\n\n# TODO: ...\n",
+  "missionId": "cmtut9p2mb4c80cpwa1n3rabc",
+  "title": "حسبة العيش على الطبلية",
+  "instructions": "يا سلمى، الصواني داخلة الفرن وورايا زحمة زباين!",
+  "starterCode": "def bake_loaves(trays: int) -> int:\n    ___ = 12\n    loaves = trays * loaves_per_tray\n    return loaves",
   "testCases": [
-    { "input": "gate.state", "expectedOutput": "open",   "isHidden": false },
-    { "input": "gate.state", "expectedOutput": "closed", "isHidden": false }
+    { "input": "bake_loaves(3)", "expectedOutput": "36", "isHidden": false },
+    { "input": "bake_loaves(1)", "expectedOutput": "12", "isHidden": false }
   ],
-  "hints": ["…rung 1…", "…rung 2…", "…rung 3…", "…rung 4…"],
-  "concepts": { "primary": "conditionals", "carried": ["variables"] },
-  "scaffoldPlan": { "scaffold": { "variables": "FULL" }, "difficultyBand": 4, "repNumber": 1 },
+  "hints": ["...", "...", "...", "..."],
+  "concepts": { "primary": "variables", "carried": [] },
+  "scaffoldPlan": {},
   "validated": true,
-  "engineVersion": "stub-0"
+  "engineVersion": "gen/v2-phases"
 }
 ```
 
-`hints` is always **4 entries**, one per rung. These are the authored fallbacks used when
-the model is unavailable or its output gets rejected.
+**This shape is lossy on purpose.** A six-phase mission is a journey and an `exercises` row
+has nowhere to put one, so what you get back is the guided phase: `starterCode` is the first
+guided step's code, blanks and all, and `testCases` are its tests. Call `/v1/missions/next`
+for the whole thing.
+
+`hints` are the four authored fallbacks, one per rung — served when the model is unavailable
+or a guard rejects what it wrote.
 
 ---
 
 ## 12. `POST /v1/challenges/next`
 
-The arena, for students who finished the roadmap.
+The arena, for students who finished the roadmap. Six phases like any other mission, but
+**no scaffolding** and a shorter hint ladder.
+
+⏱ **20–30 seconds.**
 
 **Send:**
 ```json
-{ "excludeLevelIds": [] }
+{}
 ```
 
-Optional: `worldSlug` to restrict to one world.
+| Field | Notes |
+| --- | --- |
+| `worldSlug` | Restrict to one world. Omit to mix across everything unlocked |
+| `excludeLevelIds` | Recently played, to avoid repeats |
 
-**Get:** the same shape as `/missions/next`, with two differences:
+**Get:** the same `PhasedMissionOut` as `/v1/missions/next`.
 
+Concepts are mixed and weighted toward the **weakest mastered** one — a challenge built from
+what a student is best at flatters them and teaches nothing. Only concepts at or above the
+mastery threshold are eligible, so a challenge never surprises anyone with something they
+were never taught.
+
+**Get (not ready):** `409`
 ```json
 {
-  "id": "demo-challenge-1",
-  "brief": "تحدي: افتح البوابة بس لو الرصيف زحمة والقطر جاي في نفس الوقت.",
-  "carriedConceptIds": ["variables", "conditionals"],
-  "scaffoldPlan": { "scaffold": {}, "difficultyBand": 7, "repNumber": 1 }
+  "error": {
+    "code": "conflict",
+    "message": "Not ready for the arena yet. Insufficient mastered concepts for arena challenge: required 2, but learner only has 0 concept(s) at or above mastery threshold 0.70. Eligible: [].",
+    "request_id": "27cbab37-78d0-46aa-b7d7-f7d9b8ab186e",
+    "retryable": false,
+    "details": {}
+  }
 }
 ```
 
-- `scaffold` is **empty** — no help
-- `difficultyBand` is 6 or higher
-
-A challenge should stretch, not flatter.
+`409` is not a failure. Nothing is broken — the student belongs on the roadmap for now, and
+two mastered concepts are the minimum needed to mix anything worth calling a challenge.
 
 ---
 
 ## 13. `POST /v1/tico/messages`
 
-TICO's chat. **This one is different from all the others** — it streams Server-Sent
-Events, and is not wrapped in `{data, meta}`.
+Chat. **Server-sent events, not JSON** — this is the one endpoint with no envelope.
 
 **Send:**
 ```json
-{ "sessionId": "sess-abc", "message": "ليه == ؟" }
+{
+  "sessionId": "cmtusykjlyrc50280d3jdbvqc",
+  "message": "ليه الكود بتاعي مش شغال؟"
+}
 ```
 
-**Get** — `Content-Type: text/event-stream`, arriving one line at a time:
+**Get:** `Content-Type: text/event-stream`
 ```
-data: {"delta": "سؤال حلو! ", "done": false, "blocked": false, "offeredHintRung": null}
+data: {"delta": "يا هلا يا بطل! ولا يهمك،", "done": false, "blocked": false, "offeredHintRung": null}
 
-data: {"delta": "في Python، الـ `=` الواحدة معناها ", "done": false, "blocked": false, "offeredHintRung": null}
+data: {"delta": " مفيش كود بيمشي صح من أول مرة، وده حلاوة البرمجة! 😉", "done": false, "blocked": false, "offeredHintRung": null}
 
 data: {"delta": "", "done": true, "blocked": false, "offeredHintRung": null}
 ```
 
-Append each `delta` as it arrives; stop when `done` is `true`.
-
-| Field | Meaning |
+| Field | Means |
 | --- | --- |
-| `delta` | The next piece of text. Empty on the final frame |
+| `delta` | The next chunk. Append it |
 | `done` | `true` on the last frame |
 | `blocked` | Moderation stopped the message. The reply redirects gently |
 | `offeredHintRung` | TICO declined to give the answer and offered a hint instead |
 
-In code use `aiClient.streamTicoMessage()`, which returns the raw `Response` — **not**
-`fetchAi`, which would try to parse it as JSON.
+Use `aiClient.streamTicoMessage()`, which returns the raw `Response` — **not** `fetchAi`,
+which would try to parse it as JSON.
+
+Real frames, not yet real tokens: the graph returns a finished string and the service chunks
+it. The frame format will not change when it learns to stream properly.
 
 ---
 
@@ -485,11 +600,11 @@ Every error looks like this:
   "error": {
     "code": "validation_error",
     "message": "The request body did not match the contract.",
-    "request_id": "ec2778c1-1056-44c9-a287-8425146ccdbc",
+    "request_id": "96d9232d-477c-4e5c-b515-5c1f044752fa",
     "retryable": false,
     "details": {
       "fields": [
-        { "loc": ["body", "missionId"], "msg": "Field required", "type": "missing" }
+        { "type": "missing", "loc": ["body", "levelId"], "msg": "Field required", "input": {} }
       ]
     }
   }
@@ -498,11 +613,62 @@ Every error looks like this:
 
 | Status | `code` | Usually |
 | --- | --- | --- |
-| 401 | `unauthenticated` | No token, or it expired (they last one hour) |
+| 401 | `unauthenticated` | No token, or the session expired |
 | 403 | `forbidden` | Valid token, but you asked for another student's data |
+| 404 | `not_found` | No such session **for this student** — see below |
+| 409 | `conflict` | Not ready for the arena, or no lessons to plan |
 | 422 | `validation_error` | Read `details.fields` — it names the field |
 | 429 | `rate_limited` | Daily model-call cap. `retryable: true`, so back off |
-| 503 | `service_unavailable` | Server misconfigured. Not your problem |
+| 503 | `service_unavailable` | Generation could not produce something playable |
+
+**404, not 403, for someone else's session.** Asking for a session you do not own gives:
+
+```json
+{
+  "error": {
+    "code": "not_found",
+    "message": "no session 'does-not-exist' for this student",
+    "request_id": "14a723ec-903a-481a-9759-45c9dfe98863",
+    "retryable": false,
+    "details": {}
+  }
+}
+```
+
+Deliberate: confirming that another child's session id exists is not worth being able to tell
+an attacker apart from a typo. A `403` is reserved for `/v1/students/{id}/...`, where the id
+in the path is already known to the caller:
+
+```json
+{
+  "error": {
+    "code": "forbidden",
+    "message": "You can only access your own progress.",
+    "request_id": "339fba48-2da9-4cb9-98af-70538e7b6a93",
+    "retryable": false,
+    "details": {}
+  }
+}
+```
 
 Only retry when `retryable` is `true`. Quote `request_id` in a bug report and the exact
 server log line can be found.
+
+---
+
+## The order to call things in
+
+```
+POST   /v1/missions/next              20-30s, returns generatedMissionId
+POST   /v1/sessions                   pass that id, or mastery cannot move
+PATCH  /v1/sessions/{id}/phase        once per phase
+  POST /v1/submissions/analyze        after a failed run
+  POST /v1/hints                      rung counted server-side
+  POST /v1/tico/messages              SSE, any time
+POST   /v1/sessions/{id}/close        mastery moves here
+POST   /v1/sessions/{id}/debrief      the results screen
+POST   /v1/students/{id}/refresh      background, fire and forget
+```
+
+`/v1/students/{id}/plan` is called once after onboarding, and `/v1/challenges/next` replaces
+`/v1/missions/next` once the roadmap is finished.
