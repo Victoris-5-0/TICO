@@ -18,12 +18,12 @@ import uuid
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine, text
+from sqlalchemy import create_engine, select, text
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.database import get_db
 from app.main import app
-from app.models_tables import GeneratedMission, MissionTemplate, Submission, User
+from app.models_tables import GeneratedMission, Lesson, MissionTemplate, Submission, User
 from app.models_tables.enums import ErrorFamily, Role, SubmissionStatus
 
 DB_URL = os.environ.get("REAL_DATABASE_URL") or os.environ.get("TEST_DATABASE_URL")
@@ -79,6 +79,16 @@ def student(db) -> User:
 
 
 @pytest.fixture
+def lesson_id(db) -> str:
+    """A real lesson. `practice_sessions.lesson_id` is a foreign key, so "lesson-4" — which
+    these tests used to send — now fails the constraint rather than being quietly stored."""
+    row = db.execute(select(Lesson).order_by(Lesson.order).limit(1)).scalar_one_or_none()
+    if row is None:
+        pytest.skip("no lessons in the database — run the client seed")
+    return row.id
+
+
+@pytest.fixture
 def mission(db) -> GeneratedMission:
     """A six-phase mission, cut down to the fields the session endpoints read."""
     template = db.query(MissionTemplate).first()
@@ -131,10 +141,10 @@ def body(r):
 # =========================================================================== the loop
 
 
-def test_the_whole_mission_loop(client, db, student, mission):
+def test_the_whole_mission_loop(client, db, student, mission, lesson_id):
     """Open, move through phases, close, debrief. The path a real student takes."""
     opened = body(client.post("/v1/sessions", json={
-        "levelId": "lesson-4", "generatedMissionId": mission.id,
+        "levelId": lesson_id, "generatedMissionId": mission.id,
     }))
     session_id = opened["id"]
 
@@ -161,9 +171,9 @@ def test_the_whole_mission_loop(client, db, student, mission):
     assert debrief["ticoFeedback"], "a student always gets a sentence"
 
 
-def test_another_students_session_is_not_found(client, db, student, mission):
+def test_another_students_session_is_not_found(client, db, student, mission, lesson_id):
     """404, not 403 — and definitely not the session."""
-    opened = body(client.post("/v1/sessions", json={"levelId": "lesson-4"}))
+    opened = body(client.post("/v1/sessions", json={"levelId": lesson_id}))
 
     from app.core.auth import CurrentUser, get_current_user
 
@@ -188,10 +198,10 @@ def test_another_students_session_is_not_found(client, db, student, mission):
         assert call().status_code == 404
 
 
-def test_closing_twice_keeps_the_first_ending(client, mission):
+def test_closing_twice_keeps_the_first_ending(client, mission, lesson_id):
     """The client legitimately fires on both "tests passed" and "navigated away"."""
     session_id = body(client.post("/v1/sessions", json={
-        "levelId": "lesson-4", "generatedMissionId": mission.id,
+        "levelId": lesson_id, "generatedMissionId": mission.id,
     }))["id"]
 
     first = body(client.post(f"/v1/sessions/{session_id}/close", json={
@@ -204,10 +214,10 @@ def test_closing_twice_keeps_the_first_ending(client, mission):
     assert second["endedAt"] == first["endedAt"], "the first ending is the real one"
 
 
-def test_the_debrief_counts_real_rows(client, db, student, mission):
+def test_the_debrief_counts_real_rows(client, db, student, mission, lesson_id):
     """The numbers come from `submissions`, not from anywhere else."""
     session_id = body(client.post("/v1/sessions", json={
-        "levelId": "lesson-4", "generatedMissionId": mission.id,
+        "levelId": lesson_id, "generatedMissionId": mission.id,
     }))["id"]
 
     exercise_id = db.execute(text("select id from exercises limit 1")).scalar()
@@ -252,7 +262,7 @@ def _ask_for_a_hint(client, mission, session_id):
     })
 
 
-def test_a_hint_can_find_the_session(client, mission):
+def test_a_hint_can_find_the_session(client, mission, lesson_id):
     """The reason this endpoint had to exist: /v1/hints 404s without a session row.
 
     **The model does not run here.** `conftest.py` blanks `GOOGLE_API_KEY`, so the chain
@@ -261,7 +271,7 @@ def test_a_hint_can_find_the_session(client, mission):
     envelope. `test_the_hint_ladder_against_a_real_model` is the one that calls Gemini.
     """
     session_id = body(client.post("/v1/sessions", json={
-        "levelId": "lesson-4", "generatedMissionId": mission.id,
+        "levelId": lesson_id, "generatedMissionId": mission.id,
     }))["id"]
     client.patch(f"/v1/sessions/{session_id}/phase", json={"phase": "GUIDED_CODING"})
 
@@ -285,7 +295,7 @@ def test_the_hint_ladder_against_a_real_model(client, mission, live_model):
         TICO_LIVE_MODEL=1 REAL_DATABASE_URL=... pytest tests/test_sessions_live.py -m slow
     """
     session_id = body(client.post("/v1/sessions", json={
-        "levelId": "lesson-4", "generatedMissionId": mission.id,
+        "levelId": lesson_id, "generatedMissionId": mission.id,
     }))["id"]
     client.patch(f"/v1/sessions/{session_id}/phase", json={"phase": "GUIDED_CODING"})
 
@@ -309,3 +319,22 @@ def test_the_hint_ladder_against_a_real_model(client, mission, live_model):
     assert "12" not in top["hint"]
 
     assert len(set(seen)) > 1, "four identical hints would make the ladder decoration"
+
+
+def test_a_lesson_that_does_not_exist_is_a_422(client):
+    """Not a 500. `lesson_id` is a foreign key, so an unknown one used to blow up inside
+    the flush; the client deserves to be told which field is wrong."""
+    r = client.post("/v1/sessions", json={"levelId": "no-such-lesson"})
+    assert r.status_code == 422, r.text
+    assert "no-such-lesson" in r.json()["error"]["message"]
+
+
+def test_the_lesson_comes_back_on_the_session(client, lesson_id):
+    """The gap this column closed. `levelId` used to be null for every generated mission,
+    because there was nowhere to store what the client sent."""
+    opened = body(client.post("/v1/sessions", json={"levelId": lesson_id}))
+    assert opened["levelId"] == lesson_id
+
+    # And it survives a phase change and a close, rather than being set only on create.
+    moved = body(client.patch(f"/v1/sessions/{opened['id']}/phase", json={"phase": "EXPLORE"}))
+    assert moved["levelId"] == lesson_id

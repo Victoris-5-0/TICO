@@ -29,6 +29,7 @@ RESPONSES = {
     401: {"model": ErrorResponse},
     403: {"model": ErrorResponse},
     404: {"model": ErrorResponse},
+    422: {"model": ErrorResponse},
 }
 
 
@@ -65,12 +66,15 @@ def open_session(
     user: CurrentUser = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> SessionOut:
-    session = sessions_service.open_session(
-        db,
-        user_id=user.id,
-        level_id=body.level_id,
-        generated_mission_id=body.generated_mission_id,
-    )
+    try:
+        session = sessions_service.open_session(
+            db,
+            user_id=user.id,
+            level_id=body.level_id,
+            generated_mission_id=body.generated_mission_id,
+        )
+    except sessions_service.UnknownLesson as exc:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
     return _out(db, session)
 
 
