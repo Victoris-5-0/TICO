@@ -84,6 +84,21 @@ def check_manifest(path: pathlib.Path) -> dict:
                         f"{name}: {group[:-1]} '{item['id']}' points at missing artwork "
                         f"'{asset}'"
                     )
+
+        # Sprites and the backdrop were not checked here until a merge added five that
+        # did not exist. They are the likeliest to be wrong, because they are the ones a
+        # person hand-types while reading somebody else's inventory.
+        visual = doc.get("visual") or {}
+        for sprite_name, spec in (visual.get("sprites") or {}).items():
+            asset = (spec or {}).get("asset")
+            if asset and not (ASSETS / asset).exists():
+                problems.append(
+                    f"{name}: sprite '{sprite_name}' points at missing artwork '{asset}'"
+                )
+        for key in ("backdrop", "establishing"):
+            asset = visual.get(key)
+            if asset and not (ASSETS / asset).exists():
+                problems.append(f"{name}: visual.{key} points at missing artwork '{asset}'")
     else:
         notes.append("client/public/assets not found — artwork checks skipped")
 

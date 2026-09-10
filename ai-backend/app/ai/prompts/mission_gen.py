@@ -83,7 +83,7 @@ SPRITES the client can draw (props you may show):
 
 ANIMATIONS the client can play — you may ONLY name one of these:
 {animations}
-
+{simulation}
 {scaffold_note}
 
 Return exactly this JSON:
@@ -191,6 +191,42 @@ def _characters_block(world: World) -> str:
     return "\n".join(rows)
 
 
+
+def _simulation_block(world: World) -> str:
+    """The numbers the scene has already committed to, and the buttons that exist.
+
+    Phrased as facts rather than as a menu, because that is what they are. The rest of
+    this prompt offers the model choices; these are true on screen before the mission is
+    written, and a mission that disagrees is wrong in a way no test can see — the Python
+    runs, the tests pass, the validator is satisfied, and a child is taught that a tray
+    holds twelve loaves while watching eight land on it.
+    """
+    sim = world.simulation
+    if sim is None:
+        return ""
+
+    lines = [
+        "",
+        "FIXED NUMBERS — the scene already draws these. Your mission MUST agree with them.",
+        "Use these exact values; never invent a different one for the same thing:",
+    ]
+    lines += [f"  {name} = {value}" for name, value in sim.quantities.items()]
+
+    if sim.rules:
+        lines.append("")
+        lines.append("RULES the scene enforces:")
+        lines += [f"  - {rule}" for rule in sim.rules]
+
+    if sim.controls:
+        lines.append("")
+        lines.append(
+            "BUTTONS the player has. Do not ask them to do anything else — there is no "
+            "other control on screen:"
+        )
+        lines += [f"  {c.id} ({c.label_ar}) — {c.effect}" for c in sim.controls]
+
+    return "\n".join(lines) + "\n"
+
 def build(
     world: World,
     *,
@@ -222,6 +258,7 @@ def build(
         characters=_characters_block(world),
         sprites=_sprites_block(world),
         animations="  " + ", ".join(world.visual.animations),
+        simulation=_simulation_block(world),
         scaffold_note=scaffold_note,
     )
     return SYSTEM, task

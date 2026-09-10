@@ -509,7 +509,7 @@ controls:
     - { id: serve, label_en: Serve next, label_ar: قدّم للي عليه الدور,  effect: gives 2 loaves to the head of the queue }
     - { id: demo,  label_en: Play demo,  label_ar: شغّل العرض,           effect: runs the full cycle unattended }
     - { id: pause, label_en: Pause,      label_ar: وقّف مؤقتًا,          effect: freezes the clock mid-phase }
-    - { id: reset, label_en: Reset,      label_ar: ابدأ من جديد,         effect: back to 8 waiting, 0 baked }
+    - { id: reset, label_en: Reset,      label_ar: ابدأ من جديد,         effect: "back to 8 waiting, 0 baked" }
   view_toggles: [full scene, counter close-up]
   readouts: [loaves ready, waiting, "served / 8"]
 

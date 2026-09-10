@@ -1,54 +1,54 @@
 {
   "data": {
-    "id": "example-mission-el-forn-variables",
+    "id": "example-mission",
     "worldId": "el_forn",
     "sceneId": "bakery_gameplay",
     "targetConceptId": "variables",
     "carriedConceptIds": [],
-    "titleAr": "حساب عيش الطبلية",
+    "titleAr": "حسبة العيش في الفرن البلدي",
     "source": "model",
     "validated": true,
     "phases": {
       "encounter": {
         "speaker": "hassan",
-        "speakerNameAr": "الأسطى حسن",
-        "lineAr": "يا مريم، الصواني جاهزة تخش الفرن، بس مش عارفين الإجمالي كام رغيف بالظبط! كل صينية بتشيل عدد معين من الأرغفة، وعايزين نحسبهم بسرعة قبل ما الفرن يبرد.",
+        "speakerNameAr": "عم حسن",
+        "lineAr": "يا فتاح يا عليم يا رزاق يا كريم! الزباين واقفة على الرصيف ومحتاجين نحسب بسرعة الصواني اللي طالعة من الفرن هتعمل كام رغيف سخن عشان نكفي الناس.",
         "ctaAr": "يلا نبدأ",
         "world": {
           "props": {
-            "tray": 2,
             "oven": "lit",
-            "worktop": 1
+            "tray": 2,
+            "loaf": 0
           }
         }
       },
       "explore": {
-        "ticoIntroAr": "تيكو واقف على الطبلية وعايز يفهم إزاي بنحسب العيش اللي داخل الفرن!",
+        "ticoIntroAr": "يا هلا! تيكو هنا عشان يساعدنا نفهم الحسبة ماشية ازاي جوة الفرن.",
         "rounds": [
           {
-            "questionAr": "لو بصينا على الصواني، إيه اللي بيحدد كمية العيش اللي هتكفيها الصينية الواحدة؟",
+            "questionAr": "بص على الصينية اللي قدام عم حسن، تفتكر الصينية الواحدة بتشيل كام رغيف عجين؟",
             "optionsAr": [
-              "حجم الصينية وشكلها",
-              "اسم منطقة الفرع",
-              "درجة حرارة الجو برة"
+              "8 أرغفة",
+              "15 رغيف",
+              "3 أرغفة"
             ],
             "correctIndex": 0,
-            "nudgeAr": "فكر كدة، هل اسم الفرع مثلاً في السيدة زينب بيغير عدد الأرغفة اللي بتشيلها الصينية؟",
+            "nudgeAr": "بص كويس على العجين المرصوص على الصينية الواحدة وعدهم.",
             "highlight": [
               "tray"
             ]
           },
           {
-            "questionAr": "الأسطى حسن عايز يعرف إجمالي الأرغفة اللي هيطلعها من الصواني الجاهزة. تفتكر إيه اللي محتاج يضربه في بعض؟",
+            "questionAr": "لو عم حسن حضّر صينيتين جاهزين عشان يدخلوا الفرن، تفتكر إجمالي الأرغفة هيكون كام؟",
             "optionsAr": [
-              "عدد الصواني في عدد الأرغفة في الصينية الواحدة",
-              "عدد الزباين في سعر الرغيف بالقرش",
-              "وزن شكارة الدقيق في ميعاد فتح الفرن"
+              "16 رغيف",
+              "8 أرغفة",
+              "24 رغيف"
             ],
             "correctIndex": 0,
-            "nudgeAr": "عشان نجيب الإجمالي، بنشوف عندنا كام صينية وكل واحدة بتشيل كام رغيف بالظبط.",
+            "nudgeAr": "اضرب عدد الصواني في سعة الصينية الواحدة اللي لسه عارفينها.",
             "highlight": [
-              "loaf"
+              "tray"
             ]
           }
         ]
@@ -56,114 +56,113 @@
       "discover": {
         "conceptSlug": "variables",
         "conceptNameAr": "المتغيرات (Variables)",
-        "explanationAr": "المتغير في البرمجة زي علبة بنشيل جواها قيمة أو رقم وبنديلها اسم واضح. في الفرن، ممكن نعمل علبة نسميها trays ونشيل جواها عدد الصواني، وعلبة تانية نسميها loaves نشيل فيها الإجمالي.",
-        "ticoLineAr": "برافو! كده نقدر نبرمج الفرن ونغير الأرقام دي براحتنا في أي وقت!"
+        "explanationAr": "المتغير في البرمجة زي علبة بنسميها باسم مميز ونخزن جواها قيمة أو رقم. بدل ما نكتب الرقم نفسه كل شوية، بنادي على اسم العلبة وهي بتفتكر الرقم لوحدها وتسهل علينا الحساب!",
+        "ticoLineAr": "برافو عليك! يعني إحنا ممكن نعمل علبة نسميها سعة الصينية ونشيل جواها رقم 8 ونستخدمها وقت ما نحب!"
       },
       "understand": {
-        "introAr": "بص كدة الأسطى حسن كتب الكود ده إزاي في بايثون عشان يحسب إجمالي العيش لما يكون عنده صينيتين:",
-        "code": "def calculate_loaves(loaves_per_tray: int) -> int:\n    trays = 2\n    loaves = trays * loaves_per_tray\n    return loaves",
+        "introAr": "شوف كده الكود ده في بايثون بيحسب الأرغفة إزاي باستخدام المتغيرات:",
+        "code": "def calculate_loaves(trays: int) -> int:\n    loaves_per_tray = 8\n    loaves = trays * loaves_per_tray\n    return loaves",
         "annotations": [
           {
             "line": 2,
-            "textAr": "عملنا متغير سميناه trays وشيلنا جواه رقم 2",
+            "textAr": "عملنا متغير اسمه loaves_per_tray وحفظنا جواه رقم 8 اللي هو سعة الصينية الواحدة",
             "pointsAt": "tray"
           },
           {
             "line": 3,
-            "textAr": "عملنا متغير جديد اسمه loaves وحسبنا قيمته بضرب الصواني في الأرغفة",
+            "textAr": "ضربنا عدد الصواني في سعة الصينية وحطينا النتيجة في متغير جديد اسمه loaves",
             "pointsAt": "loaf"
           }
         ],
         "runLabelAr": "شغّل وشوف",
         "onRun": {
-          "animate": "trays_into_oven",
+          "animate": "baking",
           "props": {
-            "tray": 2,
+            "oven": "lit",
             "loaf": 16
           },
-          "captionAr": "الصواني دخلت الفرن والعيش بدأ يستوي بالصلاة على النبي!"
+          "captionAr": "الفرن اشتغل وطلعنا 16 رغيف سخن وجميل!"
         }
       },
       "guided": {
         "steps": [
           {
-            "code": "def calculate_loaves(loaves_per_tray: int) -> int:\n    trays = ___\n    loaves = trays * loaves_per_tray\n    return loaves",
+            "code": "def calculate_loaves(trays: int) -> int:\n    loaves_per_tray = ___\n    loaves = trays * loaves_per_tray\n    return loaves",
             "blanks": [
-              "2"
+              "8"
             ],
-            "promptAr": "املا الفراغ عشان نحدد عدد الصواني الجاهزة على الطبلية (2 صينية).",
-            "hintAr": "اكتب الرقم 2 عشان نخزنه جوة المتغير trays."
+            "promptAr": "حط سعة الصينية الواحدة جوة المتغير المناسب ليها.",
+            "hintAr": "افتكر إن الصينية الواحدة بتشيل 8 أرغفة."
           },
           {
-            "code": "def calculate_loaves(loaves_per_tray: int) -> int:\n    trays = 2\n    ___ = trays * loaves_per_tray\n    return loaves",
+            "code": "def calculate_loaves(trays: int) -> int:\n    loaves_per_tray = 8\n    loaves = trays * ___\n    return loaves",
             "blanks": [
-              "loaves"
+              "loaves_per_tray"
             ],
-            "promptAr": "اكتب اسم المتغير اللي هنخزن فيه النتيجة ونرجعه في الآخر.",
-            "hintAr": "المتغير اسمه loaves ومكتوب في سطر الـ return."
+            "promptAr": "اضرب عدد الصواني (trays) في المتغير اللي شايل سعة الصينية عشان نحسب الإجمالي.",
+            "hintAr": "استخدم نفس اسم المتغير اللي عرفناه فوق: loaves_per_tray."
           }
         ],
-        "solutionCode": "def calculate_loaves(loaves_per_tray: int) -> int:\n    trays = 2\n    loaves = trays * loaves_per_tray\n    return loaves",
+        "solutionCode": "def calculate_loaves(trays: int) -> int:\n    loaves_per_tray = 8\n    loaves = trays * loaves_per_tray\n    return loaves",
         "tests": [
           {
-            "call": "calculate_loaves(8)",
+            "call": "calculate_loaves(2)",
             "expected": "16",
             "name": null,
             "hidden": false
           },
           {
-            "call": "calculate_loaves(10)",
+            "call": "calculate_loaves(1)",
+            "expected": "8",
+            "name": null,
+            "hidden": false
+          },
+          {
+            "call": "calculate_loaves(5)",
+            "expected": "40",
+            "name": null,
+            "hidden": false
+          }
+        ],
+        "onRun": {
+          "animate": "retrieving",
+          "props": {
+            "loaf": 8
+          },
+          "captionAr": "الله ينور! الحسبة مظبوطة والأرغفة جاهزة للتسليم."
+        }
+      },
+      "remix": {
+        "twistAr": "درجة حرارة الفرن زادت، وعم حسن جاب صواني أكبر بتشيل 10 أرغفة بدل 8!",
+        "newRequirementAr": "عدل الكود عشان يحسب الأرغفة بناءً على السعة الجديدة للصينية (10 أرغفة).",
+        "worldChange": {
+          "animate": "steam",
+          "props": {
+            "oven-fire": "lit",
+            "tray": 2
+          },
+          "captionAr": null
+        },
+        "startingCode": "def calculate_loaves(trays: int) -> int:\n    loaves_per_tray = 8\n    loaves = trays * loaves_per_tray\n    return loaves",
+        "solutionCode": "def calculate_loaves(trays: int) -> int:\n    loaves_per_tray = 10\n    loaves = trays * loaves_per_tray\n    return loaves",
+        "tests": [
+          {
+            "call": "calculate_loaves(2)",
             "expected": "20",
             "name": null,
             "hidden": false
           },
           {
-            "call": "calculate_loaves(12)",
-            "expected": "24",
+            "call": "calculate_loaves(5)",
+            "expected": "50",
             "name": null,
             "hidden": false
           }
         ],
         "onRun": {
-          "animate": "count_up",
+          "animate": "baking",
           "props": {
-            "tray": 2,
             "loaf": 20
-          },
-          "captionAr": "تمام كدة! المتغيرات اشتغلت وحسبت العيش مظبوط."
-        }
-      },
-      "remix": {
-        "twistAr": "الطلبات زادت والأسطى حسن جهز صينية تالتة زيادة على الطبلية!",
-        "newRequirementAr": "عدل قيمة المتغير trays عشان تخلي عدد الصواني 3 بدل 2، عشان نحسب الإجمالي الجديد صح.",
-        "worldChange": {
-          "animate": "loaves_appear",
-          "props": {
-            "tray": 3
-          },
-          "captionAr": null
-        },
-        "startingCode": "def calculate_loaves(loaves_per_tray: int) -> int:\n    trays = 2\n    loaves = trays * loaves_per_tray\n    return loaves",
-        "solutionCode": "def calculate_loaves(loaves_per_tray: int) -> int:\n    trays = 3\n    loaves = trays * loaves_per_tray\n    return loaves",
-        "tests": [
-          {
-            "call": "calculate_loaves(8)",
-            "expected": "24",
-            "name": null,
-            "hidden": false
-          },
-          {
-            "call": "calculate_loaves(10)",
-            "expected": "30",
-            "name": null,
-            "hidden": false
-          }
-        ],
-        "onRun": {
-          "animate": "trays_into_oven",
-          "props": {
-            "tray": 3,
-            "loaf": 24
           },
           "captionAr": null
         }

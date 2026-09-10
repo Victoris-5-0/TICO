@@ -140,6 +140,51 @@ class Visual(ManifestModel):
         return name in self.animations
 
 
+class Control(ManifestModel):
+    """One button the player can actually press."""
+
+    id: str
+    label_en: str
+    label_ar: str
+    effect: str | None = None
+
+
+class Simulation(ManifestModel):
+    """The scene's own arithmetic, and the verbs it offers.
+
+    The third fence. `visual` says what can be *drawn*; this says what is *true* about it
+    once drawn, which is a different constraint and the one that was missing.
+
+    A generated mission is a story about numbers, and the scene is already committed to
+    its own: the bakery-v2 demo bakes eight loaves a batch and hands two to each customer,
+    because `simulation.ts` says so and the sprites are placed accordingly. A mission that
+    teaches `loaves_per_tray = 12` is not wrong in Python — it runs, it passes its tests,
+    the validator is satisfied — and a child still watches a tray fill with eight loaves
+    while being told there are twelve. Nothing else in the pipeline can catch that, because
+    every part of it is individually correct.
+
+    `quantities` is therefore a closed set of facts generation must agree with, and
+    `controls` is a closed set of verbs it may ask the player to use. A mission needing a
+    button the scene does not have is unplayable in a way the code does not reveal.
+    """
+
+    #: Fixed numbers the scene draws. Generation may use these values and must not
+    #: contradict them. Keys are free-form because each world counts different things.
+    quantities: dict[str, int] = Field(default_factory=dict)
+    #: What the player can do. A mission expecting any other verb has no button.
+    controls: list[Control] = Field(default_factory=list)
+    #: Rules the scene enforces that are not a single number.
+    rules: list[str] = Field(default_factory=list)
+
+    def contradicts(self, name: str, value: int) -> bool:
+        """True when `value` disagrees with a quantity the scene has already committed to."""
+        known = self.quantities.get(name)
+        return known is not None and known != value
+
+    def has_control(self, control_id: str) -> bool:
+        return any(c.id == control_id for c in self.controls)
+
+
 class Constraints(ManifestModel):
     may_vary: list[str] = Field(default_factory=list)
     may_not_vary: list[str] = Field(default_factory=list)
@@ -171,6 +216,8 @@ class World(ManifestModel):
     characters: list[Character] = Field(default_factory=list)
     vocabulary: dict[str, VocabularyEntry]
     visual: Visual
+    #: Optional: only a world with a running interactive scene has one.
+    simulation: Simulation | None = None
     mechanics: list[Mechanic]
     carried_scaffold: dict[str, dict[str, str]] = Field(default_factory=dict)
     constraints: Constraints
