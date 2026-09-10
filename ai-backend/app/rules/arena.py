@@ -8,7 +8,7 @@ Pedagogical & architectural contract (AGENTS.md, docs/08, tico-ai-tasks.csv):
   - "A challenge should stretch, not flatter": Among mastered concepts, the one closer
     to the threshold (more recently mastered, growth edge) is prioritized as the primary
     target over rock-solid concepts.
-  - Eligibility: Concepts must have mastery >= STRONG_MASTERY_THRESHOLD (0.7), imported
+  - Eligibility: Concepts must have mastery >= MASTERY_THRESHOLD, imported
     directly from app.rules.composer to eliminate threshold drift.
   - Deterministic: Ascending mastery sort with alphabetical tie-breaking for repeatable evaluation.
 """
@@ -18,7 +18,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Final
 
-from app.rules.composer import STRONG_MASTERY_THRESHOLD
+from app.rules.mastery import MASTERY_THRESHOLD
 from app.schemas.common import SkillBand
 
 # NEEDS DECISION: the default number of concepts mixed into one arena
@@ -62,12 +62,16 @@ def select_arena_concepts(
     mastery_map: dict[str, float],
     *,
     count: int = DEFAULT_ARENA_CONCEPT_COUNT,
-    mastery_threshold: float = STRONG_MASTERY_THRESHOLD,
+    mastery_threshold: float = MASTERY_THRESHOLD,
 ) -> ArenaSelectionResult:
     """Select and rank concepts for a challenge arena mission.
 
     Pedagogical contract:
-      - Only mastered concepts (mastery >= STRONG_MASTERY_THRESHOLD) are eligible.
+      - Only mastered concepts (mastery >= MASTERY_THRESHOLD) are eligible. This is the
+        same threshold the gate and the mission picker use — arena entry is a mastery
+        question, and it used to borrow composer.MASTERY_THRESHOLD (0.70), which
+        answers a different one and let a student into the arena on a concept the
+        roadmap had not finished teaching them.
       - Concepts are sorted ascending by mastery so the weakest-but-mastered concept
         comes first to stretch the learner on solid ground.
       - Stable alphabetical tie-breaking on concept_id for identical masteries.
@@ -77,7 +81,7 @@ def select_arena_concepts(
                      MasteryProfileUpdateResult.mastery_map.
         count: Number of concepts to select for the challenge (minimum 1).
         mastery_threshold: Cutoff for arena eligibility, defaulting strictly to
-                           composer.STRONG_MASTERY_THRESHOLD.
+                           mastery.MASTERY_THRESHOLD.
 
     Returns:
         ArenaSelectionResult with selected concepts and target/carried partition.

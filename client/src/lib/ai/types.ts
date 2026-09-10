@@ -88,6 +88,28 @@ export interface CodeAnnotation {
   pointsAt?: string | null;
 }
 
+/**
+ * One concept's row on the map: how many stops it has and how many are walked.
+ *
+ * This is what the path on screen is drawn from. `stopsTotal` is three for a concept a
+ * student is coping with and grows to at most six while they are not, so a client can
+ * render the stops without knowing anything about mastery — and `extended` lets it say
+ * the path grew rather than silently showing more circles.
+ */
+export interface ConceptProgressOut {
+  conceptId: string;
+  /** Missions finished on this concept. */
+  completed: number;
+  /** Stops to draw. 3 normally, up to 6. */
+  stopsTotal: number;
+  remaining: number;
+  /** Walk past it; the next concept is unlocked. */
+  isComplete: boolean;
+  /** The path grew beyond the usual three because mastery was still short. */
+  extended: boolean;
+  mastery: number;
+}
+
 /** Rules propose, the model reviews. Always recorded so a decision can be explained. */
 export type DecidedBy = "RULE" | "MODEL";
 
@@ -463,6 +485,7 @@ export interface RefreshRequest {
 export interface RefreshResponse {
   profile: StudentProfileOut;
   concepts: Array<MasteryOut>;
+  progress?: Array<ConceptProgressOut>;
   /** Did the gate move the student on, or hold them for another rep? */
   advanced: boolean;
   decidedBy: DecidedBy;
@@ -514,7 +537,7 @@ export interface SessionDebriefResponse {
 export interface SessionOut {
   id: string;
   userId: string;
-  /** The lesson, when the session can be traced to one. `practice_sessions` links to an exercise or a generated mission, and only the exercise carries a lesson — so a runtime-generated mission returns null here. Send it on create; do not rely on getting it back. */
+  /** The lesson this session is playing. Stored on create and returned here, including for a runtime-generated mission. Null only for sessions written before `practice_sessions.lesson_id` existed and which have no exercise to derive it from. */
   levelId?: string | null;
   generatedMissionId?: string | null;
   phase: Phase;
@@ -571,7 +594,7 @@ export interface TicoMessageRequest {
  * against the manifest rather than trusting the model.
  */
 export interface WorldChange {
-  /** One of the manifest animations, e.g. "trays_into_oven". */
+  /** One of the world manifest's animations, e.g. "baking" or "handover" in el_forn. Closed set — the validator rejects anything else, so a client may switch on it exhaustively. */
   animate?: string | null;
   /** The scene after running. Values may reference a variable from the student's code as "= total". */
   props?: Record<string, number | string>;

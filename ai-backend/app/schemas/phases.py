@@ -63,7 +63,9 @@ class WorldChange(Schema):
 
     animate: str | None = Field(
         default=None,
-        description='One of the manifest animations, e.g. "trays_into_oven".',
+        description="One of the world manifest's animations, e.g. \"baking\" or "
+        "\"handover\" in el_forn. Closed set — the validator rejects anything else, so a "
+        "client may switch on it exhaustively.",
     )
     props: dict[str, int | str] = Field(
         default_factory=dict,

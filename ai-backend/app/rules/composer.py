@@ -24,11 +24,20 @@ from typing import Final
 from app.schemas.common import DecidedBy, ScaffoldLevel, SkillBand
 from app.schemas.missions import ScaffoldPlan
 
+from app.rules.mastery import MASTERY_THRESHOLD
+
 # NEEDS DECISION: Threshold values (0.7 / 0.4) are implementation defaults mapped
 # from qualitative documentation tiers ("Strong" / "Shaky"). They are not currently
 # grounded in empirical mastery data or curriculum specification.
 # See docs/06-data-model-and-contracts.md and docs/08-ai-generation-and-companion.md.
-GATE_MASTERY_THRESHOLD: Final[float] = 0.7
+#: The concept gate. Imported from `rules/mastery` so it cannot drift from the number the
+#: mission picker and the debrief use — it did, and a student at 0.72 was told they had
+#: advanced while still being handed the same concept.
+GATE_MASTERY_THRESHOLD: Final[float] = MASTERY_THRESHOLD
+
+#: Scaffolding, which is a *different* question from mastery: not "has he got it?" but
+#: "how much help should this mission carry?". A student can be past the gate and still
+#: want the shape of the answer in front of them, so these stay on their own scale.
 STRONG_MASTERY_THRESHOLD: Final[float] = 0.7
 WEAK_MASTERY_THRESHOLD: Final[float] = 0.4
 

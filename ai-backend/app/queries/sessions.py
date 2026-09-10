@@ -15,7 +15,6 @@ from sqlalchemy.orm import Session
 
 from app.models_tables import HintEvent, PracticeSession, Submission
 from app.models_tables.enums import Phase, SessionKind, SessionOutcome
-from app.models_tables.learning import _utcnow
 
 
 def get(db: Session, session_id: str) -> PracticeSession | None:
@@ -43,6 +42,7 @@ def open_session(
     user_id: str,
     exercise_id: str | None = None,
     generated_mission_id: str | None = None,
+    lesson_id: str | None = None,
     kind: SessionKind = SessionKind.LESSON,
 ) -> PracticeSession:
     """Start a session. `id` and `started_at` fill themselves in.
@@ -50,14 +50,16 @@ def open_session(
     Either `exercise_id` or `generated_mission_id` should be set, depending on whether
     the mission was authored or composed at runtime.
 
-    `exercise_id`, not `lesson_id` — the column is a foreign key to `exercises`, and a
-    lesson id passed here fails on that constraint. The parameter used to be called
-    `lesson_id`, which invited exactly that mistake.
+    `exercise_id` and `lesson_id` are different columns and both are foreign keys. Passing
+    a lesson id as `exercise_id` fails the constraint — the parameter used to be called
+    `lesson_id`, which invited exactly that mistake, and for a while there was no lesson
+    column at all so the value was simply dropped.
     """
     session = PracticeSession(
         user_id=user_id,
         exercise_id=exercise_id,
         generated_mission_id=generated_mission_id,
+        lesson_id=lesson_id,
         kind=kind,
         phase=Phase.ENCOUNTER,
         outcome=SessionOutcome.IN_PROGRESS,
@@ -87,13 +89,21 @@ def close_session(
     A double-close is normal: the client may fire on both "tests passed" and "student
     navigated away", and overwriting the timestamp would corrupt the timing evidence the
     student model reads.
+
+    `ended_at` is taken from the **database** clock, not this process's, because
+    `started_at` is a `server_default=func.now()`. Mixing the two produced sessions that
+    ended before they began: a laptop about a second behind the Postgres host is enough,
+    and anything computing a duration from the pair then gets a negative number.
     """
     session.outcome = outcome
     if time_spent_ms is not None:
         session.time_spent_ms = time_spent_ms
     if session.ended_at is None:
-        session.ended_at = _utcnow()
+        session.ended_at = func.now()
     db.flush()
+    # `func.now()` is SQL, so the attribute holds a pending expression until it is read
+    # back. Refresh it, or the caller serialises the expression object into the response.
+    db.refresh(session, ["ended_at"])
     return session
 
 

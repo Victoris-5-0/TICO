@@ -20,6 +20,7 @@ from sqlalchemy.orm import Session
 from app import manifests
 from app.ai.chains import mission_gen
 from app.schemas import phases as P
+from app.schemas.common import ScaffoldLevel
 from app.manifests.models import World
 from app.models_tables import (
     Concept,
@@ -32,15 +33,16 @@ from app.models_tables import (
 )
 from app.config import settings
 from app.ai.prompts import tico_hint as hint_prompt
-from app.rules import arena
-from app.queries import ai_log, students, users
+from app.rules import arena, progression
+from app.rules.mastery import MASTERY_THRESHOLD
+from app.queries import ai_log, students, students as student_q, users
 
 log = logging.getLogger(__name__)
 
 #: Below this a concept counts as not yet learned. The roadmap sends a student to the
 #: first concept under it, in `sequence_order` — the order never changes, only where in
 #: it a particular student is.
-MASTERY_THRESHOLD = 0.75
+
 
 ENGINE_VERSION = "gen/v2-phases"
 
@@ -96,14 +98,20 @@ def carried_for_lesson(db: Session, lesson_id: str) -> list[str]:
 
 
 def next_concept(db: Session, user_id: str) -> Concept:
-    """The first concept in the fixed order this student has not yet mastered.
+    """The first concept in the fixed order this student has not yet finished.
 
     Deliberately simple, and deliberately here rather than in a model. "Which concept
     next" is a rule a teacher must be able to check, and a language model asked it will
     give a fluent answer that cannot be audited.
 
-    A student who has mastered everything gets the last concept again — the arena is
-    where they should be, but a repeat beats an error.
+    **Finished is a count, not a number the student cannot see.** `rules/progression` says
+    a concept has three stops, extended to at most six if mastery is still short after
+    those three — which is what the map on screen draws. Gating purely on mastery meant the
+    path had no visible end: a child completed the third stop, the path carried on, and
+    nothing said why.
+
+    A student who has finished everything gets the last concept again — the arena is where
+    they should be, but a repeat beats an error.
     """
     concepts = students.concepts_in_order(db)
     if not concepts:
@@ -112,7 +120,9 @@ def next_concept(db: Session, user_id: str) -> Concept:
     mastery = students.mastery_map(db, user_id)
     for concept in concepts:
         row = mastery.get(concept.id)
-        if row is None or row.mastery < MASTERY_THRESHOLD:
+        if row is None:
+            return concept
+        if not progression.is_complete(mastery=row.mastery, completed=row.evidence_count):
             return concept
     return concepts[-1]
 
@@ -378,13 +388,16 @@ def generate_explicit(
     )
 
 
-def as_exercise(mission: "P.PhasedMissionOut", *, engine_version: str) -> dict:
+def as_exercise(mission: "P.PhasedMissionOut", *, engine_version: str = ENGINE_VERSION) -> dict:
     """Flatten a six-phase mission into the `exercises`-row shape.
 
     Lossy on purpose. `GenerateMissionResponse` describes an authored artefact — a title,
     a starter, tests, hints — and the six phases are a *journey*, which an exercise row has
-    nowhere to put. The guided phase is the part that maps: its starter code is the
-    student's starting point and its tests are the tests.
+    nowhere to put. The guided phase is the part that maps.
+
+    The starter is the **first guided step's code**, blanks and all. There is no separate
+    starting file in the six-phase design: guided coding hands the student code with holes
+    in it and fills them one step at a time, so step one's code is where they begin.
 
     Anyone who needs the whole journey should call `/v1/missions/next`, which returns it.
     """
@@ -393,9 +406,9 @@ def as_exercise(mission: "P.PhasedMissionOut", *, engine_version: str) -> dict:
         "mission_id": mission.id,
         "title": mission.title_ar,
         "instructions": mission.phases.encounter.line_ar,
-        "starter_code": guided.starting_code,
+        "starter_code": guided.steps[0].code,
         "test_cases": [
-            {"input": t.call, "expectedOutput": t.expected, "isHidden": False}
+            {"input": t.call, "expectedOutput": t.expected, "isHidden": t.hidden}
             for t in guided.tests
         ],
         # One authored fallback per rung, served when the model is unavailable or a guard

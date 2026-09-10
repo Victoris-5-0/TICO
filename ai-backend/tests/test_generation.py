@@ -296,3 +296,208 @@ def test_hint_guard_does_not_trip_on_short_shared_lines():
         "شيل الـ pass واكتب return مكانها.", "def f():\n    pass\n"
     )
     assert not leaked
+
+
+# ------------------------------------------------------- the exercise-shaped flattening
+
+
+def test_as_exercise_reads_fields_that_exist():
+    """`/v1/missions/generate` flattens six phases into an `exercises` row.
+
+    This exists because that endpoint shipped with two bugs that no test would have caught:
+    a `NameError` on an unimported module, and a read of `guided.starting_code`, which the
+    six-phase schema does not have. Both were found by generating a real mission, not by
+    the suite — the endpoint had no coverage at all.
+
+    Run against the committed example mission, so it costs nothing and cannot drift from
+    the shape the service actually produces.
+    """
+    import json
+    import pathlib
+
+    from app.schemas import phases as P
+    from app.schemas.missions import GenerateMissionResponse
+    from app.services.missions import ENGINE_VERSION, as_exercise
+
+    example = pathlib.Path(__file__).resolve().parents[1] / "docs" / "example-mission-response.json"
+    mission = P.PhasedMissionOut.model_validate(json.loads(example.read_text(encoding="utf-8"))["data"])
+
+    # Constructing the DTO is most of the assertion: a missing or misnamed field raises.
+    response = GenerateMissionResponse(**as_exercise(mission))
+
+    # The starter is the first guided step's code — there is no separate starting file.
+    assert response.starter_code == mission.phases.guided.steps[0].code
+    assert response.test_cases, "an exercise with no tests cannot be marked passed"
+    assert len(response.hints) == 4, "one authored fallback per rung"
+
+    # The version must match what `persist` stamps on the row, or the response describes a
+    # different artefact from the one that was stored.
+    assert response.engine_version == ENGINE_VERSION
+
+
+def test_as_exercise_keeps_hidden_tests_hidden():
+    """A hidden test shown to the student is the answer, spelled out as an assertion."""
+    import json
+    import pathlib
+
+    from app.schemas import phases as P
+    from app.services.missions import as_exercise
+
+    example = pathlib.Path(__file__).resolve().parents[1] / "docs" / "example-mission-response.json"
+    mission = P.PhasedMissionOut.model_validate(json.loads(example.read_text(encoding="utf-8"))["data"])
+    mission.phases.guided.tests[0].hidden = True
+
+    flattened = as_exercise(mission)
+    assert flattened["test_cases"][0]["isHidden"] is True
+    assert [t["isHidden"] for t in flattened["test_cases"]] == [
+        t.hidden for t in mission.phases.guided.tests
+    ]
+
+
+# ------------------------------------------------- the scene's arithmetic is binding
+
+
+def _example_mission():
+    import json
+    import pathlib
+
+    from app.schemas import phases as P
+
+    example = pathlib.Path(__file__).resolve().parents[1] / "docs" / "example-mission-response.json"
+    return P.PhasedMissionOut.model_validate(json.loads(example.read_text(encoding="utf-8"))["data"])
+
+
+def test_the_manifest_carries_the_scenes_own_numbers():
+    """`visual` says what can be drawn; `simulation` says what is true about it.
+
+    These come from `client/src/lib/bakery/simulation.ts` by way of the bakery-v2
+    inventory. Without them the manifest could describe a tray it could draw but not how
+    many loaves fit on it.
+    """
+    from app import manifests
+
+    sim = manifests.get("el_forn").simulation
+    assert sim is not None, "el_forn has a running interactive scene and must declare it"
+    assert sim.quantities["tray_capacity"] == 8
+    assert sim.quantities["order_size"] == 2
+    assert sim.quantities["queue_length"] == 8
+    # Two batches of eight, two loaves each, eight customers. The scene is built on this.
+    assert (
+        sim.quantities["batch_size"] * sim.quantities["batches_to_clear_queue"]
+        == sim.quantities["order_size"] * sim.quantities["queue_length"]
+    )
+
+
+def test_a_mission_may_not_contradict_what_the_scene_draws():
+    """The bug this guard exists for, and the one nothing else could catch.
+
+    `loaves_per_tray = 12` is correct Python. It runs, its tests pass, the sandbox is
+    satisfied — and the child watches eight loaves land on the tray while being told there
+    are twelve. Generation really did produce exactly this before the scene's numbers
+    reached the prompt.
+    """
+    from app import manifests
+    from app.ai.phase_guards import validate_phases
+
+    world = manifests.get("el_forn")
+    mission = _example_mission()
+    mission.phases.understand.code = (
+        "def calculate_loaves(trays: int) -> int:\n"
+        "    loaves_per_tray = 12\n"
+        "    return trays * loaves_per_tray"
+    )
+
+    report = validate_phases(mission, world)
+    assert not report.ok
+    assert any("contradicts the scene" in f and "tray_capacity = 8" in f for f in report.failures)
+
+
+def test_the_value_the_scene_actually_draws_is_accepted():
+    from app import manifests
+    from app.ai.phase_guards import validate_phases
+
+    world = manifests.get("el_forn")
+    mission = _example_mission()
+    mission.phases.understand.code = (
+        "def calculate_loaves(trays: int) -> int:\n"
+        "    loaves_per_tray = 8\n"
+        "    return trays * loaves_per_tray"
+    )
+
+    assert not [f for f in validate_phases(mission, world).failures if "contradicts" in f]
+
+
+def test_a_quantity_the_scene_has_no_opinion_on_is_left_alone():
+    """A mission may invent its own numbers. It may not redefine the scene's."""
+    from app import manifests
+    from app.ai.phase_guards import validate_phases
+
+    world = manifests.get("el_forn")
+    mission = _example_mission()
+    mission.phases.understand.code = (
+        "def total(days: int) -> int:\n"
+        "    price_per_loaf = 75\n"
+        "    return days * price_per_loaf"
+    )
+
+    assert not [f for f in validate_phases(mission, world).failures if "contradicts" in f]
+
+
+def test_the_scene_numbers_reach_the_model():
+    """A guard that only rejects is a worse tool than a prompt that prevents."""
+    from app import manifests
+    from app.ai.prompts import mission_gen as prompt
+
+    world = manifests.get("el_forn")
+    _, task = prompt.build(
+        world, target_concept="variables", carried_concepts=[],
+        scene_id="bakery_gameplay", scaffold={},
+    )
+
+    assert "FIXED NUMBERS" in task
+    assert "tray_capacity = 8" in task
+    # And the buttons, because a mission needing a verb the scene lacks is unplayable.
+    assert "bake" in task and "serve" in task
+
+
+def test_a_world_with_no_interactive_scene_still_validates():
+    """Only el_forn has a running demo. The other two must not need a `simulation`."""
+    from app import manifests
+    from app.ai.prompts import mission_gen as prompt
+
+    for world_id in ("el_mahatta", "isharet_cairo"):
+        world = manifests.get(world_id)
+        assert world.simulation is None
+        _, task = prompt.build(
+            world, target_concept="variables", carried_concepts=[],
+            scene_id=world.scenes[0].id, scaffold={},
+        )
+        assert "FIXED NUMBERS" not in task
+
+
+def test_every_animation_named_is_one_the_client_implements():
+    """Four of the old names rendered nothing at all.
+
+    `trays_into_oven`, `loaves_appear`, `count_up` and `tray_burns` were in the manifest
+    and in no state machine; `tray_burns` had no artwork either. A mission naming one was
+    valid, solvable, and showed a still image.
+    """
+    from app import manifests
+
+    animations = set(manifests.get("el_forn").visual.animations)
+    assert not animations & {"trays_into_oven", "loaves_appear", "count_up", "tray_burns"}
+    # The phases bakery-v2 really runs.
+    assert {"loading", "baking", "retrieving", "stocking", "handover"} <= animations
+
+
+def test_the_committed_example_mission_still_validates():
+    """It is used as a fixture in several tests, so a stale one fails them confusingly.
+
+    It went stale exactly once: after the bakery-v2 merge it named three animations that
+    no longer exist, and had to be regenerated.
+    """
+    from app import manifests
+    from app.ai.phase_guards import validate_phases
+
+    report = validate_phases(_example_mission(), manifests.get("el_forn"))
+    assert report.ok, report.failures

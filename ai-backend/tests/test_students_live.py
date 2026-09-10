@@ -15,12 +15,12 @@ import uuid
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine, text
+from sqlalchemy import create_engine, select, text
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.database import get_db
 from app.main import app
-from app.models_tables import User
+from app.models_tables import Lesson, User
 from app.models_tables.enums import Role
 
 DB_URL = os.environ.get("REAL_DATABASE_URL") or os.environ.get("TEST_DATABASE_URL")
@@ -195,7 +195,10 @@ def test_refresh_gates_on_a_closed_session(client, student, db):
     if db.execute(text("select count(*) from mission_templates")).scalar() == 0:
         pytest.skip("no mission_templates — run scripts/sync_mission_templates.py")
 
-    session_id = body(client.post("/v1/sessions", json={"levelId": "lesson-x"}))["id"]
+    lesson = db.execute(select(Lesson).limit(1)).scalar_one_or_none()
+    if lesson is None:
+        pytest.skip("no lessons in the database — run the client seed")
+    session_id = body(client.post("/v1/sessions", json={"levelId": lesson.id}))["id"]
     client.post(f"/v1/sessions/{session_id}/close", json={
         "outcome": "SOLVED", "timeSpentMs": 120_000,
     })

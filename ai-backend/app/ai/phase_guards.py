@@ -20,6 +20,8 @@ Two rules, as everywhere else in this service:
 
 from __future__ import annotations
 
+import ast
+
 import re
 
 from app.ai import sandbox
@@ -38,6 +40,9 @@ def validate_phases(mission, world: World) -> ValidationReport:
     _understand(p.understand, world, report)
     _guided(p.guided, p.understand, world, report)
     _remix(p.remix, p.guided, world, report)
+
+    # Not about what is drawn, but about whether it is true.
+    _check_arithmetic(mission, world, report)
 
     return report
 
@@ -66,6 +71,67 @@ def _check_props(props: dict | None, world: World, where: str, report: Validatio
                 f"(have: {sorted(world.visual.sprites)})"
             )
 
+
+
+#: Vocabulary a mission uses for a quantity the scene has already fixed. Assignments to
+#: these names are checked against `simulation.quantities`.
+_QUANTITY_ALIASES = {
+    "loaves_per_tray": "tray_capacity",
+    "tray_capacity": "tray_capacity",
+    "batch_size": "batch_size",
+    "loaves_per_batch": "batch_size",
+    "order_size": "order_size",
+    "loaves_per_customer": "order_size",
+    "queue_length": "queue_length",
+    "customers": "queue_length",
+    "customers_waiting": "queue_length",
+}
+
+
+def _check_arithmetic(mission, world: World, report: ValidationReport) -> None:
+    """Every literal the mission assigns must agree with what the scene draws.
+
+    A mission teaching `loaves_per_tray = 12` is perfectly good Python. It runs, its tests
+    pass, the sandbox is satisfied — and the child watches eight loaves land on the tray
+    while being told there are twelve. Every other guard here asks "can the client draw
+    this?"; this one asks "is it true?", and nothing else in the pipeline does.
+
+    Only assignments of plain integers to known names are checked. A mission is free to
+    invent its own quantities; it is not free to redefine one the scene has committed to.
+    """
+    sim = world.simulation
+    if sim is None:
+        return
+
+    report.checks_run.append("arithmetic")
+
+    for label, code in (
+        ("understand", mission.phases.understand.code),
+        ("guided", mission.phases.guided.solution_code),
+        ("remix", mission.phases.remix.starting_code),
+    ):
+        if not code:
+            continue
+        try:
+            tree = ast.parse(code)
+        except SyntaxError:
+            continue  # the sandbox reports this far better than we could
+
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.Assign):
+                continue
+            if not (isinstance(node.value, ast.Constant) and isinstance(node.value.value, int)):
+                continue
+            for target in node.targets:
+                if not isinstance(target, ast.Name):
+                    continue
+                quantity = _QUANTITY_ALIASES.get(target.id)
+                if quantity and sim.contradicts(quantity, node.value.value):
+                    report.fail(
+                        f"{label}: `{target.id} = {node.value.value}` contradicts the scene, "
+                        f"which draws {quantity} = {sim.quantities[quantity]}. Use that value "
+                        f"or a different name."
+                    )
 
 # --------------------------------------------------------------------- per phase
 

@@ -35,10 +35,10 @@ class SessionOut(ORMSchema):
     user_id: str
     level_id: str | None = Field(
         default=None,
-        description="The lesson, when the session can be traced to one. `practice_sessions` "
-        "links to an exercise or a generated mission, and only the exercise carries a "
-        "lesson — so a runtime-generated mission returns null here. Send it on create; do "
-        "not rely on getting it back.",
+        description="The lesson this session is playing. Stored on create and returned "
+        "here, including for a runtime-generated mission. Null only for sessions written "
+        "before `practice_sessions.lesson_id` existed and which have no exercise to "
+        "derive it from.",
     )
     generated_mission_id: str | None = None
     phase: Phase

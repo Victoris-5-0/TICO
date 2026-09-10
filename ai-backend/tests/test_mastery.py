@@ -6,6 +6,7 @@ import pytest
 
 import app.rules.mastery as mastery_module
 from app.rules.mastery import (
+    MASTERY_THRESHOLD,
     BOUNDARY_EPSILON,
     DEFAULT_LEARNING_RATE,
     OUTCOME_CLEAN_PASS,
@@ -158,12 +159,14 @@ def test_compute_outcome_score_monotonicity_and_rungs():
     s5 = compute_outcome_score(passed=True, hints_used=5)
     s_fail = compute_outcome_score(passed=False, hints_used=0)
 
+    # The named constants, not their literal values. The numbers are calibration and have
+    # been recalibrated once already; the ordering and the floor below are the contract.
     assert s0 == OUTCOME_CLEAN_PASS == 1.0
-    assert s1 == OUTCOME_RUNG_1_PASS == 0.85
-    assert s2 == OUTCOME_RUNG_2_PASS == 0.70
-    assert s3 == OUTCOME_RUNG_3_PASS == 0.55
-    assert s4 == OUTCOME_RUNG_4_PASS == 0.40
-    assert s5 == OUTCOME_RUNG_4_PASS == 0.40
+    assert s1 == OUTCOME_RUNG_1_PASS
+    assert s2 == OUTCOME_RUNG_2_PASS
+    assert s3 == OUTCOME_RUNG_3_PASS
+    assert s4 == OUTCOME_RUNG_4_PASS
+    assert s5 == OUTCOME_RUNG_4_PASS, "5+ hints scores the same as 4; the ladder ends there"
     assert s_fail == OUTCOME_FAILURE == 0.0
 
     # Monotonic decrease: clean pass > rung 1 > rung 2 > rung 3 > rung 4 > failure
@@ -172,6 +175,66 @@ def test_compute_outcome_score_monotonicity_and_rungs():
     # Negative hints rejected
     with pytest.raises(ValueError, match="hints_used cannot be negative"):
         compute_outcome_score(passed=True, hints_used=-1)
+
+
+def test_every_passing_score_can_actually_reach_mastery():
+    """The invariant the old calibration broke, and the reason this file exists.
+
+    This score is the target of an exponential moving average, so it is also the ceiling
+    that average converges to. A passing score below MASTERY_THRESHOLD therefore means a
+    student who passes every single mission still never crosses it — not slowly, never.
+
+    That was real: two hints scored 0.70 against a 0.70 gate, and three scored 0.55. A
+    child who leaned on hints could solve a hundred missions on `variables` and be handed
+    `variables` again every time, with no way to tell why.
+    """
+    for hints in range(0, 8):
+        score = compute_outcome_score(passed=True, hints_used=hints)
+        assert score > MASTERY_THRESHOLD, (
+            f"passing with {hints} hints scores {score}, at or below the "
+            f"{MASTERY_THRESHOLD} threshold — a student who always uses {hints} hints "
+            f"can never master anything"
+        )
+
+
+def test_passing_always_converges_above_the_threshold():
+    """The same invariant, demonstrated rather than argued."""
+    for hints in range(0, 8):
+        score = compute_outcome_score(passed=True, hints_used=hints)
+        mastery = 0.0
+        for _ in range(200):
+            mastery = compute_single_concept_mastery(mastery, score, weight=1.0)
+        assert mastery > MASTERY_THRESHOLD
+
+
+def test_hints_cost_repetitions_not_the_ceiling():
+    """Asking for help should slow a student down, not lock them out."""
+    reps = {}
+    for hints in (0, 4):
+        score = compute_outcome_score(passed=True, hints_used=hints)
+        mastery, n = 0.0, 0
+        while mastery < MASTERY_THRESHOLD and n < 500:
+            mastery = compute_single_concept_mastery(mastery, score, weight=1.0)
+            n += 1
+        reps[hints] = n
+
+    assert reps[0] < reps[4], "using every hint must take more missions"
+    assert reps[4] < 30, f"but not so many a child gives up: {reps[4]}"
+
+
+def test_one_threshold_answers_the_mastery_question():
+    """It used to be four different numbers, and they disagreed.
+
+    A student at 0.72 was past `GATE_MASTERY_THRESHOLD` (0.70) so was told they had
+    advanced, was eligible for the arena at 0.70, was below `missions.MASTERY_THRESHOLD`
+    (0.75) so got the same concept again, and was below `sessions.MASTERY_THRESHOLD` (0.80)
+    so the debrief said nothing about it.
+    """
+    from app.rules.composer import GATE_MASTERY_THRESHOLD
+    from app.services.missions import MASTERY_THRESHOLD as picker
+    from app.services.sessions import MASTERY_THRESHOLD as debrief
+
+    assert GATE_MASTERY_THRESHOLD == picker == debrief == MASTERY_THRESHOLD
 
 
 def test_calculate_concept_confidence_saturation_and_bounds():

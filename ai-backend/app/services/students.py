@@ -28,7 +28,7 @@ from app.ai.chains.escalation_review import review_composer_decision, review_pla
 from app.models_tables import LessonPlan, Lesson
 from app.models_tables.enums import DecidedBy, LessonRequirement, SkillBand
 from app.queries import ai_log, sessions as session_q, students as student_q, users
-from app.rules import plan as plan_rules
+from app.rules import plan as plan_rules, progression
 from app.rules.composer import advance_or_hold
 from app.services.missions import concept_for_lesson
 from sqlalchemy import select
@@ -73,9 +73,16 @@ def refresh(db: Session, *, user_id: str, session_id: str | None = None) -> dict
             "profile": profile,
             "concepts": list(mastery.values()),
             "advanced": False,
+            "progress": concept_map(db, user_id),
             "decided_by": DecidedBy.RULE,
+            # Two different situations, and saying "no closed session" for both was
+            # misleading: a session played on an authored exercise closes perfectly well
+            # and still has no target concept, because only a generated mission records
+            # one. The gate is about a concept, so there is nothing to open.
             "reason": (
                 "No closed session to evaluate, so there was no gate to open or hold."
+                if session is None
+                else "That session has no target concept, so there is no gate to evaluate."
             ),
             "summary": None,
         }
@@ -123,10 +130,40 @@ def refresh(db: Session, *, user_id: str, session_id: str | None = None) -> dict
         "profile": profile,
         "concepts": list(mastery.values()),
         "advanced": decision.advanced,
+        "progress": concept_map(db, user_id),
         "decided_by": decision.decided_by,
         "reason": decision.reason,
         "summary": None,
     }
+
+
+
+def concept_map(db: Session, user_id: str) -> list[dict]:
+    """The path on screen: every concept in curriculum order, with its stops.
+
+    Includes concepts the student has not started, because the map shows those too — as
+    locked circles further along the road. A concept with no mastery row has walked none of
+    its three stops, which is exactly what should be drawn.
+    """
+    mastery = student_q.mastery_map(db, user_id)
+    rows: list[dict] = []
+    for concept in student_q.concepts_in_order(db):
+        row = mastery.get(concept.id)
+        p = progression.progress_for(
+            concept.id,
+            mastery=row.mastery if row else 0.0,
+            completed=row.evidence_count if row else 0,
+        )
+        rows.append({
+            "concept_id": p.concept_id,
+            "completed": p.completed,
+            "stops_total": p.stops_total,
+            "remaining": p.remaining,
+            "is_complete": p.is_complete,
+            "extended": p.extended,
+            "mastery": p.mastery,
+        })
+    return rows
 
 
 def _evidence(db: Session, session) -> tuple[str | None, int, int]:
