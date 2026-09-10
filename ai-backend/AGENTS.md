@@ -9,6 +9,12 @@ Where this repo departs from the course, it says so below — don't "fix" it bac
 
 ## Required reading before work
 
+**Start with [`docs/STATE.md`](docs/STATE.md).** It says what is true right now — which
+endpoints are real, how to run each suite, what is deliberately unfinished and why, and
+which things this file's older sections may still assume. Read it before the list below,
+because a few of those documents describe a design that has since changed.
+
+
 Before changing this service, read:
 
 1. `../docs/02-python-curriculum.md` for concept order and assessment rules.
