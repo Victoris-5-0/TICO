@@ -571,7 +571,7 @@ export interface TicoMessageRequest {
  * against the manifest rather than trusting the model.
  */
 export interface WorldChange {
-  /** One of the manifest animations, e.g. "trays_into_oven". */
+  /** One of the world manifest's animations, e.g. "baking" or "handover" in el_forn. Closed set — the validator rejects anything else, so a client may switch on it exhaustively. */
   animate?: string | null;
   /** The scene after running. Values may reference a variable from the student's code as "= total". */
   props?: Record<string, number | string>;
