@@ -18,7 +18,7 @@ import logging
 from typing import Any, Final
 
 from langchain_core.messages import HumanMessage, SystemMessage
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from app.ai.chains.tico_hint import strip_pii_from_text
 from app.ai.prompts.error_analysis import (
@@ -43,8 +43,25 @@ class ErrorClassificationRaw(BaseModel):
     """Pydantic model for LLM structured output."""
 
     family: ErrorFamily = Field(
-        description="One of: syntax, name, type, logic, incomplete, runtime, unknown"
+        description="One of: SYNTAX, NAME, TYPE, LOGIC, INCOMPLETE, RUNTIME, UNKNOWN"
     )
+
+    @field_validator("family", mode="before")
+    @classmethod
+    def _accept_any_case(cls, v: object) -> object:
+        """Upper-case the family before the enum sees it.
+
+        This is not defensive tidying — it was a silent outage. The field description used
+        to list the values in lower case while `ErrorFamily` is upper case, so the model
+        did exactly as it was told, validation rejected every reply, and each call fell
+        through to the deterministic fallback with a warning nobody was reading. The model
+        path had never once succeeded.
+
+        The description is fixed too, but a model that lower-cases an enum anyway is
+        ordinary, and losing the whole classification over letter case is not a trade worth
+        making.
+        """
+        return v.upper() if isinstance(v, str) else v
     tag: str = Field(
         description="Snake_case tag, e.g. assignment_vs_comparison, missing_colon"
     )

@@ -231,3 +231,46 @@ def test_classify_error_model_failure_triggers_safe_fallback():
         assert response.error_tag == "undefined_variable"
         assert response.confidence >= 0.8
         assert response.escalated is False
+
+
+# ----------------------------------------------------- the enum-case silent outage
+
+
+def test_the_model_may_answer_in_any_case():
+    """A lower-case family must not throw the whole classification away.
+
+    This shipped broken. The field description listed the values in lower case while
+    `ErrorFamily` is upper case, so the model answered `"syntax"`, validation rejected it,
+    and every live call fell through to the deterministic fallback logging a warning
+    nobody read. The model path had never once succeeded in production.
+    """
+    from app.ai.chains.classify_error import ErrorClassificationRaw
+
+    for written in ("syntax", "SYNTAX", "Syntax", "sYnTaX"):
+        parsed = ErrorClassificationRaw(
+            family=written, tag="assignment_vs_comparison",
+            misconception="Thinks `=` compares.", confidence=0.9,
+        )
+        assert parsed.family is ErrorFamily.SYNTAX, f"{written!r} should parse"
+
+
+def test_the_prompt_asks_for_the_case_the_enum_accepts():
+    """Belt and braces: the validator forgives, but the description should not need it."""
+    from app.ai.chains.classify_error import ErrorClassificationRaw
+
+    described = ErrorClassificationRaw.model_fields["family"].description or ""
+    for member in ErrorFamily:
+        assert member.value in described, f"{member.value} missing from the description"
+
+
+def test_a_family_outside_the_enum_is_still_rejected():
+    """Forgiving case is not the same as forgiving invention."""
+    import pytest as _pytest
+    from pydantic import ValidationError
+
+    from app.ai.chains.classify_error import ErrorClassificationRaw
+
+    with _pytest.raises(ValidationError):
+        ErrorClassificationRaw(
+            family="off_by_one", tag="t", misconception="m", confidence=0.5
+        )
