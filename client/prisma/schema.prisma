@@ -314,6 +314,9 @@ model PracticeSession {
   aiInteractions AiInteraction[]
   xpEvents       XpEvent[]
 
+  /// The migration creates this index; the schema has to declare it or `prisma migrate
+  /// diff` reports drift between the two — which is exactly what CI caught.
+  @@index([lessonId])
   @@map("practice_sessions")
 }
 
