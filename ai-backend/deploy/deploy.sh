@@ -16,7 +16,7 @@ set -euo pipefail
 HOST="${TICO_HOST:-ubuntu@54.75.53.43}"
 KEY="${TICO_KEY:-$HOME/.ssh/tico-ai.pem}"
 URL="${TICO_URL:-https://54-75-53-43.sslip.io}"
-REPO="${TICO_REPO:-~/TICO}"
+REMOTE_DIR="${TICO_REMOTE_DIR:-~/tico-ai}"
 
 say() { printf '\n\033[1m== %s\033[0m\n' "$1"; }
 die() { printf '\n\033[31mFAILED: %s\033[0m\n' "$1" >&2; exit 1; }
@@ -42,19 +42,20 @@ say "running the tests that CI runs"
 # ------------------------------------------------------------------------- the deploy
 say "deploying to $HOST"
 
+# The box holds a *copy* of ai-backend/, not a clone — there is no .git on it. So the code
+# goes up with rsync rather than a pull.
+#
+# `.env` is excluded and never overwritten: the box's copy holds the production database
+# URL, the real model key and the CORS origins, and none of that exists locally. Losing it
+# means a container that will not start.
+rsync -az --delete   --exclude '.env'   --exclude 'env/'   --exclude '__pycache__/'   --exclude '.pytest_cache/'   --exclude '*.pyc'   -e "ssh -i $KEY -o ConnectTimeout=20"   "$(dirname "$0")/../" "$HOST:~/tico-ai/"
+
 ssh -i "$KEY" -o ConnectTimeout=20 "$HOST" bash -s <<'REMOTE_SCRIPT'
 set -euo pipefail
-cd ~/TICO
+cd ~/tico-ai
 
-echo "-- pulling"
-git fetch origin
-git reset --hard origin/main
-git log --oneline -1
-
-cd ai-backend
-
-# Production refuses to start without a model key, which is deliberate — but finding that
-# out from a dead container is worse than finding it out here.
+# Production fails fast on a missing key, which is deliberate — but finding that out from a
+# dead container is worse than finding it out here.
 grep -q '^GOOGLE_API_KEY=.\+' .env || { echo "GOOGLE_API_KEY missing from .env"; exit 1; }
 grep -q '^DATABASE_URL=.\+'   .env || { echo "DATABASE_URL missing from .env";   exit 1; }
 
@@ -65,7 +66,7 @@ echo "-- pruning old images"
 docker image prune -f >/dev/null
 
 echo "-- waiting for the container to answer"
-for i in $(seq 1 30); do
+for i in $(seq 1 45); do
   if curl -sf http://127.0.0.1:8000/v1/health >/dev/null; then
     echo "   up after ${i}s"
     exit 0
@@ -73,7 +74,7 @@ for i in $(seq 1 30); do
   sleep 1
 done
 
-echo "container did not become healthy in 30s. Last 40 log lines:"
+echo "container did not become healthy in 45s. Last 40 log lines:"
 docker compose -f docker-compose-prod.yml logs --tail=40
 exit 1
 REMOTE_SCRIPT
