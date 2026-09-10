@@ -82,16 +82,34 @@ export class SessionService {
       }
     }
 
-    // 2. Persist PracticeSession in PostgreSQL
+    // 2. Persist PracticeSession in PostgreSQL.
+    //
+    // `upsert`, not `create`. When the AI backend answered it has ALREADY written this
+    // row and committed it — `POST /v1/sessions` owns `practice_sessions` — so creating
+    // it again is a duplicate primary key. That threw a unique-constraint error into the
+    // catch below, which logged "Database offline" and returned a fabricated session
+    // with a hardcoded exercise id. The better the backend worked, the more reliably the
+    // client fell back to fake data.
+    //
+    // The update half only touches columns the backend does not own, so the two writers
+    // cannot disagree about the same field.
     try {
-      const session = await db.practiceSession.create({
-        data: {
+      const session = await db.practiceSession.upsert({
+        where: { id: aiSessionId ?? '__never__' },
+        update: {
+          exerciseId: exerciseId || null,
+          generatedMissionId: generatedMissionId || null,
+        },
+        create: {
           ...(aiSessionId ? { id: aiSessionId } : {}),
           userId,
           exerciseId: exerciseId || null,
           generatedMissionId: generatedMissionId || null,
           kind: SessionKind.LESSON,
-          phase: Phase.EXPLORE,
+          // A session starts at the first phase. The AI backend opens at ENCOUNTER, and
+          // this used to say EXPLORE, so a locally-created session began one phase ahead
+          // of an AI-created one for the same mission.
+          phase: Phase.ENCOUNTER,
           outcome: SessionOutcome.IN_PROGRESS,
           startedAt: new Date(),
         },
@@ -107,14 +125,18 @@ export class SessionService {
         hintsUsed: 0,
       };
     } catch (err) {
-      console.warn('Database offline, using fallback in-memory practice session:', err instanceof Error ? err.message : err);
+      // Say what actually happened. This used to claim the database was offline for any
+      // failure at all, including the unique-constraint error it caused itself.
+      console.warn('Could not persist practice session, using in-memory fallback:', err instanceof Error ? err.message : err);
       return {
         id: aiSessionId || 'session-dev-explore-01',
+        // Not a hardcoded 'ex-bakery-01'. Inventing an exercise id sends every later
+        // write against this session to the wrong row.
         userId,
-        exerciseId: exerciseId || 'ex-bakery-01',
+        exerciseId: exerciseId || null,
         generatedMissionId: generatedMissionId || null,
         kind: SessionKind.LESSON,
-        phase: Phase.EXPLORE,
+        phase: Phase.ENCOUNTER,
         outcome: SessionOutcome.IN_PROGRESS,
         hintsUsed: 0,
         timeSpentMs: 0,

@@ -30,7 +30,7 @@ import logging
 from sqlalchemy.orm import Session
 
 from app.ai.chains.debrief import write_debrief
-from app.models_tables import ConceptMastery, Exercise, GeneratedMission, Submission
+from app.models_tables import ConceptMastery, Exercise, GeneratedMission, Lesson, Submission
 from app.models_tables.enums import SessionKind, SessionOutcome
 from app.queries import sessions as session_q, students as student_q, users
 from app.rules.mastery import compute_outcome_score, update_mastery_profile
@@ -50,6 +50,10 @@ def stars_for(*, solved: bool, attempts: int, hints: int) -> int:
     if attempts <= 5 and hints <= 2:
         return 2
     return 1
+
+
+class UnknownLesson(RuntimeError):
+    """The client named a lesson that is not in the database. A 422, not a 500."""
 
 
 class SessionNotFound(RuntimeError):
@@ -72,18 +76,25 @@ def open_session(
 ) -> object:
     """Start a session at phase 1.
 
-    `level_id` names the lesson the client is playing. It is **not** written to
-    `exercise_id`: that column is a foreign key to `exercises`, and a lesson id fails on
-    the constraint. A generated mission carries its own link instead, and an authored
-    exercise arrives as `generated_mission_id=None` with the exercise resolved by the
-    client — which is why nothing is written there yet.
+    `level_id` is stored on `lesson_id`, which is its own column and its own foreign key.
+    It is **not** written to `exercise_id`: that points at `exercises`, and a lesson id
+    fails the constraint there.
     """
     users.ensure(db, user_id)
+
+    # `lesson_id` is a real foreign key now, so an unknown one raises an IntegrityError
+    # deep inside the flush and surfaces as a 500. Check it here and say what is wrong:
+    # the client sent a lesson that does not exist, which is worth knowing rather than
+    # silently dropping — a session attributed to no lesson is how the null got there in
+    # the first place.
+    if level_id and db.get(Lesson, level_id) is None:
+        raise UnknownLesson(f"no lesson '{level_id}'")
 
     session = session_q.open_session(
         db,
         user_id=user_id,
         generated_mission_id=generated_mission_id,
+        lesson_id=level_id,
         kind=SessionKind.LESSON,
     )
     db.commit()
@@ -128,18 +139,18 @@ def _owned(db: Session, session_id: str, user_id: str):
 
 
 def level_id_of(db: Session, session) -> str | None:
-    """The lesson this session belongs to, when there is one to find.
+    """The lesson this session belongs to.
 
-    `practice_sessions` has no lesson column: it points at an exercise or at a generated
-    mission, and only the exercise carries `lessonId`. A runtime-generated mission has no
-    link back to a lesson at all, which is a real gap — a session opened on a generated
-    mission cannot be attributed to a lesson in reporting. Closing it means a Prisma
-    migration adding `lesson_id` to `practice_sessions`, which belongs to the client side.
+    Stored now, rather than derived. It used to be neither: `practice_sessions` had no
+    lesson column, so a session on a runtime-generated mission could not be attributed to
+    a lesson at all, and `SessionOut.levelId` came back null for exactly the sessions that
+    most needed it.
 
-    Until then this returns what can actually be derived and null otherwise, rather than
-    echoing back whatever the client sent — which is what the stub did, and why nobody
-    noticed the column was missing.
+    The exercise is still consulted as a fallback, because rows written before the column
+    existed have `lesson_id` null and an exercise that knows the answer.
     """
+    if session.lesson_id:
+        return session.lesson_id
     if not session.exercise_id:
         return None
     exercise = db.get(Exercise, session.exercise_id)

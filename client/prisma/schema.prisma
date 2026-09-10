@@ -207,6 +207,7 @@ model Lesson {
   exercises      Exercise[]
   progress       UserProgress[]
   companionChats CompanionChat[]
+  practiceSessions PracticeSession[]
   lessonPlans    LessonPlan[]
 
   @@unique([trackId, slug])
@@ -294,6 +295,12 @@ model PracticeSession {
   exercise           Exercise?         @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
   generatedMissionId String?           @map("generated_mission_id")
   generatedMission   GeneratedMission? @relation(fields: [generatedMissionId], references: [id], onDelete: SetNull)
+  /// Which lesson this session belongs to. Nullable because a session may be opened on a
+  /// runtime-generated mission, which has no exercise and therefore no lesson of its own.
+  /// Without this column such a session could not be attributed to a lesson at all: the
+  /// client sent `levelId` when opening it and the server had nowhere to put it.
+  lessonId           String?           @map("lesson_id")
+  lesson             Lesson?           @relation(fields: [lessonId], references: [id], onDelete: SetNull)
   kind               SessionKind       @default(LESSON)
   phase              Phase?            @default(EXPLORE)
   outcome            SessionOutcome    @default(IN_PROGRESS)
@@ -307,6 +314,9 @@ model PracticeSession {
   aiInteractions AiInteraction[]
   xpEvents       XpEvent[]
 
+  /// The migration creates this index; the schema has to declare it or `prisma migrate
+  /// diff` reports drift between the two — which is exactly what CI caught.
+  @@index([lessonId])
   @@map("practice_sessions")
 }
 

@@ -42,6 +42,7 @@ def open_session(
     user_id: str,
     exercise_id: str | None = None,
     generated_mission_id: str | None = None,
+    lesson_id: str | None = None,
     kind: SessionKind = SessionKind.LESSON,
 ) -> PracticeSession:
     """Start a session. `id` and `started_at` fill themselves in.
@@ -49,14 +50,16 @@ def open_session(
     Either `exercise_id` or `generated_mission_id` should be set, depending on whether
     the mission was authored or composed at runtime.
 
-    `exercise_id`, not `lesson_id` — the column is a foreign key to `exercises`, and a
-    lesson id passed here fails on that constraint. The parameter used to be called
-    `lesson_id`, which invited exactly that mistake.
+    `exercise_id` and `lesson_id` are different columns and both are foreign keys. Passing
+    a lesson id as `exercise_id` fails the constraint — the parameter used to be called
+    `lesson_id`, which invited exactly that mistake, and for a while there was no lesson
+    column at all so the value was simply dropped.
     """
     session = PracticeSession(
         user_id=user_id,
         exercise_id=exercise_id,
         generated_mission_id=generated_mission_id,
+        lesson_id=lesson_id,
         kind=kind,
         phase=Phase.ENCOUNTER,
         outcome=SessionOutcome.IN_PROGRESS,

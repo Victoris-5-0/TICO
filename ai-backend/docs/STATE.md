@@ -60,16 +60,22 @@ because the first two cannot see it.
 `el_forn` is the only world with a `simulation` block, because it is the only one with a
 running interactive scene. The other two must keep loading without one.
 
+## Recently closed
+
+`practice_sessions.lesson_id` (migration `20260910120000_session_lesson_id`, applied
+2026-09-10). `SessionOut.levelId` used to be null for every generated mission because there
+was nowhere to store what the client sent. It round-trips now, and an unknown lesson is a
+422 rather than a foreign-key error surfacing as a 500.
+
 ## Deliberately unfinished
 
-Three features are implemented and unreachable because Prisma owns migrations and lives in
+Two features are implemented and unreachable because Prisma owns migrations and lives in
 `client/`. Each is recorded at the point it is blocked rather than faked:
 
 - **under-13 static hints** — `write_hint(static_only=True)` works; nothing can set it,
-  because no table records an age. Needs a migration *and* a product decision about
-  collecting a child's age at all. `app/services/hints.py`
-- **`practice_sessions.lesson_id`** — `SessionOut.levelId` is `null` for a generated
-  mission. `app/services/sessions.level_id_of`
+  because no table records an age. **Deliberately left blocked on 2026-09-10**: storing a
+  child's date of birth or age band is a privacy decision with legal weight, and Ahmed
+  chose not to make it yet. Do not add the column without asking. `app/services/hints.py`
 - **per-session diagnostic scores** — `build_plan` accepts `diagnosticSessionId` and cannot
   use it. `app/services/students._diagnostic_scores`
 

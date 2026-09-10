@@ -50,6 +50,12 @@ class PracticeSession(Base):
     generated_mission_id: Mapped[str | None] = mapped_column(
         Text, ForeignKey("generated_missions.id", ondelete="SET NULL")
     )
+    #: The lesson being played. Nullable, because a session on a runtime-generated mission
+    #: has no exercise to derive one from — the client tells us, and before this column
+    #: existed there was nowhere to put what it told us.
+    lesson_id: Mapped[str | None] = mapped_column(
+        "lesson_id", Text, ForeignKey("lessons.id", ondelete="SET NULL")
+    )
     kind: Mapped[SessionKind] = mapped_column(SESSION_KIND, default=SessionKind.LESSON)
     phase: Mapped[Phase | None] = mapped_column(PHASE)
     outcome: Mapped[SessionOutcome] = mapped_column(
