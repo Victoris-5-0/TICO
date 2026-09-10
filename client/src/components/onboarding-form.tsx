@@ -3,8 +3,9 @@
 import { useActionState, useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { motion, useReducedMotion } from "motion/react";
+import { motion, AnimatePresence, useReducedMotion, type Variants } from "motion/react";
 import { completeOnboarding } from "@/actions/onboarding";
+import { EgyptianIdCard } from "@/components/egyptian-id-card";
 import type { Locale } from "@/i18n/config";
 import styles from "./account-form.module.css";
 
@@ -38,6 +39,7 @@ export function OnboardingForm({
   const ar = locale === "ar-EG";
   const reduced = useReducedMotion();
   const [step, setStep] = useState(1);
+  const [direction, setDirection] = useState(1);
   const [displayName, setDisplayName] = useState(name);
   const [ageBand, setAgeBand] = useState("");
   const [gender, setGender] = useState("MALE");
@@ -78,13 +80,20 @@ export function OnboardingForm({
   useEffect(() => {
     const back = (event: PopStateEvent) => {
       const s = Number(event.state?.onboardingStep);
-      setStep(s >= 1 && s <= 4 ? s : 1);
+      if (s >= 1 && s <= 4) {
+        setDirection(s > step ? 1 : -1);
+        setStep(s);
+      } else {
+        setDirection(-1);
+        setStep(1);
+      }
     };
     window.addEventListener("popstate", back);
     return () => window.removeEventListener("popstate", back);
-  }, []);
+  }, [step]);
 
   function goToStep(target: number) {
+    setDirection(target > step ? 1 : -1);
     window.history.pushState(
       { ...window.history.state, onboardingStep: target },
       "",
@@ -106,27 +115,54 @@ export function OnboardingForm({
   const stepTitles = [
     {
       title: ar ? "خلّينا نتعرّف عليك!" : "Let’s Get to Know you!",
-      subtitle: ar ? "احكيلنا شوية عن نفسك." : "Tell us a bit about yourself.",
+      subtitle: ar ? "بياناتك هتظهر في بطاقة هويتك البرمجية المصرية." : "Your details will form your official Egyptian Coder ID.",
     },
     {
-      title: ar ? "مين هيكون رفيقك؟" : "Who will be your companion?",
+      title: ar ? "مين هيكون رفيقك في مصر؟" : "Who will be your companion?",
       subtitle: ar
         ? "اختار تيكو أو تيكا علشان يرافقك في رحلتك البرمجية."
-        : "Choose Tico or Tika to join you on your learning journey.",
+        : "Choose Tico or Tika to accompany you on your learning journey.",
     },
     {
-      title: ar ? "اختار صورتك الرمزية (PFP)!" : "Pick your avatar (PFP)!",
+      title: ar ? "اختار صورتك لبطاقة الهوية!" : "Pick your ID photo!",
       subtitle: ar
-        ? "اختار الصورة اللي هتمثلك في عالم تيكو."
-        : "Choose the avatar that represents you in TICO.",
+        ? "الصورة اللي هتعتمد رسميًا على بطاقتك البرمجية."
+        : "The photo that will appear on your official Coder ID.",
     },
     {
-      title: ar ? "إنت حابب تكون؟" : "You are?",
+      title: ar ? "ما هو مسارك في البرمجة؟" : "What is your coding path?",
       subtitle: ar
-        ? "اختار أسلوب التعلم اللي يناسبك."
-        : "Choose the learning path that matches your style.",
+        ? "اختار أسلوب التعلم اللي يناسب طموحك وخبرتك."
+        : "Choose the learning path that matches your ambition.",
     },
   ];
+
+  // Motion variants for step slide transitions
+  const stepVariants: Variants = {
+    enter: (dir: number) => ({
+      x: reduced ? 0 : dir * (ar ? -28 : 28),
+      opacity: 0,
+      scale: 0.98,
+    }),
+    center: {
+      x: 0,
+      opacity: 1,
+      scale: 1,
+      transition: {
+        duration: 0.24,
+        ease: [0.22, 1, 0.36, 1] as const,
+      },
+    },
+    exit: (dir: number) => ({
+      x: reduced ? 0 : dir * (ar ? 28 : -28),
+      opacity: 0,
+      scale: 0.98,
+      transition: {
+        duration: 0.16,
+        ease: [0.4, 0, 1, 1] as const,
+      },
+    }),
+  };
 
   return (
     <main className={styles.onboardingPage}>
@@ -153,13 +189,13 @@ export function OnboardingForm({
           <span className={styles.srOnly}>{ar ? "بياناتك" : "Your details"}</span>
         </li>
         <li data-active={step >= 2} aria-current={step === 2 ? "step" : undefined}>
-          <span className={styles.srOnly}>{ar ? "الهوية" : "Gender"}</span>
+          <span className={styles.srOnly}>{ar ? "الرفيق" : "Companion"}</span>
         </li>
         <li data-active={step >= 3} aria-current={step === 3 ? "step" : undefined}>
           <span className={styles.srOnly}>{ar ? "الصورة الرمزية" : "Avatar"}</span>
         </li>
         <li data-active={step >= 4} aria-current={step === 4 ? "step" : undefined}>
-          <span className={styles.srOnly}>{ar ? "طريقك" : "Your path"}</span>
+          <span className={styles.srOnly}>{ar ? "المسار" : "Path"}</span>
         </li>
       </ol>
 
@@ -174,322 +210,459 @@ export function OnboardingForm({
           </header>
 
           {previewDone ? (
-            <div className={styles.previewComplete} role="status">
-              <h2>{ar ? "جاهز للمغامرة!" : "Ready for your adventure!"}</h2>
-              <p>
-                {ar
-                  ? "دي معاينة للتصميم. مفيش بيانات اتحفظت."
-                  : "This is a design preview. No account details were saved."}
-              </p>
-              <Link className={styles.primary} href={`/${locale}/login`}>
-                {ar ? "كمّل باستخدام Google" : "Continue with Google"}
-              </Link>
-            </div>
-          ) : (
             <motion.div
-              key={step}
-              className={styles.stepContent}
-              initial={reduced ? false : { opacity: 0, x: ar ? -10 : 10 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.2 }}
+              className={styles.previewSuccessWrapper}
+              role="status"
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.35 }}
             >
-              {/* STEP 1: Name & Age */}
-              {step === 1 && (
-                <form onSubmit={handleStep1Submit} className={styles.detailsForm}>
-                  <div className={styles.fields}>
-                    <label>
-                      {ar ? "تحب نناديك بإيه؟" : "What would you like us to call you?"}
-                      <input
-                        ref={nameInput}
-                        name="name"
-                        value={displayName}
-                        onChange={(e) => setDisplayName(e.target.value)}
-                        placeholder={ar ? "اسمك" : "Your name"}
-                        autoComplete="given-name"
-                        required
-                        maxLength={80}
-                      />
-                    </label>
-                    <label>
-                      {ar ? "الفئة العمرية" : "Age group"}
-                      <select
-                        name="ageBand"
-                        value={ageBand}
-                        onChange={(e) => setAgeBand(e.target.value)}
-                        required
-                      >
-                        <option value="" disabled>
-                          {ar ? "اختار فئتك العمرية" : "Choose your age group"}
-                        </option>
-                        <option value="UNDER_13">
-                          {ar ? "أقل من ١٣ سنة" : "Under 13"}
-                        </option>
-                        <option value="TEEN">
-                          {ar ? "من ١٣ إلى ١٧ سنة" : "13–17"}
-                        </option>
-                        <option value="ADULT">
-                          {ar ? "١٨ سنة أو أكتر" : "18 or older"}
-                        </option>
-                      </select>
-                    </label>
-                  </div>
-                  <button type="submit" className={styles.primary}>
-                    {ar ? "التالي" : "Next"}
-                  </button>
-                </form>
-              )}
-
-              {/* STEP 2: Choose Tico or Tika */}
-              {step === 2 && (
-                <div className={styles.choiceForm}>
-                  <fieldset className={styles.choices}>
-                    <legend className={styles.srOnly}>
-                      {ar ? "اختار تيكو أو تيكا" : "Choose Tico or Tika"}
-                    </legend>
-                    <div className={styles.genderGrid}>
-                      {[
-                        {
-                          val: "MALE",
-                          name: ar ? "تيكو" : "Tico",
-                          sub: ar ? "ولد / شاب" : "Boy / Male",
-                          img: "/assets/characters/tico/tico-neutral.webp",
-                        },
-                        {
-                          val: "FEMALE",
-                          name: ar ? "تيكا" : "Tika",
-                          sub: ar ? "بنت / فتاة" : "Girl / Female",
-                          img: "/assets/characters/tico/tika.webp",
-                        },
-                      ].map((item) => (
-                        <label
-                          key={item.val}
-                          className={styles.genderChoice}
-                          data-selected={gender === item.val}
-                        >
-                          <input
-                            type="radio"
-                            name="gender"
-                            value={item.val}
-                            checked={gender === item.val}
-                            onChange={() => {
-                              setGender(item.val);
-                              if (
-                                item.val === "FEMALE" &&
-                                selectedAvatar === "/assets/characters/tico/tico-neutral.webp"
-                              ) {
-                                setSelectedAvatar("/assets/characters/tico/tika.webp");
-                              } else if (
-                                item.val === "MALE" &&
-                                selectedAvatar === "/assets/characters/tico/tika.webp"
-                              ) {
-                                setSelectedAvatar("/assets/characters/tico/tico-neutral.webp");
-                              }
-                            }}
-                          />
-                          <div className={styles.characterArtWrapper}>
-                            <Image
-                              src={item.img}
-                              alt={item.name}
-                              fill
-                              sizes="(max-width: 760px) 140px, 200px"
-                              className={styles.characterArt}
-                            />
-                          </div>
-                          <h3 className={styles.characterName}>{item.name}</h3>
-                          <p className={styles.characterSubLabel}>{item.sub}</p>
-                        </label>
-                      ))}
-                    </div>
-                  </fieldset>
-
-                  <div className={styles.stepActions}>
-                    <button
-                      className={styles.secondary}
-                      type="button"
-                      onClick={() => goToStep(1)}
-                    >
-                      {ar ? "رجوع" : "Back"}
-                    </button>
-                    <button
-                      className={styles.primary}
-                      type="button"
-                      onClick={() => goToStep(3)}
-                    >
-                      {ar ? "التالي" : "Next"}
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {/* STEP 3: Avatar / PFP */}
-              {step === 3 && (
-                <div className={styles.choiceForm}>
-                  <div className={styles.avatarPickerContainer}>
-                    <div className={styles.avatarPreviewRow}>
-                      <div className={styles.avatarPreviewCircle}>
-                        <Image
-                          src={selectedAvatar}
-                          alt={displayName || "Student"}
-                          fill
-                          sizes="60px"
-                          style={{ objectFit: "cover" }}
-                        />
-                      </div>
-                      <div className={styles.avatarPreviewInfo}>
-                        <span className={styles.avatarPreviewName}>
-                          {displayName || (ar ? "طالب" : "Student")}
-                        </span>
-                        <span className={styles.avatarPreviewLabel}>
-                          {ar ? "صورتك الرمزية المختارة" : "Selected avatar"}
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className={styles.avatarGrid}>
-                      {avatarOptions.map((opt) => {
-                        const isSelected = selectedAvatar === opt.src;
-                        return (
-                          <label
-                            key={opt.id}
-                            className={styles.avatarOption}
-                            data-selected={isSelected}
-                            title={ar ? opt.nameAr : opt.nameEn}
-                          >
-                            <input
-                              type="radio"
-                              name="avatarUrl"
-                              value={opt.src}
-                              checked={isSelected}
-                              onChange={() => setSelectedAvatar(opt.src)}
-                            />
-                            <div className={styles.avatarCircle}>
-                              <Image
-                                src={opt.src}
-                                alt={ar ? opt.nameAr : opt.nameEn}
-                                fill
-                                sizes="48px"
-                                style={{ objectFit: "cover" }}
-                              />
-                            </div>
-                            <span className={styles.avatarNameTag}>
-                              {ar ? opt.nameAr : opt.nameEn}
-                            </span>
-                          </label>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  <div className={styles.stepActions}>
-                    <button
-                      className={styles.secondary}
-                      type="button"
-                      onClick={() => goToStep(2)}
-                    >
-                      {ar ? "رجوع" : "Back"}
-                    </button>
-                    <button
-                      className={styles.primary}
-                      type="button"
-                      onClick={() => goToStep(4)}
-                    >
-                      {ar ? "التالي" : "Next"}
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {/* STEP 4: Mode & Submission */}
-              {step === 4 && (
-                <form action={action} className={styles.choiceForm}>
-                  <input type="hidden" name="name" value={displayName} />
-                  <input type="hidden" name="ageBand" value={ageBand} />
-                  <input type="hidden" name="gender" value={gender} />
-                  <input type="hidden" name="avatarUrl" value={selectedAvatar} />
-
-                  <fieldset disabled={pending} className={styles.choices}>
-                    <legend className={styles.srOnly}>
-                      {ar ? "إنت حابب تكون؟" : "You are?"}
-                    </legend>
-                    <div className={styles.choiceGrid}>
-                      {(["LEARNER", "CHALLENGER"] as const).map((value) => (
-                        <label
-                          key={value}
-                          className={styles.choice}
-                          data-selected={mode === value}
-                        >
-                          <input
-                            type="radio"
-                            name="mode"
-                            value={value}
-                            checked={mode === value}
-                            onChange={() => setMode(value)}
-                          />
-                          <span>
-                            {value === "LEARNER"
-                              ? ar
-                                ? "متعلّم"
-                                : "Learner"
-                              : ar
-                              ? "متحدّي"
-                              : "Challenger"}
-                          </span>
-                        </label>
-                      ))}
-                    </div>
-                  </fieldset>
-
-                  {error && (
-                    <p className={styles.error} role="alert">
-                      {error === "unauthorized" ? (
-                        <Link href={`/${locale}/login`}>
-                          {ar
-                            ? "سجّل دخولك تاني علشان تكمّل."
-                            : "Sign in again to continue."}
-                        </Link>
-                      ) : ar ? (
-                        "مقدرناش نحفظ بياناتك. جرّب تاني."
-                      ) : (
-                        "We couldn’t save your setup. Please try again."
-                      )}
-                    </p>
-                  )}
-
-                  <div className={styles.stepActions}>
-                    <button
-                      className={styles.secondary}
-                      type="button"
-                      onClick={() => goToStep(3)}
-                      disabled={pending}
-                    >
-                      {ar ? "رجوع" : "Back"}
-                    </button>
-                    <button className={styles.primary} disabled={pending}>
-                      {pending
-                        ? ar
-                          ? "بنجهّز حسابك…"
-                          : "Saving…"
-                        : ar
-                        ? "ابدأ التعلم الآن!"
-                        : "Start Learning!"}
-                    </button>
-                  </div>
-                </form>
-              )}
+              <h2 className={styles.previewSuccessTitle}>
+                {ar ? "تم اعتماد وإصدار بطاقة الهوية بنجاح! 🇪🇬" : "Your Egyptian Coder ID is officially issued! 🇪🇬"}
+              </h2>
+              <p className={styles.previewSuccessDesc}>
+                {ar
+                  ? "دي معاينة حية لشكل بطاقتك وتجربة التسجيل. بياناتك جاهزة للمغامرة القادمة في عالم بايثون!"
+                  : "This is a live preview of your Egyptian Coder ID and onboarding flow. No account details were stored in preview."}
+              </p>
+              <div className={styles.previewActionRow}>
+                <button
+                  type="button"
+                  className={styles.secondary}
+                  onClick={() => {
+                    setPreviewDone(false);
+                    goToStep(1);
+                  }}
+                >
+                  {ar ? "تعديل البيانات" : "Edit details"}
+                </button>
+                <Link className={styles.primary} href={`/${locale}/login`}>
+                  {ar ? "كمّل باستخدام Google" : "Continue with Google"}
+                </Link>
+              </div>
             </motion.div>
+          ) : (
+            <AnimatePresence mode="wait" custom={direction}>
+              <motion.div
+                key={step}
+                custom={direction}
+                variants={stepVariants}
+                initial="enter"
+                animate="center"
+                exit="exit"
+                className={styles.stepContent}
+              >
+                {/* STEP 1: Name & Age (DROPDOWN REPLACED WITH CLICKABLE BUTTONS) */}
+                {step === 1 && (
+                  <form onSubmit={handleStep1Submit} className={styles.detailsForm}>
+                    <div className={styles.fields}>
+                      <label>
+                        {ar ? "تحب نناديك بإيه؟" : "What would you like us to call you?"}
+                        <input
+                          ref={nameInput}
+                          name="name"
+                          value={displayName}
+                          onChange={(e) => setDisplayName(e.target.value)}
+                          placeholder={ar ? "اسمك الكامل" : "Your full name"}
+                          autoComplete="given-name"
+                          required
+                          maxLength={80}
+                          enterKeyHint="next"
+                        />
+                      </label>
+
+                      <div>
+                        <span
+                          id="ageband-label"
+                          style={{
+                            display: "block",
+                            marginBottom: "14px",
+                            fontSize: "clamp(18px,1.57vw,22.5px)",
+                            fontWeight: 600,
+                          }}
+                        >
+                          {ar ? "الفئة العمرية" : "Age group"}
+                        </span>
+                        {/* Accessible Clickable Option Buttons instead of dropdown */}
+                        <div
+                          role="radiogroup"
+                          aria-labelledby="ageband-label"
+                          className={styles.ageBandGrid}
+                        >
+                          {[
+                            {
+                              val: "UNDER_13",
+                              title: ar ? "أقل من ١٣ سنة" : "Under 13",
+                              sub: ar ? "مستكشف ناشئ" : "Junior Explorer",
+                              icon: "🌱",
+                            },
+                            {
+                              val: "TEEN",
+                              title: ar ? "١٣ إلى ١٧ سنة" : "13–17 years",
+                              sub: ar ? "مبرمج صاعد" : "Rising Coder",
+                              icon: "⚡",
+                            },
+                            {
+                              val: "ADULT",
+                              title: ar ? "١٨ سنة أو أكبر" : "18 or older",
+                              sub: ar ? "محترف واعد" : "Master Scribe",
+                              icon: "🏛️",
+                            },
+                          ].map((item) => {
+                            const isSelected = ageBand === item.val;
+                            return (
+                              <motion.label
+                                key={item.val}
+                                className={styles.ageBandChoice}
+                                data-selected={isSelected}
+                                whileHover={reduced ? {} : { y: -2, scale: 1.02 }}
+                                whileTap={reduced ? {} : { scale: 0.98 }}
+                                transition={{ type: "spring", stiffness: 420, damping: 26 }}
+                              >
+                                <input
+                                  type="radio"
+                                  name="ageBand"
+                                  value={item.val}
+                                  checked={isSelected}
+                                  onChange={() => setAgeBand(item.val)}
+                                  required
+                                />
+                                <span className={styles.ageBandIcon} aria-hidden="true">
+                                  {item.icon}
+                                </span>
+                                <span className={styles.ageBandTitle}>{item.title}</span>
+                                <span className={styles.ageBandSub}>{item.sub}</span>
+                                {isSelected && (
+                                  <motion.span
+                                    className={styles.ageCheckBadge}
+                                    initial={{ scale: 0 }}
+                                    animate={{ scale: 1 }}
+                                    transition={{ type: "spring", stiffness: 500, damping: 25 }}
+                                  >
+                                    ✓
+                                  </motion.span>
+                                )}
+                              </motion.label>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                    <button
+                      type="submit"
+                      className={styles.primary}
+                      disabled={!displayName.trim() || !ageBand}
+                      style={{ opacity: !displayName.trim() || !ageBand ? 0.6 : 1 }}
+                    >
+                      {ar ? "التالي" : "Next"}
+                    </button>
+                  </form>
+                )}
+
+                {/* STEP 2: Choose Tico or Tika */}
+                {step === 2 && (
+                  <div className={styles.choiceForm}>
+                    <fieldset className={styles.choices}>
+                      <legend className={styles.srOnly}>
+                        {ar ? "اختار تيكو أو تيكا" : "Choose Tico or Tika"}
+                      </legend>
+                      <div className={styles.genderGrid}>
+                        {[
+                          {
+                            val: "MALE",
+                            name: ar ? "تيكو" : "Tico",
+                            sub: ar ? "ولد / شاب" : "Boy / Male",
+                            img: "/assets/characters/tico/tico-neutral.webp",
+                          },
+                          {
+                            val: "FEMALE",
+                            name: ar ? "تيكا" : "Tika",
+                            sub: ar ? "بنت / فتاة" : "Girl / Female",
+                            img: "/assets/characters/tico/tika.webp",
+                          },
+                        ].map((item) => {
+                          const isSelected = gender === item.val;
+                          return (
+                            <motion.label
+                              key={item.val}
+                              className={styles.genderChoice}
+                              data-selected={isSelected}
+                              whileHover={reduced ? {} : { y: -3, scale: 1.02 }}
+                              whileTap={reduced ? {} : { scale: 0.98 }}
+                              transition={{ type: "spring", stiffness: 400, damping: 25 }}
+                            >
+                              <input
+                                type="radio"
+                                name="gender"
+                                value={item.val}
+                                checked={isSelected}
+                                onChange={() => {
+                                  setGender(item.val);
+                                  if (
+                                    item.val === "FEMALE" &&
+                                    selectedAvatar === "/assets/characters/tico/tico-neutral.webp"
+                                  ) {
+                                    setSelectedAvatar("/assets/characters/tico/tika.webp");
+                                  } else if (
+                                    item.val === "MALE" &&
+                                    selectedAvatar === "/assets/characters/tico/tika.webp"
+                                  ) {
+                                    setSelectedAvatar("/assets/characters/tico/tico-neutral.webp");
+                                  }
+                                }}
+                              />
+                              <div className={styles.characterArtWrapper}>
+                                <Image
+                                  src={item.img}
+                                  alt={item.name}
+                                  fill
+                                  sizes="(max-width: 760px) 140px, 200px"
+                                  className={styles.characterArt}
+                                />
+                              </div>
+                              <h3 className={styles.characterName}>{item.name}</h3>
+                              <p className={styles.characterSubLabel}>{item.sub}</p>
+                              {isSelected && (
+                                <motion.span
+                                  className={styles.ageCheckBadge}
+                                  initial={{ scale: 0 }}
+                                  animate={{ scale: 1 }}
+                                  transition={{ type: "spring", stiffness: 500, damping: 25 }}
+                                >
+                                  ✓
+                                </motion.span>
+                              )}
+                            </motion.label>
+                          );
+                        })}
+                      </div>
+                    </fieldset>
+
+                    <div className={styles.stepActions}>
+                      <button
+                        className={styles.secondary}
+                        type="button"
+                        onClick={() => goToStep(1)}
+                      >
+                        {ar ? "رجوع" : "Back"}
+                      </button>
+                      <button
+                        className={styles.primary}
+                        type="button"
+                        onClick={() => goToStep(3)}
+                      >
+                        {ar ? "التالي" : "Next"}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* STEP 3: Avatar / PFP for Egyptian ID */}
+                {step === 3 && (
+                  <div className={styles.choiceForm}>
+                    <div className={styles.avatarPickerContainer}>
+                      <div className={styles.avatarPreviewRow}>
+                        <div className={styles.avatarPreviewCircle}>
+                          <Image
+                            src={selectedAvatar}
+                            alt={displayName || "Student"}
+                            fill
+                            sizes="60px"
+                            style={{ objectFit: "cover" }}
+                          />
+                        </div>
+                        <div className={styles.avatarPreviewInfo}>
+                          <span className={styles.avatarPreviewName}>
+                            {displayName || (ar ? "طالب بايثون" : "Python Student")}
+                          </span>
+                          <span className={styles.avatarPreviewLabel}>
+                            {ar ? "هذه الصورة ستعتمد على بطاقتك الشخصية 🪪" : "This photo will appear on your ID card 🪪"}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className={styles.avatarGrid}>
+                        {avatarOptions.map((opt) => {
+                          const isSelected = selectedAvatar === opt.src;
+                          return (
+                            <motion.label
+                              key={opt.id}
+                              className={styles.avatarOption}
+                              data-selected={isSelected}
+                              title={ar ? opt.nameAr : opt.nameEn}
+                              whileHover={reduced ? {} : { scale: 1.06 }}
+                              whileTap={reduced ? {} : { scale: 0.95 }}
+                            >
+                              <input
+                                type="radio"
+                                name="avatarUrl"
+                                value={opt.src}
+                                checked={isSelected}
+                                onChange={() => setSelectedAvatar(opt.src)}
+                              />
+                              <div className={styles.avatarCircle}>
+                                <Image
+                                  src={opt.src}
+                                  alt={ar ? opt.nameAr : opt.nameEn}
+                                  fill
+                                  sizes="48px"
+                                  style={{ objectFit: "cover" }}
+                                />
+                              </div>
+                              <span className={styles.avatarNameTag}>
+                                {ar ? opt.nameAr : opt.nameEn}
+                              </span>
+                            </motion.label>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    <div className={styles.stepActions}>
+                      <button
+                        className={styles.secondary}
+                        type="button"
+                        onClick={() => goToStep(2)}
+                      >
+                        {ar ? "رجوع" : "Back"}
+                      </button>
+                      <button
+                        className={styles.primary}
+                        type="button"
+                        onClick={() => goToStep(4)}
+                      >
+                        {ar ? "التالي" : "Next"}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* STEP 4: Mode & Submission */}
+                {step === 4 && (
+                  <form action={action} className={styles.choiceForm}>
+                    <input type="hidden" name="name" value={displayName} />
+                    <input type="hidden" name="ageBand" value={ageBand} />
+                    <input type="hidden" name="gender" value={gender} />
+                    <input type="hidden" name="avatarUrl" value={selectedAvatar} />
+
+                    <fieldset disabled={pending} className={styles.choices}>
+                      <legend className={styles.srOnly}>
+                        {ar ? "إنت حابب تكون؟" : "You are?"}
+                      </legend>
+                      <div className={styles.choiceGrid}>
+                        {[
+                          {
+                            val: "LEARNER",
+                            title: ar ? "متعلّم بايثون" : "Python Learner",
+                            desc: ar
+                              ? "رحلة ممتعة وتفاعلية مع إرشادات تيكو وشروحات تدريجية تناسب المبتدئين."
+                              : "Step-by-step interactive journey with Tico's hints and guided missions.",
+                            icon: "📜",
+                          },
+                          {
+                            val: "CHALLENGER",
+                            title: ar ? "متحدّي خوارزميات" : "Code Challenger",
+                            desc: ar
+                              ? "مباشرة للتحديات والمهمات البرمجية الشيقة بدون مساعدة زائدة للمحترفين."
+                              : "Dive directly into tricky coding challenges with minimal guidance.",
+                            icon: "⚔️",
+                          },
+                        ].map((item) => {
+                          const isSelected = mode === item.val;
+                          return (
+                            <motion.label
+                              key={item.val}
+                              className={styles.richChoice}
+                              data-selected={isSelected}
+                              whileHover={reduced ? {} : { y: -3, scale: 1.02 }}
+                              whileTap={reduced ? {} : { scale: 0.98 }}
+                              transition={{ type: "spring", stiffness: 420, damping: 25 }}
+                            >
+                              <input
+                                type="radio"
+                                name="mode"
+                                value={item.val}
+                                checked={isSelected}
+                                onChange={() => setMode(item.val)}
+                              />
+                              <span className={styles.richChoiceIcon} aria-hidden="true">
+                                {item.icon}
+                              </span>
+                              <span className={styles.richChoiceTitle}>{item.title}</span>
+                              <p className={styles.richChoiceDesc}>{item.desc}</p>
+                              {isSelected && (
+                                <motion.span
+                                  className={styles.richChoiceCheck}
+                                  initial={{ scale: 0 }}
+                                  animate={{ scale: 1 }}
+                                  transition={{ type: "spring", stiffness: 500, damping: 25 }}
+                                >
+                                  ✓
+                                </motion.span>
+                              )}
+                            </motion.label>
+                          );
+                        })}
+                      </div>
+                    </fieldset>
+
+                    {error && (
+                      <p className={styles.error} role="alert">
+                        {error === "unauthorized" ? (
+                          <Link href={`/${locale}/login`}>
+                            {ar
+                              ? "سجّل دخولك تاني علشان تكمّل."
+                              : "Sign in again to continue."}
+                          </Link>
+                        ) : ar ? (
+                          "مقدرناش نحفظ بياناتك. جرّب تاني."
+                        ) : (
+                          "We couldn’t save your setup. Please try again."
+                        )}
+                      </p>
+                    )}
+
+                    <div className={styles.stepActions}>
+                      <button
+                        className={styles.secondary}
+                        type="button"
+                        onClick={() => goToStep(3)}
+                        disabled={pending}
+                      >
+                        {ar ? "رجوع" : "Back"}
+                      </button>
+                      <button className={styles.primary} disabled={pending}>
+                        {pending
+                          ? ar
+                            ? "جاري الحفظ…"
+                            : "Saving…"
+                          : ar
+                          ? "ابدأ التعلم"
+                          : "Start Learning"}
+                      </button>
+                    </div>
+                  </form>
+                )}
+              </motion.div>
+            </AnimatePresence>
           )}
         </section>
 
-        <div className={styles.thinkingArt} aria-hidden="true">
-          <Image
-            src="/assets/auth/thinking-sheet.png"
-            alt=""
-            width={1500}
-            height={1500}
-            sizes="1500px"
-            preload
-          />
-        </div>
+        {/* Right Column: Egyptian Programmer ID that progressively fills in */}
+        <aside className={styles.idCardColumn} aria-label={ar ? "معاينة بطاقة الهوية" : "Egyptian Coder ID Preview"}>
+          <div className={styles.idCardStickyWrapper}>
+            <EgyptianIdCard
+              name={displayName}
+              ageBand={ageBand}
+              gender={gender}
+              avatarUrl={selectedAvatar}
+              mode={mode}
+              step={step}
+              locale={locale}
+              isCompleted={previewDone}
+            />
+          </div>
+        </aside>
       </div>
 
       {preview && (
