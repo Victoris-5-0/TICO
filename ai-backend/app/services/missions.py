@@ -33,7 +33,7 @@ from app.models_tables import (
 )
 from app.config import settings
 from app.ai.prompts import tico_hint as hint_prompt
-from app.rules import arena
+from app.rules import arena, progression
 from app.rules.mastery import MASTERY_THRESHOLD
 from app.queries import ai_log, students, students as student_q, users
 
@@ -98,14 +98,20 @@ def carried_for_lesson(db: Session, lesson_id: str) -> list[str]:
 
 
 def next_concept(db: Session, user_id: str) -> Concept:
-    """The first concept in the fixed order this student has not yet mastered.
+    """The first concept in the fixed order this student has not yet finished.
 
     Deliberately simple, and deliberately here rather than in a model. "Which concept
     next" is a rule a teacher must be able to check, and a language model asked it will
     give a fluent answer that cannot be audited.
 
-    A student who has mastered everything gets the last concept again — the arena is
-    where they should be, but a repeat beats an error.
+    **Finished is a count, not a number the student cannot see.** `rules/progression` says
+    a concept has three stops, extended to at most six if mastery is still short after
+    those three — which is what the map on screen draws. Gating purely on mastery meant the
+    path had no visible end: a child completed the third stop, the path carried on, and
+    nothing said why.
+
+    A student who has finished everything gets the last concept again — the arena is where
+    they should be, but a repeat beats an error.
     """
     concepts = students.concepts_in_order(db)
     if not concepts:
@@ -114,7 +120,9 @@ def next_concept(db: Session, user_id: str) -> Concept:
     mastery = students.mastery_map(db, user_id)
     for concept in concepts:
         row = mastery.get(concept.id)
-        if row is None or row.mastery < MASTERY_THRESHOLD:
+        if row is None:
+            return concept
+        if not progression.is_complete(mastery=row.mastery, completed=row.evidence_count):
             return concept
     return concepts[-1]
 

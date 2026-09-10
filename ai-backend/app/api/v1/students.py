@@ -15,6 +15,7 @@ from app.core.auth import CurrentUser, get_current_user, require_self
 from app.database import get_db
 from app.schemas.common import ErrorResponse
 from app.schemas.students import (
+    ConceptProgressOut,
     LessonPlanEntry,
     MasteryOut,
     PlanRequest,
@@ -68,6 +69,7 @@ def refresh(
     return RefreshResponse(
         profile=StudentProfileOut.model_validate(result["profile"]),
         concepts=[MasteryOut.model_validate(c) for c in result["concepts"]],
+        progress=[ConceptProgressOut(**row) for row in result["progress"]],
         advanced=result["advanced"],
         decided_by=result["decided_by"],
         reason=result["reason"],

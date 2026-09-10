@@ -88,6 +88,28 @@ export interface CodeAnnotation {
   pointsAt?: string | null;
 }
 
+/**
+ * One concept's row on the map: how many stops it has and how many are walked.
+ *
+ * This is what the path on screen is drawn from. `stopsTotal` is three for a concept a
+ * student is coping with and grows to at most six while they are not, so a client can
+ * render the stops without knowing anything about mastery — and `extended` lets it say
+ * the path grew rather than silently showing more circles.
+ */
+export interface ConceptProgressOut {
+  conceptId: string;
+  /** Missions finished on this concept. */
+  completed: number;
+  /** Stops to draw. 3 normally, up to 6. */
+  stopsTotal: number;
+  remaining: number;
+  /** Walk past it; the next concept is unlocked. */
+  isComplete: boolean;
+  /** The path grew beyond the usual three because mastery was still short. */
+  extended: boolean;
+  mastery: number;
+}
+
 /** Rules propose, the model reviews. Always recorded so a decision can be explained. */
 export type DecidedBy = "RULE" | "MODEL";
 
@@ -463,6 +485,7 @@ export interface RefreshRequest {
 export interface RefreshResponse {
   profile: StudentProfileOut;
   concepts: Array<MasteryOut>;
+  progress?: Array<ConceptProgressOut>;
   /** Did the gate move the student on, or hold them for another rep? */
   advanced: boolean;
   decidedBy: DecidedBy;
