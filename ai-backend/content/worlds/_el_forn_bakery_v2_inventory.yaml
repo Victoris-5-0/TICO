@@ -1,0 +1,562 @@
+# =============================================================================
+# INVENTORY — El Forn, bakery-v2 interactive scene
+#
+# WHAT THIS IS: a complete, code-derived listing of everything the WORKING DEMO at
+# /[locale]/worlds/el-forn/missions/opening-message can actually draw and move.
+#
+# WHAT THIS IS NOT: a world manifest. The `_` prefix means `manifests/loader.py` and
+# `scripts/check_manifests.py` both skip this file, so it changes nothing at runtime.
+# It is the raw material for a decision — see `merge_gap` at the bottom.
+#
+# Every fact below was read out of the client, not authored here. Nothing was invented:
+#
+#   client/src/lib/bakery/scene-manifest.ts   anchors, atlas grids, hand sockets
+#   client/src/lib/bakery/simulation.ts       phases, durations, loaf ownership, counts
+#   client/src/components/bakery/scene.tsx    draw rects, frame selection, motion
+#   client/src/components/bakery/neighborhood-details.tsx   vector-only detail, fire
+#   client/src/components/bakery-world-demo.tsx             controls, copy, a11y
+#   client/scripts/prepare-bakery-assets.mjs  atlas cropping, cell normalization
+#   docs/bakery-v2-prompts.json               character identity and per-frame poses
+#
+# Coordinates are SVG user units in a fixed 1600x900 viewBox. "Rect" is x/y/w/h as
+# passed to <image>. Actor frames are addressed by INDEX into a sprite atlas.
+# =============================================================================
+
+inventory:
+  id: el_forn_bakery_v2
+  world_id: el_forn                 # the manifest this would eventually feed
+  track_slug: el-forn
+  derived_on: 2026-09-10
+  route: /[locale]/worlds/el-forn/missions/opening-message
+  renderer: inline SVG + Motion for React, driven by a useReducer state machine
+  runtime_dir: client/public/assets/bakery-v2/
+  master_dir: client/assets/source/bakery-v2/
+  rebuild: "cd client && pnpm assets:bakery   # requires ImageMagick"
+  preloaded_files: 25               # 15 fixtures + 10 actor atlases, gated on decode()
+
+# -----------------------------------------------------------------------------
+# STAGE — the coordinate space and the fixed anchors everything is placed against.
+# -----------------------------------------------------------------------------
+stage:
+  canvas: { width: 1600, height: 900 }
+  view_full: "0 0 1600 900"
+  view_counter: "145 300 690 485"   # the "Counter" toggle, a framed close-up
+  anchors:
+    baker: { x: 486, y: 719 }       # Hassan's rest position at the counter
+    baker_at_oven: { x: 411, y: 719 }
+    oven: { x: 291, y: 546 }
+    tray: { x: 553, y: 590 }
+    queue_first: { x: 705, y: 752 } # head of the queue, where handover happens
+    queue_spacing: 105              # one step back per place in line
+    queue_actor_size: 310           # rendered height of a queue actor
+    salma: { x: 158, y: 825 }       # off to the side, size 288, not in the queue
+  exit_to: { x: -150 }              # a served customer walks off frame left
+
+# -----------------------------------------------------------------------------
+# FIXTURES — static raster layers. 15 files, all under runtime_dir, all preloaded.
+# `rect` is where the scene draws it. `intrinsic` is the file's own pixel size.
+# -----------------------------------------------------------------------------
+fixtures:
+  environment:
+    file: environment.webp
+    intrinsic: { w: 1600, h: 900 }
+    rect: { x: 0, y: 0, w: 1600, h: 900 }
+    description_en: The full side-on bakery backdrop. Contains no people and no bread.
+    layer: 0
+
+  awning:
+    file: awning.webp
+    intrinsic: { w: 535, h: 204 }
+    rect: { x: 130, y: 143, w: 602, h: 224 }
+    description_en: Striped shop awning over the frontage.
+
+  oven:
+    file: oven.webp
+    intrinsic: { w: 269, h: 424 }
+    rect: { x: 202, y: 349, w: 195, h: 346 }
+    description_en: The domed baladi oven, left of frame.
+    states: [cold, lit]             # `lit` is the fire overlay, not a second file
+
+  counter:
+    file: counter.webp
+    intrinsic: { w: 420, h: 240 }
+    rect: { x: 437, y: 606, w: 218, h: 112 }
+    description_en: The serving counter front.
+
+  worktop:
+    file: worktop.webp
+    intrinsic: { w: 479, h: 81 }
+    rect: { x: 430, y: 592, w: 231, h: 28 }
+    description_en: The counter's flat top surface. Loaves rest above it.
+
+  tray:
+    file: tray.webp
+    intrinsic: { w: 460, h: 131 }
+    rect: { x: 468, y: 580, w: 165, h: 33 }
+    description_en: The serving tray on the worktop. Holds up to 8 loaves.
+
+  peel:
+    file: peel.webp
+    intrinsic: { w: 545, h: 120 }
+    rect: dynamic              # see moves.peel_path — length and angle are computed
+    description_en: The long-handled baker's peel (المِطرحة). Only visible while baking.
+
+  olive:
+    file: olive.webp
+    intrinsic: { w: 271, h: 456 }
+    rect: { x: 6, y: 432, w: 104, h: 290 }
+    description_en: Potted olive tree, far left.
+
+  aloe:
+    file: aloe.webp
+    intrinsic: { w: 291, h: 335 }
+    rect: { x: 1483, y: 640, w: 100, h: 127 }
+    description_en: Potted aloe, far right.
+
+  radio:
+    file: radio.webp
+    intrinsic: { w: 324, h: 283 }
+    rect: { x: 548, y: 363, w: 90, h: 81 }
+    description_en: Small radio on a wall shelf behind the counter. Shelf is vector-drawn.
+
+  flour-sack:
+    file: flour-sack.webp
+    intrinsic: { w: 278, h: 324 }
+    rect: { x: 385, y: 604, w: 67, h: 86 }
+    description_en: A leaning sack of flour at the end of the counter.
+
+  loaf:
+    file: loaf.webp
+    intrinsic: { w: 403, h: 177 }
+    rect: dynamic
+    countable: true
+    max_shown: 8                    # one full batch on the tray
+    description_en: One baked baladi loaf. The unit everything is counted in.
+
+  dough:
+    file: dough.webp
+    intrinsic: { w: 359, h: 176 }
+    rect: dynamic
+    countable: true
+    max_shown: 8
+    description_en: Unbaked dough. Swaps to `loaf` at 60% through the bake.
+
+  bag:
+    file: bag.webp
+    intrinsic: { w: 298, h: 299 }
+    rect: dynamic                   # pinned to the receiving customer's hand socket
+    countable: true
+    max_shown: 1
+    description_en: The paper bag a customer carries bread away in.
+
+  oven-fire:
+    file: oven-fire.webp
+    intrinsic: { w: 512, h: 512 }
+    atlas: { columns: 2, rows: 2, cell: 256, frames: 4 }
+    rect: { x: 237, y: 444, w: 120, h: 120 }
+    clip: "oven mouth — M247 566 V516 Q247 481 297 466 Q348 482 348 516 V566 Z"
+    description_en: Four-frame flame loop inside the oven mouth.
+
+# -----------------------------------------------------------------------------
+# ACTOR ATLASES — 10 sprite sheets. Every cell is 384x384 with the figure's FEET
+# normalized to the cell centre, which is why an actor can be placed by a single
+# ground point and never drifts.
+#
+# `hands` is a per-frame hand socket in world units relative to that foot pivot at
+# size 310. It is what lets a loaf or a bag sit IN a hand instead of near it.
+# `receive_hand` is the socket used for the actual bread handover.
+# -----------------------------------------------------------------------------
+actor_atlases:
+  hassan:
+    file: hassan.webp
+    intrinsic: { w: 1536, h: 1536 }
+    grid: { columns: 4, rows: 4, cell: 384, frames: 16 }
+    receive_hand: { x: 84, y: -141 }        # == frame 14
+    rows_meaning:
+      - { row: 1, frames: [0, 1, 2, 3],     facing: left,  action: load the oven with the peel }
+      - { row: 2, frames: [4, 5, 6, 7],     facing: left,  action: retrieve bread from the oven }
+      - { row: 3, frames: [8, 9, 10, 11],   facing: right, action: place bread down on the counter }
+      - { row: 4, frames: [12, 13, 14, 15], facing: right, action: hand bread over at waist height }
+    hands:
+      0:  { x: -15, y: -132 }
+      1:  { x: 61,  y: -160 }
+      2:  { x: 108, y: -191 }
+      3:  { x: 68,  y: -164 }
+      4:  { x: 108, y: -182 }
+      5:  { x: 103, y: -178 }
+      6:  { x: 36,  y: -150 }
+      7:  { x: 27,  y: -130 }
+      8:  { x: -15, y: -132 }
+      9:  { x: 39,  y: -181 }
+      10: { x: 75,  y: -109 }
+      11: { x: 27,  y: -130 }
+      12: { x: -15, y: -132 }
+      13: { x: 69,  y: -122 }
+      14: { x: 84,  y: -141 }
+      15: { x: -15, y: -132 }
+    notes: >
+      Frame 15 is the neutral rest pose and the scene's default. The atlas is drawn
+      mirrored while facing the oven, so hand sockets are negated on those phases.
+
+  # All eight queue customers share one 3x2 layout and one pose vocabulary.
+  _customer_layout: &customer_layout
+    intrinsic: { w: 1152, h: 768 }
+    grid: { columns: 3, rows: 2, cell: 384, frames: 6 }
+    facing: left
+    frames_meaning:
+      0: relaxed standing idle
+      1: walk, contact — left leg forward, long stride
+      2: walk, passing — legs together, rear heel raised
+      3: walk, opposite contact — right leg forward
+      4: walk, opposite passing
+      5: receiving — both arms extended forward at waist height, palms up
+    hands:
+      0: { x: 26, y: -107 }
+      1: { x: 51, y: -105 }
+      2: { x: 0,  y: -119 }
+      3: { x: 47, y: -109 }
+      4: { x: -5, y: -116 }
+      # frame 5 is per-actor; it is the `receive_hand` below.
+
+  mariam:  { file: mariam.webp,      <<: *customer_layout, receive_hand: { x: -73, y: -162 } }
+  nour:    { file: nour.webp,        <<: *customer_layout, receive_hand: { x: -66, y: -153 } }
+  amina:   { file: amina.webp,       <<: *customer_layout, receive_hand: { x: -73, y: -151 } }
+  omar:    { file: omar.webp,        <<: *customer_layout, receive_hand: { x: -73, y: -151 } }
+  dina:    { file: dina.webp,        <<: *customer_layout, receive_hand: { x: -64, y: -153 } }
+  youssef: { file: youssef.webp,     <<: *customer_layout, receive_hand: { x: -73, y: -151 } }
+  hoda:    { file: hoda.webp,        <<: *customer_layout, receive_hand: { x: -73, y: -151 } }
+  farid:   { file: farid-saidi.webp, <<: *customer_layout, receive_hand: { x: -78, y: -150 } }
+
+  salma:
+    file: salma.webp
+    intrinsic: { w: 768, h: 384 }
+    grid: { columns: 2, rows: 1, cell: 384, frames: 2 }
+    facing: right                   # she faces the queue, everyone else faces the counter
+    render_size: 288
+    frames_meaning:
+      0: idle, holding a small blank clipboard close to the body
+      1: guiding gesture — open hand inviting the next customer forward
+    notes: Plays frame 1 only during the `advancing` phase. Never queues, never served.
+
+# -----------------------------------------------------------------------------
+# CHARACTERS — identity, for NPC lines. Appearance is summarised from the
+# generation prompt log so a written line never contradicts the artwork.
+#
+# `speaks` marks who currently has a rendered mouth-piece in the demo. Everyone
+# here is DRAWABLE; only Hassan and Salma have an authored role beyond queueing.
+# -----------------------------------------------------------------------------
+characters:
+  - id: tico
+    name_ar: تيكو
+    role: mentor
+    asset: characters/tico/tico-neutral.webp   # NOT in bakery-v2; a separate portrait
+    rendered_in_scene: false                   # sits in the side panel, not the SVG
+    voice: warm, playful, encouraging; never sarcastic, never condescending
+    language: Egyptian Arabic for prose, English for code identifiers
+    beats: [greeting, nudge, success, failure, celebrate]
+
+  - id: hassan
+    name_ar: حسن
+    name_en: Hassan
+    role: baker
+    appearance: >
+      Moustache, short salt-and-pepper hair, medium-brown skin, cream rolled-sleeve
+      shirt, terracotta apron, dark trousers. Middle-aged.
+    voice: gruff, kind underneath, short practical sentences
+    does: [loads the oven, retrieves bread, stocks the tray, hands bread over]
+    beats: [problem_intro, reaction]
+
+  - id: salma
+    name_ar: سلمى
+    name_en: Salma
+    role: queue coordinator
+    appearance: >
+      Medium-brown skin, teal hijab, coral long modest tunic, dark trousers, brown
+      shoes. Carries a small blank clipboard.
+    voice: curious, a little unsure, asks rather than tells
+    does: [waves the next customer forward]
+    beats: [problem_intro]
+
+  - id: mariam
+    name_ar: مريم
+    name_en: Mariam
+    role: customer
+    appearance: Adult woman. Sand hijab, medium-brown skin, teal patterned dress, brown shoes.
+    queue_position: 1
+
+  - id: nour
+    name_ar: نور
+    name_en: Nour
+    role: customer
+    appearance: >
+      Young adult man. Curly dark hair, teal open overshirt over a cream T-shirt,
+      navy trousers, brown sneakers, small terracotta backpack.
+    queue_position: 2
+
+  - id: amina
+    name_ar: أمينة
+    name_en: Amina
+    role: customer
+    appearance: >
+      Woman in her sixties. Cream hijab, olive-green long loose dress, plain brown
+      shoes. Kind, dignified.
+    queue_position: 3
+    name_ar_source: not-in-code      # every other Arabic name comes from onboarding-form.tsx
+
+  - id: omar
+    name_ar: عمر
+    name_en: Omar
+    role: customer
+    appearance: >
+      Man in his thirties, stocky. Dusty-blue long-sleeve workshirt with rolled cuffs,
+      ochre-tan trousers, dark brown shoes.
+    queue_position: 4
+
+  - id: dina
+    name_ar: دينا
+    name_en: Dina
+    role: customer
+    appearance: >
+      University student in her twenties. Dark curly hair in a low ponytail, no
+      headscarf, rust-terracotta blouse, navy trousers, cream sneakers.
+    queue_position: 5
+
+  - id: youssef
+    name_ar: يوسف
+    name_en: Youssef
+    role: customer
+    appearance: >
+      Dignified man in his late sixties. White hair and moustache, small round
+      eyeglasses, light-taupe galabeya, brown slippers.
+    queue_position: 6
+
+  - id: hoda
+    name_ar: هدى
+    name_en: Hoda
+    role: customer
+    appearance: >
+      Woman in her forties. Charcoal-black hijab, mustard-ochre knee-length tunic,
+      dark-teal trousers, black flats.
+    queue_position: 7
+    name_ar_source: not-in-code
+
+  - id: farid
+    name_ar: فريد
+    name_en: Farid
+    role: customer
+    appearance: >
+      Man in his fifties, Sa'idi. Galabeya and turban. Balding with a thick black
+      moustache, tan-brown skin.
+    queue_position: 8
+    asset_note: >
+      id `farid` renders farid-saidi.webp. A second atlas, farid.webp — same man in a
+      plain cream shirt and olive trousers — ships but is not wired into the scene.
+
+# -----------------------------------------------------------------------------
+# MOVES — the demo's whole motion vocabulary.
+#
+# The scene is a phase machine, not a timeline. `phases` is the authoritative list:
+# nine states, each with a fixed duration in ms, advanced by a rAF tick that is
+# clamped to 1000ms per step so a backgrounded tab can never drain the queue at once.
+# -----------------------------------------------------------------------------
+moves:
+  phases:
+    - id: idle
+      ms: 0
+      description_en: Waiting for input. Hassan at rest (frame 15).
+    - id: loading
+      ms: 1800
+      actor: hassan
+      frames: [0, 1, 2, 3]
+      facing: left
+      description_en: Hassan slides the dough into the oven on the peel.
+      moves: [hassan walks to the oven mouth, peel extends left, dough travels with it]
+    - id: baking
+      ms: 2800
+      actor: hassan
+      frames: [15]
+      facing: left
+      description_en: The oven works. Dough becomes bread at 60% through.
+      moves: [fire brightens, steam rises above the oven, dough sprite swaps to loaf]
+    - id: retrieving
+      ms: 1800
+      actor: hassan
+      frames: [4, 5, 6, 7]
+      facing: left
+      description_en: Hassan draws the hot bread out on the peel.
+      moves: [peel retracts right, hassan walks back from oven to counter]
+    - id: stocking
+      ms: 1400
+      actor: hassan
+      frames: [8, 9, 10, 11]
+      facing: right
+      description_en: Loaves move from the peel onto the tray, growing to full size.
+      moves: [loaves interpolate into their tray slots, steam rises above the counter]
+    - id: handover
+      ms: 2000
+      actor: hassan
+      frames: [10, 13, 14, 15]
+      facing: right
+      description_en: Two loaves pass from Hassan's hand to the customer's.
+      moves:
+        - customer at the head of the queue switches to frame 5, arms out
+        - loaves lift to Hassan's hand socket, then travel to the customer's
+        - a paper bag appears at the customer's hand
+    - id: exiting
+      ms: 2200
+      description_en: The served customer walks off to the left, bread in the bag.
+      moves: [walk cycle frames 1-4, x travels 705 to -150, a shallow 65-unit arc]
+    - id: advancing
+      ms: 1400
+      description_en: The whole queue steps one place forward.
+      moves: [every waiting customer walks one 105-unit step, salma plays frame 1]
+    - id: complete
+      ms: 0
+      description_en: All eight served. Two batches, sixteen loaves.
+
+  # Continuous loops, driven by the same clock rather than by phase.
+  loops:
+    walk_cycle:
+      frames: [1, 2, 3, 4]
+      frame_ms: 180
+      applies_to: [exiting, advancing]
+    oven_fire:
+      frames: [0, 1, 2, 3]
+      frame_ms: 170
+      opacity: { baking: 0.96, otherwise: 0.68 }
+      glow: "radial ellipse cx297 cy521 rx72 ry66, opacity .8 baking / .4 idle, plus a two-sine shimmer"
+    steam:
+      description_en: Two small vector curls, opacity peaking mid-phase.
+      at: { baking: { x: 291, y: 507 }, stocking: { x: 551, y: 566 } }
+
+  peel_path:
+    description_en: >
+      The peel is not keyframed. Its far end walks a per-phase path and its near end is
+      pinned to Hassan's live hand socket, so length and angle are solved every frame.
+    x: { loading: 333 -> 254, retrieving: 254 -> 417, other: 417 -> 520 }
+    y: { stocking: 546 -> 590, other: 546 }
+    visible_during: [loading, retrieving, stocking]
+
+  loaf_slots:
+    description_en: Eight positions, indexed by loaf id modulo 8, in a 4-wide two-row grid.
+    tray:  { x: "479 + (n % 4) * 34", y: "578 - floor(n / 4) * 11", size: { w: 34, h: 15 } }
+    oven:  { x: "267 + (n % 4) * 15", y: "536 - floor(n / 4) * 8",  size: { w: 24, h: 11 } }
+    peel:  { x: "peelX - 19 + (n % 4) * 15", y: "peelY - 8 - floor(n / 4) * 8", size: { w: 24, h: 11 } }
+    in_hand: { size: { w: 32, h: 15 } }
+    carried: { size: { w: 27, h: 13 } }
+
+  reduced_motion:
+    description_en: >
+      Honoured, and not by disabling the scene. Phase progress is pinned to 0, so every
+      actor holds its first frame, the fire and steam stop, and a loaf jumps straight to
+      its destination instead of travelling. The state machine still advances; only
+      interpolation stops.
+    source: useReducedMotion, applied after hydration so server and client markup match
+
+# -----------------------------------------------------------------------------
+# PROP LIFECYCLE — every loaf is one object that changes owner. This is the part a
+# generated mission would actually drive, so the owner names matter.
+# -----------------------------------------------------------------------------
+prop_lifecycle:
+  loaf_owners: [dough, oven, peel, tray, "handover:<customer_id>", "customer:<customer_id>"]
+  transitions:
+    - { on: bake,       creates: 8, owner: dough }
+    - { at: loading_end,   from: dough, to: oven }
+    - { at: baking_end,    from: oven,  to: peel }
+    - { at: stocking_end,  from: peel,  to: tray }
+    - { on: serve,      from: tray,  to: "handover:<id>", count: 2 }
+    - { at: handover_end,  from: "handover:<id>", to: "customer:<id>" }
+
+# -----------------------------------------------------------------------------
+# VECTOR DETAIL — drawn as SVG, not raster. Listed because it is on screen and a
+# mission's prose can refer to it, but it is NOT a sprite and cannot be counted or
+# animated the way `fixtures` can.
+# -----------------------------------------------------------------------------
+vector_details:
+  shop_sign:
+    text_ar: فرن الحارة
+    subtitle_ar: عيش بلدي
+    at: { x: 455, y: 70 }
+    note: Arabic lettering stays vector in both locales; the raster masters carry no text.
+  greeting_sign:
+    text_ar: صباح الخير
+    at: { x: 776, y: 378 }
+    rotated: -4
+  radio_shelf: A bracketed wooden shelf under the radio.
+  actor_shadows: One soft ellipse per actor.
+  queue_marker: A terracotta ring drawn under whoever is first in line.
+
+# -----------------------------------------------------------------------------
+# CONSTANTS — the demo's fixed numbers. Any mission set in this scene has to agree
+# with these or the arithmetic on screen contradicts the arithmetic in the code.
+# -----------------------------------------------------------------------------
+constants:
+  batch_size: 8                     # loaves produced per bake
+  order_size: 2                     # loaves handed to each customer
+  queue_length: 8
+  batches_to_clear_queue: 2
+  loaves_to_clear_queue: 16
+  tray_capacity: 8
+  rule: A bake is refused while the tray still holds bread; a serve is refused below 2.
+
+# -----------------------------------------------------------------------------
+# CONTROLS — what a player can actually do. A generated mission that expects any
+# other verb has no button to press.
+# -----------------------------------------------------------------------------
+controls:
+  buttons:
+    - { id: bake,  label_en: Bake batch, label_ar: اخبز دفعة,           effect: adds 8 loaves as dough }
+    - { id: serve, label_en: Serve next, label_ar: قدّم للي عليه الدور,  effect: gives 2 loaves to the head of the queue }
+    - { id: demo,  label_en: Play demo,  label_ar: شغّل العرض,           effect: runs the full cycle unattended }
+    - { id: pause, label_en: Pause,      label_ar: وقّف مؤقتًا,          effect: freezes the clock mid-phase }
+    - { id: reset, label_en: Reset,      label_ar: ابدأ من جديد,         effect: back to 8 waiting, 0 baked }
+  view_toggles: [full scene, counter close-up]
+  readouts: [loaves ready, waiting, "served / 8"]
+
+# -----------------------------------------------------------------------------
+# SHIPPED BUT NOT WIRED — present under runtime_dir, referenced by nothing.
+# Available at zero asset cost if a mission needs them.
+# -----------------------------------------------------------------------------
+not_wired:
+  - { file: glow.webp,  reason: superseded by the vector radial gradient on the oven }
+  - { file: farid.webp, reason: the scene uses the Sa'idi variant for this character }
+
+# -----------------------------------------------------------------------------
+# MERGE GAP — how this inventory differs from `el_forn.yaml` as it stands today.
+#
+# READ THIS BEFORE FEEDING ANY OF THE ABOVE TO GENERATION. The live manifest and this
+# demo describe two different art directions, and three things block a merge.
+# -----------------------------------------------------------------------------
+merge_gap:
+  1_different_renderer:
+    manifest_says: visual.backdrop is worlds/bakery/gameplay/playfield-topdown-v1.webp
+    demo_uses: an SVG scene composed from bakery-v2 layers, side-on
+    consequence: >
+      Generation currently targets a top-down still that this demo does not render.
+      Deciding that bakery-v2 is the mission renderer is a product call, not a refactor.
+
+  2_docs_say_client_only:
+    where: docs/09-asset-bible-and-image-prompts.md:27 and docs/bakery-v2-prompts.json
+    quote: "These are client-only visual assets, not a shared AI manifest change."
+    consequence: >
+      That line is currently true and would become false. Per the root AGENTS.md, a
+      change to a client/ai-backend interface updates the doc in the same commit.
+
+  3_models_forbid_extras:
+    where: ai-backend/app/manifests/models.py
+    detail: >
+      Every manifest model is ConfigDict(extra="forbid"). Atlas grids, frame semantics,
+      hand sockets, phase durations and prop lifecycles have no fields today, so this
+      inventory cannot be pasted into el_forn.yaml as-is — the loader would reject it
+      at boot. Merging means adding fields to SpriteSpec/Visual/Character first.
+
+  what_generation_would_gain:
+    characters: 3 today (hassan, mariam, salma) -> 11 drawable, 10 with atlases
+    sprites: 8 today -> 15 fixtures plus 10 actor atlases
+    animations: >
+      4 today (trays_into_oven, loaves_appear, count_up, tray_burns), none of which the
+      demo implements -> 9 real phases plus 3 continuous loops that do exist. Note
+      `tray_burns` has no artwork in bakery-v2; the burnt-tray state is manifest-only.
+    new_capability: >
+      Per-frame hand sockets mean a mission can say "put the bread in Youssef's hands"
+      and have it land in his hands. Nothing in the current manifest can express that.
