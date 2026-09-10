@@ -41,11 +41,35 @@ DEFAULT_LEARNING_RATE: Final[float] = 0.20
 # NEEDS DECISION: Outcome mapping values by hint count / rung reached before solving
 # are implementation heuristics mapped to the 4-rung progressive disclosure hint ladder
 # (rules/hint_ladder.py). They are not yet empirically calibrated.
+#: Where "this student has mastered this concept" begins. **One number, one question.**
+#:
+#: It used to be four. `missions.MASTERY_THRESHOLD` was 0.75, `GATE_MASTERY_THRESHOLD`
+#: 0.70, `sessions.MASTERY_THRESHOLD` 0.80 and arena eligibility 0.70 — so a student at
+#: 0.72 was told they had advanced, was offered the arena, and was handed the same concept
+#: again while the debrief stayed silent. Everything that asks "has he got it?" imports
+#: this.
+#:
+#: Distinct from WEAK_/STRONG_MASTERY_THRESHOLD in `rules/composer.py`, which answer a
+#: different question — how much scaffolding this mission should carry — and are allowed
+#: to sit elsewhere on the scale.
+MASTERY_THRESHOLD: Final[float] = 0.75
+
+# Evidence a *passing* session contributes. These are the target of an exponential moving
+# average, which means they are also the ceiling it converges to — so every one of them
+# must sit above MASTERY_THRESHOLD or the student can never reach it.
+#
+# They did not. 2 hints scored 0.70 and 3 scored 0.55, so a student who leaned on hints
+# converged below every gate and stayed on one concept forever, however many missions they
+# solved. Hints now cost *reps*, not the ceiling: 6 clean solves reach the threshold, about
+# 12 do if every hint is used.
 OUTCOME_CLEAN_PASS: Final[float] = 1.00     # 0 hints used (clean solve)
-OUTCOME_RUNG_1_PASS: Final[float] = 0.85    # 1 hint (Rung 1: ORIENT)
-OUTCOME_RUNG_2_PASS: Final[float] = 0.70    # 2 hints (Rung 2: QUESTION)
-OUTCOME_RUNG_3_PASS: Final[float] = 0.55    # 3 hints (Rung 3: NAME_IT)
-OUTCOME_RUNG_4_PASS: Final[float] = 0.40    # 4+ hints (Rung 4: WALK)
+OUTCOME_RUNG_1_PASS: Final[float] = 0.95    # 1 hint (Rung 1: ORIENT)
+OUTCOME_RUNG_2_PASS: Final[float] = 0.90    # 2 hints (Rung 2: QUESTION)
+OUTCOME_RUNG_3_PASS: Final[float] = 0.85    # 3 hints (Rung 3: NAME_IT)
+OUTCOME_RUNG_4_PASS: Final[float] = 0.80    # 4+ hints (Rung 4: WALK)
+
+#: Failing still drags hard, and is what keeps the number meaningful: the signal that
+#: separates students is pass-versus-fail, and the hint count only sets the pace.
 OUTCOME_FAILURE: Final[float] = 0.00        # Mission failed / unpassed
 
 # Confidence calculation bounds and defaults
@@ -89,12 +113,18 @@ def compute_outcome_score(*, passed: bool, hints_used: int = 0) -> float:
 
     Pedagogical design:
       - Clean solve with 0 hints represents full mastery evidence (1.0).
-      - Passing with hint support yields partial credit decaying with the hint ladder rung reached:
-          - 1 hint  (Rung 1 ORIENT): 0.85
-          - 2 hints (Rung 2 QUESTION): 0.70
-          - 3 hints (Rung 3 NAME_IT): 0.55
-          - 4+ hints (Rung 4 WALK): 0.40
+      - Passing with hint support yields slightly less, decaying with the rung reached:
+          - 1 hint  (Rung 1 ORIENT): 0.95
+          - 2 hints (Rung 2 QUESTION): 0.90
+          - 3 hints (Rung 3 NAME_IT): 0.85
+          - 4+ hints (Rung 4 WALK): 0.80
       - Failure or abandonment yields 0.0.
+
+      Every passing value sits above MASTERY_THRESHOLD on purpose. This score is the target
+      of an EMA and therefore its ceiling, so a passing score below the threshold means a
+      student who keeps passing can never cross it. That was the old behaviour: two hints
+      scored 0.70 and converged on 0.70 exactly. Asking for help should cost repetitions,
+      not the possibility of finishing.
 
     Args:
         passed: True if student passed the mission tests, False otherwise.

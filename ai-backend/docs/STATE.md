@@ -43,6 +43,25 @@ python scripts/gen_client_types.py --check    # the generated TS is not stale
 The offline suite blanks `GOOGLE_API_KEY` in `conftest.py` so nothing can reach a model by
 accident. `TICO_LIVE_MODEL=1` is the deliberate exception.
 
+## How a student progresses
+
+One threshold, `rules/mastery.MASTERY_THRESHOLD = 0.75`, imported by everything that asks
+"has this student mastered the concept?" — the advance gate, the mission picker, the
+debrief's `conceptsMastered`, and arena entry. They flip together, at the same moment.
+
+Mastery is an exponential moving average over sessions, so **the outcome score is also the
+ceiling it converges to**. Every passing score therefore sits above the threshold: hints
+cost repetitions, not the possibility of finishing. Roughly six clean solves to master a
+concept from cold, twelve if every hint is used.
+
+That was not true until 2026-09-10. Passing with two hints scored 0.70 against a 0.70 gate
+and passing with three scored 0.55, so a student who leaned on hints converged *below* the
+bar and was handed the same concept forever, with nothing on screen explaining why.
+
+When a concept is mastered, `services/missions.next_concept` returns the next one in the
+fixed order on the following `/v1/missions/next` — nothing else has to happen, and no
+model is asked.
+
 ## The three fences on generation
 
 A generated mission has to get past all three. They fail differently, and the third exists

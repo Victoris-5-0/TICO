@@ -34,6 +34,7 @@ from app.models_tables import (
 from app.config import settings
 from app.ai.prompts import tico_hint as hint_prompt
 from app.rules import arena
+from app.rules.mastery import MASTERY_THRESHOLD
 from app.queries import ai_log, students, students as student_q, users
 
 log = logging.getLogger(__name__)
@@ -41,7 +42,7 @@ log = logging.getLogger(__name__)
 #: Below this a concept counts as not yet learned. The roadmap sends a student to the
 #: first concept under it, in `sequence_order` — the order never changes, only where in
 #: it a particular student is.
-MASTERY_THRESHOLD = 0.75
+
 
 ENGINE_VERSION = "gen/v2-phases"
 
