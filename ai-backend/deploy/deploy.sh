@@ -48,7 +48,13 @@ say "deploying to $HOST"
 # `.env` is excluded and never overwritten: the box's copy holds the production database
 # URL, the real model key and the CORS origins, and none of that exists locally. Losing it
 # means a container that will not start.
-rsync -az --delete   --exclude '.env'   --exclude 'env/'   --exclude '__pycache__/'   --exclude '.pytest_cache/'   --exclude '*.pyc'   -e "ssh -i $KEY -o ConnectTimeout=20"   "$(dirname "$0")/../" "$HOST:~/tico-ai/"
+# tar over ssh, not rsync — Git Bash on Windows ships no rsync, and this is the one
+# machine the security group lets in, so it has to work here.
+#
+# `.env` is excluded and never overwritten: the box's copy holds the production database
+# URL, the real model key and the CORS origins, none of which exist locally. Losing it
+# means a container that will not start.
+tar -cz   --exclude='.env'   --exclude='env'   --exclude='__pycache__'   --exclude='.pytest_cache'   --exclude='*.pyc'   --exclude='.git'   -C "$(dirname "$0")/.." . | ssh -i "$KEY" -o ConnectTimeout=20 "$HOST" "mkdir -p ~/tico-ai && tar -xz -C ~/tico-ai"
 
 ssh -i "$KEY" -o ConnectTimeout=20 "$HOST" bash -s <<'REMOTE_SCRIPT'
 set -euo pipefail
