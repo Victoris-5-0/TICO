@@ -15,14 +15,19 @@ services:
       - .env
     environment:
       ENVIRONMENT: development
-      # Force dev mode regardless of what .env holds. The same .env is used for the
-      # deployed box, so it has a real SUPABASE_URL in it — and that alone is enough to
-      # switch auth ON, which makes every local call 401 with no obvious cause.
-      # These two empty values are what dev mode actually keys off.
-      SUPABASE_URL: ""
-      JWT_SECRET: ""
+      # Accept unauthenticated requests and serve them as the demo student, so the client
+      # team can drive the API locally without minting a Better Auth session first.
+      #
+      # This used to blank SUPABASE_URL and JWT_SECRET, which is what dev mode keyed off
+      # when auth was Supabase JWTs. Auth is Better Auth now — `app/core/auth.py` looks a
+      # session token up in the shared database — so those two lines had stopped doing
+      # anything and every local call 401'd with no obvious cause. `ALLOW_DEMO_AUTH`
+      # defaults to false, and this is the only thing that turns it on.
+      #
+      # Ignored when ENVIRONMENT=production, so it cannot ship by accident.
+      ALLOW_DEMO_AUTH: "true"
       # One worker with --reload: code changes restart the server, and a single worker
-      # keeps the stub endpoints' in-memory state (the hint rung counter) coherent.
+      # keeps per-process state coherent.
       WEB_CONCURRENCY: 1
     volumes:
       # Live-reload the source. `content/` too, so editing a world manifest does not
