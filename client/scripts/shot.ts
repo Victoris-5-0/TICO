@@ -4,6 +4,7 @@
  *   pnpm shot /ar-EG/worlds/el-forn                       -> /tmp/tico-shot.png
  *   pnpm shot /en/worlds/el-forn out.png 1440 900
  *   pnpm shot "/ar-EG/worlds/el-forn/missions/<id>" m.png 1600 1000 --phase 3
+ *   pnpm shot /en/challenges map.png 1440 900 --full
  *
  * Most of TICO is behind the auth gate, so a plain headless capture lands on the login
  * page. This mints a session for a demo user, sets the cookie, and removes the session
@@ -31,6 +32,8 @@ async function main() {
 
   const phaseFlag = process.argv.indexOf("--phase");
   const advance = phaseFlag >= 0 ? Number(process.argv[phaseFlag + 1] ?? 0) : 0;
+  // Whole page, for the tall ones — a challenge map is nearly 2000px of scene.
+  const fullPage = process.argv.includes("--full");
 
   const token = randomBytes(24).toString("hex");
   const session = await db.authSession.create({
@@ -90,7 +93,19 @@ async function main() {
 
     // The bakery preloads 25 images before it draws; a screenshot taken first is grey.
     await page.waitForTimeout(2_500);
-    await page.screenshot({ path: out, fullPage: false });
+    // Walk down the page first: everything below the fold is lazy, and a fullPage shot
+    // of a page that was never scrolled photographs the holes where the art will go.
+    if (fullPage) {
+      await page.evaluate(async () => {
+        for (let y = 0; y < document.body.scrollHeight; y += window.innerHeight / 2) {
+          window.scrollTo(0, y);
+          await new Promise((r) => setTimeout(r, 220));
+        }
+        window.scrollTo(0, 0);
+      });
+      await page.waitForTimeout(1_200);
+    }
+    await page.screenshot({ path: out, fullPage });
     console.log(`${BASE}${path} -> ${out} (${width}x${height}@2x)`);
   } finally {
     await browser.close();

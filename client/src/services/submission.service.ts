@@ -112,7 +112,27 @@ export class SubmissionService {
       };
     }
 
+    // Which exercise row does this attempt hang off?
+    //
+    // A generated mission has no exercise of its own, so one is borrowed to satisfy the
+    // submission's foreign key. Borrow it from the lesson the student is actually
+    // playing: the old order reached for the *track's first* exercise, and when that did
+    // not resolve either it fell through to a hardcoded `el-forn-ex-01` — an id no row
+    // has ever had. Every attempt in that state violated the foreign key, the whole
+    // transaction below rolled back inside a `catch` that reports success anyway, and
+    // the lesson was never marked complete. That is precisely how a finished mission
+    // left the next one locked with nothing to show for it.
     let resolvedExerciseId = session.exerciseId;
+    if (!resolvedExerciseId && session.lessonId) {
+      try {
+        const own = await db.exercise.findFirst({
+          where: { lessonId: session.lessonId },
+          orderBy: { order: 'asc' },
+          select: { id: true },
+        });
+        resolvedExerciseId = own?.id || null;
+      } catch {}
+    }
     if (!resolvedExerciseId && session.generatedMissionId) {
       try {
         const gm = await db.generatedMission.findUnique({
@@ -121,10 +141,6 @@ export class SubmissionService {
         });
         resolvedExerciseId = gm?.template.track.lessons[0]?.exercises[0]?.id || null;
       } catch {}
-    }
-
-    if (!resolvedExerciseId) {
-      resolvedExerciseId = 'el-forn-ex-01';
     }
 
     const attemptNumber = session.submissions.length + 1;
@@ -202,6 +218,14 @@ export class SubmissionService {
 
     try {
       await db.$transaction(async (tx) => {
+        // No exercise anywhere in this lesson: record nothing rather than invent an id
+        // that the foreign key will reject. Completion does not depend on this row —
+        // `session.service` marks the lesson when the mission is finished.
+        if (!resolvedExerciseId) {
+          console.error('No exercise to attach submission to for session', sessionId, 'lesson', targetLessonId);
+          return;
+        }
+
         const submission = await tx.submission.create({
           data: {
             userId,

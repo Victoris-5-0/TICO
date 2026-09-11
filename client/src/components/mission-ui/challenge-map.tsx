@@ -29,16 +29,16 @@ const statusLabels = {
 };
 
 /** Presentation only: the caller owns mission availability, progress, and navigation. */
-export function ChallengeMap({ locale, stages, onSelect, emptyMessage }: { locale: Locale; stages: readonly ChallengeStage[]; onSelect: (node: ChallengeNode, stage: ChallengeStage) => void; emptyMessage?: string }) {
+export function ChallengeMap({ locale, stages, onSelect, emptyMessage, banners = true }: { locale: Locale; stages: readonly ChallengeStage[]; onSelect: (node: ChallengeNode, stage: ChallengeStage) => void; emptyMessage?: string; /** The painted stage banner. Off inside a world page, which has just said the world's name in its own hero. */ banners?: boolean }) {
   const reduced = useReducedMotion();
   const mapId = useId();
   if (!stages.length) return <p className={styles.empty}>{emptyMessage ?? (locale === "ar-EG" ? "مفيش مهام متاحة حاليًا." : "No missions available yet.")}</p>;
   return <div className={styles.map}>
     {stages.map((stage, stageIndex) => <section key={stage.id} className={styles.stage} aria-labelledby={`${mapId}-stage-${stage.id}`}>
-      <header className={`${styles.banner} ${stage.theme === "traffic" ? styles.trafficBanner : ""}`}>
+      {banners ? <header className={`${styles.banner} ${stage.theme === "traffic" ? styles.trafficBanner : ""}`}>
         <Image src={`/assets/challenge-map/${stage.theme}-banner.png`} alt="" fill sizes="(max-width: 1440px) 100vw, 1440px" />
         <div><p>{stage.stageLabel}</p><h2 id={`${mapId}-stage-${stage.id}`}>{stage.title}</h2></div>
-      </header>
+      </header> : <header className={styles.offscreenBanner}><h2 id={`${mapId}-stage-${stage.id}`}>{stage.title}</h2></header>}
       <div className={styles.scene}>
         <Image className={styles.sceneArt} src={`/assets/challenge-map/${stage.theme}.png`} alt="" fill sizes="(max-width: 1440px) 100vw, 1440px" preload={stageIndex === 0} />
         <ol className={styles.nodes}>
