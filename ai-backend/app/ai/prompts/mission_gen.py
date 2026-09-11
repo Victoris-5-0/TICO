@@ -36,7 +36,9 @@ through. What changes is how much help the student gets.
 
   1 ENCOUNTER   an NPC states a real problem. No code exists yet.
   2 EXPLORE     TICO asks 2 questions about the scene. Buttons only, still no code.
-  3 DISCOVER    name the concept they just used. Credit, not a lecture.
+  3 DISCOVER    the concept behind what they just did, at the depth the task asks
+                for — a concept is introduced ONCE and built on after that, and the
+                task says which of the three this is. Credit, not a lecture.
   4 UNDERSTAND  show the FINISHED code. They run it and watch the world work.
   5 GUIDED      the SAME code with blanks. They fill them in.
   6 REMIX       the world changes and their code is now wrong. They adapt it.
@@ -78,12 +80,16 @@ VOCABULARY — the ONLY nouns you may use, with plausible values so numbers feel
 CHARACTERS who may speak in phase 1:
 {characters}
 
+{speaker_note}TICO guides throughout, in every phase. This is only about who raises the
+problem in phase 1.
+
 SPRITES the client can draw (props you may show):
 {sprites}
 
 ANIMATIONS the client can play — you may ONLY name one of these:
 {animations}
 {simulation}
+{repetition_note}
 {scaffold_note}
 
 Return exactly this JSON:
@@ -111,7 +117,7 @@ Return exactly this JSON:
 
   "discover": {{
     "concept_name_ar": "اسم المفهوم بالعربي",
-    "explanation_ar": "٣ سطور بالكتير. من غير أي كود",
+    "explanation_ar": "{discover_slot}",
     "tico_line_ar": "برافو! ..."
   }},
 
@@ -241,6 +247,83 @@ def _simulation_block(world: World) -> str:
 
     return "\n".join(lines) + "\n"
 
+
+#: What phase 3 is for, on each of a concept's three stops. A concept is taught once and
+#: then used; a definition repeated three times is three missions that go nowhere.
+_ANGLE = {
+    1: "This is the student's FIRST mission on this concept. Phase 3 introduces it: what "
+       "it is, in one plain image they can hold on to.",
+    2: "The student has already met this concept and been given the definition. **Do not "
+       "define it again.** Phase 3 this time is about USING it: why the name matters, what "
+       "changes when the value changes, what it saves you from writing.",
+    3: "This is the student's THIRD mission on this concept. They know what it is and they "
+       "have used it. **Do not define it again.** Phase 3 this time is about the limit or "
+       "the pitfall: what goes wrong without it, or where a beginner gets it subtly wrong.",
+}
+
+#: What goes in the `explanation_ar` slot itself. The paragraph above was ignored three
+#: times running because the slot's own hint said "explain the concept", and a hint sitting
+#: in the field beats an instruction forty lines earlier.
+_DISCOVER_SLOT = {
+    1: "٣ سطور بالكتير. عرّف المفهوم بصورة بسيطة. من غير أي كود",
+    2: "٣ سطور بالكتير. الطالب **خد التعريف قبل كده** — ممنوع تعيده. "
+       "اتكلم عن الاستخدام: ليه الاسم مهم، وإيه اللي بيتغير لما القيمة تتغير. من غير أي كود",
+    3: "٣ سطور بالكتير. الطالب عارف التعريف وجربه — **ممنوع تعيد التعريف**. "
+       "اتكلم عن الغلطة الشائعة أو الحد: إيه اللي بيحصل من غيره. من غير أي كود",
+}
+
+
+
+def _repetition_note(concept: str, repetition: int, already_taught: list[str]) -> str:
+    """Tell the model which stop of the concept this is, and what has already been said.
+
+    Without this every mission on a concept opened by explaining the concept. Three
+    missions on `variables` produced three rewordings of "a variable is like a box" — a
+    child is taught the same sentence three times and never reaches the point.
+    """
+    if repetition <= 1 and not already_taught:
+        return ""
+
+    lines = ["", f"WHICH TIME THIS IS — mission {repetition} of 3 on `{concept}`."]
+    lines.append(_ANGLE.get(min(repetition, 3), _ANGLE[3]))
+
+    if already_taught:
+        lines.append("")
+        lines.append("Phase 3 has ALREADY said this to them. Say something else:")
+        lines += [f'  - "{t.strip()[:200]}"' for t in already_taught[-3:]]
+
+    lines.append("")
+    lines.append(
+        "Phases 1, 2, 4, 5 and 6 are a fresh scenario as usual — a different customer, a "
+        "different order, different numbers. Only phase 3 has to move on."
+    )
+    return "\n".join(lines) + "\n"
+
+
+
+def _speaker_note(world: World, speaker: str | None) -> str:
+    """Name the speaker, or leave the model to choose.
+
+    Asking for variety did not produce it: seven missions out of seven opened with Hassan
+    before the customers had descriptions of their own, and three out of three opened with
+    Mariam after they did. A model has no memory of the last mission, so "vary this" is not
+    something it can act on. The server remembers, so the server picks.
+    """
+    if not speaker:
+        return ""
+
+    who = next((c for c in world.characters if c.id == speaker), None)
+    line = f"  {speaker}"
+    if who is not None:
+        line += f" ({who.name_ar or ''}) — {who.description or ''}"
+
+    return (
+        "PHASE 1 IS SPOKEN BY THIS CHARACTER. Not another one:\n"
+        f"{line}\n"
+        "Write the encounter in their voice, about something they would actually notice.\n\n"
+    )
+
+
 def build(
     world: World,
     *,
@@ -248,8 +331,16 @@ def build(
     carried_concepts: list[str],
     scene_id: str,
     scaffold: dict[str, str] | None = None,
+    repetition: int = 1,
+    already_taught: list[str] | None = None,
+    speaker: str | None = None,
 ) -> tuple[str, str]:
-    """Return `(system, task)` for one generation attempt."""
+    """Return `(system, task)` for one generation attempt.
+
+    `repetition` is which of the concept's three stops this is, and `already_taught` the
+    phase-3 explanations the student has already been given. Both exist so phase 3 stops
+    re-teaching a concept the child already met — see `_repetition_note`.
+    """
     scene = world.scene(scene_id)
     scaffold = scaffold or {}
 
@@ -273,6 +364,9 @@ def build(
         sprites=_sprites_block(world),
         animations="  " + ", ".join(world.visual.animations),
         simulation=_simulation_block(world),
+        repetition_note=_repetition_note(target_concept, repetition, already_taught or []),
+        discover_slot=_DISCOVER_SLOT.get(min(max(repetition, 1), 3), _DISCOVER_SLOT[3]),
+        speaker_note=_speaker_note(world, speaker),
         scaffold_note=scaffold_note,
     )
     return SYSTEM, task

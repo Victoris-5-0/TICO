@@ -1,0 +1,178 @@
+{
+  "data": {
+    "id": "cmtwkn1wrqt6001z0d2qdr83w",
+    "worldId": "el_forn",
+    "sceneId": "bakery_gameplay",
+    "targetConceptId": "variables",
+    "carriedConceptIds": [],
+    "titleAr": "حساب عم يوسف",
+    "source": "model",
+    "validated": true,
+    "phases": {
+      "encounter": {
+        "speaker": "youssef",
+        "speakerNameAr": "عم يوسف",
+        "lineAr": "يا بني الحساب كده مش مظبوط! أنا طلبت عدد أرغفة معين، وعايز أعرف حسابي بالقرش بالظبط من غير لغبطة. سعر الرغيف 50 قرش، بس الحساب بيطلع غلط لما بنحسبه بسرعة في دماغنا.",
+        "ctaAr": "يلا نبدأ",
+        "world": {
+          "props": {
+            "counter": 1,
+            "loaf": 8,
+            "flour-sack": 2
+          }
+        }
+      },
+      "explore": {
+        "ticoIntroAr": "عم يوسف دقيق جداً ومش بيحب الغلطة في الحساب. تفتكر إيه اللي محتاجين نعرفه عشان نحسب الحساب صح؟",
+        "rounds": [
+          {
+            "questionAr": "لو عم يوسف هياخد 6 أرغفة، وسعر الرغيف 50 قرش، المفروض يدفع كام قرش؟",
+            "optionsAr": [
+              "300 قرش",
+              "150 قرش",
+              "500 قرش"
+            ],
+            "correctIndex": 0,
+            "nudgeAr": "فكر تاني، اضرب عدد الأرغفة في سعر الرغيف الواحد.",
+            "highlight": [
+              "loaf"
+            ]
+          },
+          {
+            "questionAr": "لو سعر الرغيف اتغير وبقى 60 قرش، هل الحساب القديم هيفضل صح؟",
+            "optionsAr": [
+              "لا، الحساب هيتغير ولازم نعدله",
+              "آه، هيفضل زي ما هو",
+              "مش فارقة"
+            ],
+            "correctIndex": 0,
+            "nudgeAr": "لو السعر زاد، أكيد الإجمالي هيزيد كمان ويحتاج تعديل.",
+            "highlight": [
+              "counter"
+            ]
+          }
+        ]
+      },
+      "discover": {
+        "conceptSlug": "variables",
+        "conceptNameAr": "ترتيب السطور وتحديث المتغيرات",
+        "explanationAr": "خد بالك: المتغير بيفضل شايل آخر قيمة حطيتها فيه. لو كتبت اسمه قبل ما تديله قيمة، بايثون هيقف ويقولك إنه مش عارفه. الترتيب مهم.",
+        "ticoLineAr": "بالظبط كده! الترتيب في بايثون هو كل حاجة، زي خطوات عجن العيش بالظبط!"
+      },
+      "understand": {
+        "introAr": "بص كده على الكود ده، بنعرف متغير السعر الأول، وبعدين بنحسب الإجمالي ونرجعه.",
+        "code": "def calculate_total_price(loaves: int) -> int:\n    price = 50\n    total = loaves * price\n    return total",
+        "annotations": [
+          {
+            "line": 2,
+            "textAr": "هنا حددنا سعر الرغيف بـ 50 قرش وجوه متغير اسمه price",
+            "pointsAt": "counter"
+          },
+          {
+            "line": 3,
+            "textAr": "هنا ضربنا عدد الأرغفة المطلوبة في متغير السعر عشان نجيب الإجمالي",
+            "pointsAt": "loaf"
+          }
+        ],
+        "runLabelAr": "شغّل وشوف",
+        "onRun": {
+          "animate": "handover",
+          "props": {
+            "loaf": 6
+          },
+          "captionAr": "عم يوسف خد العيش ودفع الحساب مظبوط بالقرش!"
+        }
+      },
+      "guided": {
+        "steps": [
+          {
+            "code": "def calculate_total_price(loaves: int) -> int:\n    ___ = 50\n    total = loaves * price\n    return total",
+            "blanks": [
+              "price"
+            ],
+            "promptAr": "اكتب اسم المتغير اللي بنخزن فيه سعر الرغيف عشان نستخدمه في السطر اللي بعده.",
+            "hintAr": "اسم المتغير مستخدم في السطر التالت لضرب الأرغفة."
+          },
+          {
+            "code": "def calculate_total_price(loaves: int) -> int:\n    price = 50\n    total = loaves * ___\n    return total",
+            "blanks": [
+              "price"
+            ],
+            "promptAr": "اضرب عدد الأرغفة (loaves) في متغير السعر عشان تحسب الإجمالي صح.",
+            "hintAr": "المتغير اللي شايل السعر اسمه price."
+          }
+        ],
+        "solutionCode": "def calculate_total_price(loaves: int) -> int:\n    price = 50\n    total = loaves * price\n    return total",
+        "tests": [
+          {
+            "call": "calculate_total_price(8)",
+            "expected": "400",
+            "name": null,
+            "hidden": false
+          },
+          {
+            "call": "calculate_total_price(0)",
+            "expected": "0",
+            "name": null,
+            "hidden": false
+          },
+          {
+            "call": "calculate_total_price(10)",
+            "expected": "500",
+            "name": null,
+            "hidden": false
+          }
+        ],
+        "onRun": {
+          "animate": "handover",
+          "props": {
+            "loaf": 8
+          },
+          "captionAr": "الحساب شغال تمام والفرن بيطلع العيش والزباين مبسوطة!"
+        }
+      },
+      "remix": {
+        "twistAr": "الفرن قرر يغلف العيش في شنطة ورق عشان يحافظ عليه، والشنطة دي ليها سعر ثابت بيضاف على الحساب كله.",
+        "newRequirementAr": "عايزين نضيف متغير جديد اسمه bag_price وقيمته 15 قرش، ونجمعه على الحساب الإجمالي بعد ضرب الأرغفة في سعرها.",
+        "worldChange": {
+          "animate": "stocking",
+          "props": {
+            "bag": 1
+          },
+          "captionAr": null
+        },
+        "startingCode": "def calculate_total_price(loaves: int) -> int:\n    price = 50\n    total = loaves * price\n    return total",
+        "solutionCode": "def calculate_total_price(loaves: int) -> int:\n    price = 50\n    bag_price = 15\n    total = (loaves * price) + bag_price\n    return total",
+        "tests": [
+          {
+            "call": "calculate_total_price(8)",
+            "expected": "415",
+            "name": null,
+            "hidden": false
+          },
+          {
+            "call": "calculate_total_price(2)",
+            "expected": "115",
+            "name": null,
+            "hidden": false
+          }
+        ],
+        "onRun": {
+          "animate": "handover",
+          "props": {
+            "bag": 1,
+            "loaf": 8
+          },
+          "captionAr": null
+        }
+      }
+    },
+    "scaffold": {},
+    "difficultyBand": 5
+  },
+  "meta": {
+    "request_id": "pregenerated",
+    "stub": false,
+    "cached": false
+  }
+}

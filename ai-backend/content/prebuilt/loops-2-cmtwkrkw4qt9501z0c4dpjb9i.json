@@ -1,0 +1,187 @@
+{
+  "data": {
+    "id": "cmtwkrkw4qt9501z0c4dpjb9i",
+    "worldId": "el_forn",
+    "sceneId": "bakery_gameplay",
+    "targetConceptId": "loops",
+    "carriedConceptIds": [
+      "variables"
+    ],
+    "titleAr": "صواني الست هدى",
+    "source": "model",
+    "validated": true,
+    "phases": {
+      "encounter": {
+        "speaker": "hoda",
+        "speakerNameAr": "هدى",
+        "lineAr": "يا بني أنا عيلتي كبيرة وبحب أشتري بالصواني عشان العيش يفضل سخن. عايزة أعرف لو خدت كذا صينية، هيطلعوا كام رغيف بالظبط عشان كلنا ناكل ونشبع؟",
+        "ctaAr": "يلا نبدأ",
+        "world": {
+          "props": {
+            "oven": "lit",
+            "tray": 3,
+            "loaf": 8
+          }
+        }
+      },
+      "explore": {
+        "ticoIntroAr": "الست هدى واقفة ومستنية الصواني تطلع من الفرن، تيجوا نساعدها تحسب بالنظر الأول؟",
+        "rounds": [
+          {
+            "questionAr": "لو الصينية الواحدة فيها 8 أرغفة، تفتكر لو الفرن طلع 3 صواني هيكون فيهم كام رغيف؟",
+            "optionsAr": [
+              "24 رغيف",
+              "16 رغيف",
+              "10 أرغفة"
+            ],
+            "correctIndex": 0,
+            "nudgeAr": "الصينية الأولى فيها 8، والتانية 8، والتالتة 8. اجمعهم مع بعض كده؟",
+            "highlight": [
+              "tray"
+            ]
+          },
+          {
+            "questionAr": "الست هدى بتراقب الخباز وهو بيطلع الصواني صينية صينية بنفس الطريقة. الحركة دي بتفكرك بإيه؟",
+            "optionsAr": [
+              "تكرار نفس الخطوة لكل صينية ورا بعضها",
+              "عمل صينية واحدة وخلاص",
+              "تغيير درجة حرارة الفرن"
+            ],
+            "correctIndex": 0,
+            "nudgeAr": "بص على الصواني وهي بتطلع ورا بعض، مش بنعمل نفس خطوة العد لكل صينية؟",
+            "highlight": [
+              "oven"
+            ]
+          }
+        ]
+      },
+      "discover": {
+        "conceptSlug": "loops",
+        "conceptNameAr": "استخدام حلقات التكرار (Loops)",
+        "explanationAr": "اللوب بيوفر عليك التكرار. بدل ما تكتب نفس السطر لكل صينية، بتكتبه مرة واحدة وبايثون بيعيده على كل واحدة لوحده — وده بيشتغل سواء كانوا تلاتة أو تلاتين.",
+        "ticoLineAr": "كده التكرار هيوفر علينا مجهود كبير وهيحسب للست هدى بسرعة!"
+      },
+      "understand": {
+        "introAr": "ده الكود اللي بيمر على كل صينية ويجمع الأرغفة اللي عليها:",
+        "code": "def calculate_total_loaves(trays: int, loaves_per_tray: int) -> int:\n    loaves = 0\n    for i in range(trays):\n        loaves = loaves + loaves_per_tray\n    return loaves",
+        "annotations": [
+          {
+            "line": 1,
+            "textAr": "بنبدأ الحساب بصفر رغيف قبل ما نعد الصواني",
+            "pointsAt": "loaf"
+          },
+          {
+            "line": 2,
+            "textAr": "حلقة تكرار بتلف بعدد الصواني المطلوبة",
+            "pointsAt": "tray"
+          },
+          {
+            "line": 3,
+            "textAr": "في كل لفة بنزود عدد أرغفة الصينية الواحدة على المجموع",
+            "pointsAt": "loaf"
+          }
+        ],
+        "runLabelAr": "شغّل وشوف",
+        "onRun": {
+          "animate": "retrieving",
+          "props": {
+            "loaf": 8,
+            "tray": 1
+          },
+          "captionAr": "الفرن شغال والتكرار بيجمع الأرغفة صينية صينية!"
+        }
+      },
+      "guided": {
+        "steps": [
+          {
+            "code": "def calculate_total_loaves(trays: int, loaves_per_tray: int) -> int:\n    loaves = 0\n    for i in ___:\n        loaves = loaves + loaves_per_tray\n    return loaves",
+            "blanks": [
+              "range(trays)"
+            ],
+            "promptAr": "اكتب المدى اللي حلقة التكرار هتلف جواه بعدد الصواني",
+            "hintAr": "بنستخدم range وبنحط جواها المتغير اللي بيعبر عن عدد الصواني"
+          },
+          {
+            "code": "def calculate_total_loaves(trays: int, loaves_per_tray: int) -> int:\n    loaves = 0\n    for i in range(trays):\n        ___ = loaves + loaves_per_tray\n    return loaves",
+            "blanks": [
+              "loaves"
+            ],
+            "promptAr": "اكتب اسم المتغير اللي بنجمع جواه الأرغفة عشان نحدث قيمته في كل لفة",
+            "hintAr": "المتغير ده هو اللي بدأنا بيه قيمته بصفر وبنرجع قيمته في الآخر"
+          }
+        ],
+        "solutionCode": "def calculate_total_loaves(trays: int, loaves_per_tray: int) -> int:\n    loaves = 0\n    for i in range(trays):\n        loaves = loaves + loaves_per_tray\n    return loaves",
+        "tests": [
+          {
+            "call": "calculate_total_loaves(5, 8)",
+            "expected": "40",
+            "name": null,
+            "hidden": false
+          },
+          {
+            "call": "calculate_total_loaves(0, 8)",
+            "expected": "0",
+            "name": null,
+            "hidden": false
+          },
+          {
+            "call": "calculate_total_loaves(10, 8)",
+            "expected": "80",
+            "name": null,
+            "hidden": false
+          }
+        ],
+        "onRun": {
+          "animate": "stocking",
+          "props": {
+            "tray": 5
+          },
+          "captionAr": "ممتاز! الكود جمع الأرغفة كلها صح بفضل حلقة التكرار."
+        }
+      },
+      "remix": {
+        "twistAr": "الست هدى زبونة قديمة، والفرن قرر يديها رغيف زيادة هدية مع كل صينية تشتريها!",
+        "newRequirementAr": "عدل الكود بحيث يزود رغيف واحد إضافي (هدية) على حساب كل صينية في حلقة التكرار.",
+        "worldChange": {
+          "animate": "handover",
+          "props": {
+            "bag": 1
+          },
+          "captionAr": null
+        },
+        "startingCode": "def calculate_total_loaves(trays: int, loaves_per_tray: int) -> int:\n    loaves = 0\n    for i in range(trays):\n        loaves = loaves + loaves_per_tray\n    return loaves",
+        "solutionCode": "def calculate_total_loaves(trays: int, loaves_per_tray: int) -> int:\n    loaves = 0\n    for i in range(trays):\n        loaves = loaves + loaves_per_tray + 1\n    return loaves",
+        "tests": [
+          {
+            "call": "calculate_total_loaves(5, 8)",
+            "expected": "45",
+            "name": null,
+            "hidden": false
+          },
+          {
+            "call": "calculate_total_loaves(0, 8)",
+            "expected": "0",
+            "name": null,
+            "hidden": false
+          }
+        ],
+        "onRun": {
+          "animate": "handover",
+          "props": {
+            "loaf": 8
+          },
+          "captionAr": null
+        }
+      }
+    },
+    "scaffold": {
+      "variables": "NONE"
+    },
+    "difficultyBand": 5
+  },
+  "meta": {
+    "request_id": "pregenerated",
+    "stub": false,
+    "cached": false
+  }
+}

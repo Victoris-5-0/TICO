@@ -1,0 +1,172 @@
+{
+  "data": {
+    "id": "cmtwklihyqt4p01z00z8ue6zx",
+    "worldId": "el_forn",
+    "sceneId": "bakery_gameplay",
+    "targetConceptId": "variables",
+    "carriedConceptIds": [],
+    "titleAr": "حسبة الدقيق السريعة",
+    "source": "model",
+    "validated": true,
+    "phases": {
+      "encounter": {
+        "speaker": "omar",
+        "speakerNameAr": "عمر",
+        "lineAr": "يا جماعة أنا مستعجل وورايا شغل، وعايز أعرف شحنة الدقيق اللي وصلت دي وزنها كام كيلو بالظبط عشان ننزلها. الشكاير كتير وكل مرة بنقعد نحسب بالورقة والقلم ونعطل نفسنا!",
+        "ctaAr": "يلا نبدأ",
+        "world": {
+          "props": {
+            "flour-sack": 5,
+            "oven": "lit"
+          }
+        }
+      },
+      "explore": {
+        "ticoIntroAr": "عمر مستعجل وعايز يحسب الوزن بسرعة. تعالوا نبص على المكان الأول ونشوف فيه إيه!",
+        "rounds": [
+          {
+            "questionAr": "شايف كام شكارة دقيق مرصوصة قدامك جنب الفرن؟",
+            "optionsAr": [
+              "5 شكاير",
+              "2 شكارة",
+              "10 شكاير"
+            ],
+            "correctIndex": 0,
+            "nudgeAr": "بص كويس على الشكاير اللي لونها بيج جنب الحيطة وعدهم.",
+            "highlight": [
+              "flour-sack"
+            ]
+          },
+          {
+            "questionAr": "لو وزن الشكارة الواحدة دايماً ثابت، إيه اللي هيتغير لو عربية النقل جابت شحنة جديدة؟",
+            "optionsAr": [
+              "عدد الشكاير",
+              "وزن الشكارة الواحدة",
+              "اسم الفرن"
+            ],
+            "correctIndex": 0,
+            "nudgeAr": "الشكارة بتيجي متعبية جاهزة بوزن ثابت، لكن الشحنة ممكن يكون فيها كام شكارة؟",
+            "highlight": [
+              "flour-sack"
+            ]
+          }
+        ]
+      },
+      "discover": {
+        "conceptSlug": "variables",
+        "conceptNameAr": "المتغيرات (Variables)",
+        "explanationAr": "المتغير زي علبة بنشيل فيها قيمة (زي رقم) وبنديها اسم واضح عشان نستخدمها بعدين. القيمة دي ممكن تتغير عادي، بس الاسم بيفضل ثابت وبيسهل علينا الحساب من غير ما نتلخبط.",
+        "ticoLineAr": "الله ينور! بدل ما نكتب الرقم علطول، بنحطه في متغير باسم سهل عشان نستخدمه كل ما نحتاجه!"
+      },
+      "understand": {
+        "introAr": "بص كده بنكتبها إزاي في بايثون عشان نحسب الوزن بالمتغيرات:",
+        "code": "def calculate_flour_weight(flour_sacks: int) -> int:\n    weight_per_sack = 50\n    total_weight = flour_sacks * weight_per_sack\n    return total_weight",
+        "annotations": [
+          {
+            "line": 2,
+            "textAr": "عملنا متغير اسمه weight_per_sack وحطينا فيه وزن الشكارة الثابت (50 كيلو)",
+            "pointsAt": "flour-sack"
+          },
+          {
+            "line": 3,
+            "textAr": "ضربنا عدد الشكاير في وزن الشكارة وخزنا النتيجة في متغير جديد اسمه total_weight",
+            "pointsAt": "flour-sack"
+          }
+        ],
+        "runLabelAr": "شغّل وشوف",
+        "onRun": {
+          "animate": "loading",
+          "props": {
+            "flour-sack": 5
+          },
+          "captionAr": "البرنامج حسب إن الـ 5 شكاير وزنهم 250 كيلو في ثانية!"
+        }
+      },
+      "guided": {
+        "steps": [
+          {
+            "code": "def calculate_flour_weight(flour_sacks: int) -> int:\n    weight_per_sack = ___\n    total_weight = flour_sacks * weight_per_sack\n    return total_weight",
+            "blanks": [
+              "50"
+            ],
+            "promptAr": "اكتب وزن الشكارة الواحدة (50) جوه المتغير عشان الحسبة تطلع صح.",
+            "hintAr": "وزن الشكارة الثابت هو 50 كيلو."
+          },
+          {
+            "code": "def calculate_flour_weight(flour_sacks: int) -> int:\n    weight_per_sack = 50\n    total_weight = flour_sacks * ___\n    return total_weight",
+            "blanks": [
+              "weight_per_sack"
+            ],
+            "promptAr": "اضرب عدد الشكاير في المتغير اللي بيعبر عن وزن الشكارة.",
+            "hintAr": "استخدم اسم المتغير اللي عرفناه فوق: weight_per_sack."
+          }
+        ],
+        "solutionCode": "def calculate_flour_weight(flour_sacks: int) -> int:\n    weight_per_sack = 50\n    total_weight = flour_sacks * weight_per_sack\n    return total_weight",
+        "tests": [
+          {
+            "call": "calculate_flour_weight(5)",
+            "expected": "250",
+            "name": null,
+            "hidden": false
+          },
+          {
+            "call": "calculate_flour_weight(0)",
+            "expected": "0",
+            "name": null,
+            "hidden": false
+          },
+          {
+            "call": "calculate_flour_weight(10)",
+            "expected": "500",
+            "name": null,
+            "hidden": false
+          }
+        ],
+        "onRun": {
+          "animate": "loading",
+          "props": {},
+          "captionAr": "كده الحسابات مظبوطة وسريعة جداً!"
+        }
+      },
+      "remix": {
+        "twistAr": "دلوقتي الفرن عايز يعمل جرد لعدد الأرغفة اللي بنجهزها على الصواني عشان نعرف الإجمالي بسرعة.",
+        "newRequirementAr": "عدّل الكود عشان ياخد عدد الصواني (trays) ويحسب إجمالي الأرغفة (loaves) لو الصينية الواحدة بتشيل 8 أرغفة (استخدم متغير tray_capacity قيمته 8).",
+        "worldChange": {
+          "animate": "stocking",
+          "props": {
+            "tray": 3
+          },
+          "captionAr": null
+        },
+        "startingCode": "def calculate_flour_weight(flour_sacks: int) -> int:\n    weight_per_sack = 50\n    total_weight = flour_sacks * weight_per_sack\n    return total_weight",
+        "solutionCode": "def calculate_total_loaves(trays: int) -> int:\n    tray_capacity = 8\n    total_loaves = trays * tray_capacity\n    return total_loaves",
+        "tests": [
+          {
+            "call": "calculate_total_loaves(3)",
+            "expected": "24",
+            "name": null,
+            "hidden": false
+          },
+          {
+            "call": "calculate_total_loaves(0)",
+            "expected": "0",
+            "name": null,
+            "hidden": false
+          }
+        ],
+        "onRun": {
+          "animate": "stocking",
+          "props": {},
+          "captionAr": null
+        }
+      }
+    },
+    "scaffold": {},
+    "difficultyBand": 5
+  },
+  "meta": {
+    "request_id": "pregenerated",
+    "stub": false,
+    "cached": false
+  }
+}

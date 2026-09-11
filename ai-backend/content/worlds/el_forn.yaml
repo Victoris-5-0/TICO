@@ -73,6 +73,11 @@ scenes:
 #
 # The `#` line under each is their appearance, read out of the artwork prompts. A
 # generated line describing someone must not contradict it.
+#
+# The eight customers used to share one description — "In the queue. Takes two loaves
+# and walks off." — and the result was that seven missions out of seven opened with
+# Hassan. A model given eight interchangeable names picks the one with a personality.
+# These are one line each so it has something to choose between.
 # -----------------------------------------------------------------------------
 characters:
 
@@ -106,7 +111,7 @@ characters:
     name_ar: مريم
     role: customer
     asset: bakery-v2/mariam.webp
-    description: In the queue. Takes two loaves and walks off.
+    description: A regular. Buys for the whole family, so she is always counting.
     # Adult woman. Sand hijab, medium-brown skin, teal patterned dress, brown shoes.
     voice: ordinary, unhurried; a neighbour buying bread, not a character in a lesson
     beats: [reaction]
@@ -115,7 +120,7 @@ characters:
     name_ar: نور
     role: customer
     asset: bakery-v2/nour.webp
-    description: In the queue. Takes two loaves and walks off.
+    description: Young, quick, in a hurry. Asks whether the maths could be faster.
     # Young adult man. Curly dark hair, teal open overshirt over a cream T-shirt, navy trousers, brown sneakers, small terracotta backpack.
     voice: ordinary, unhurried; a neighbour buying bread, not a character in a lesson
     beats: [reaction]
@@ -124,7 +129,7 @@ characters:
     name_ar: أمينة
     role: customer
     asset: bakery-v2/amina.webp
-    description: In the queue. Takes two loaves and walks off.
+    description: In her sixties, unhurried, dignified. Has bought bread here for forty years.
     # Woman in her sixties. Cream hijab, olive-green long loose dress, plain brown shoes. Kind, dignified.
     voice: ordinary, unhurried; a neighbour buying bread, not a character in a lesson
     beats: [reaction]
@@ -133,7 +138,7 @@ characters:
     name_ar: عمر
     role: customer
     asset: bakery-v2/omar.webp
-    description: In the queue. Takes two loaves and walks off.
+    description: A workman on his break. Wants a straight answer and no fuss.
     # Man in his thirties, stocky. Dusty-blue long-sleeve workshirt with rolled cuffs, ochre-tan trousers, dark brown shoes.
     voice: ordinary, unhurried; a neighbour buying bread, not a character in a lesson
     beats: [reaction]
@@ -142,7 +147,7 @@ characters:
     name_ar: دينا
     role: customer
     asset: bakery-v2/dina.webp
-    description: In the queue. Takes two loaves and walks off.
+    description: A university student. Curious about how the shop keeps its numbers straight.
     # University student in her twenties. Dark curly hair in a low ponytail, no headscarf, rust-terracotta blouse, navy trousers, cream sneakers.
     voice: ordinary, unhurried; a neighbour buying bread, not a character in a lesson
     beats: [reaction]
@@ -151,7 +156,7 @@ characters:
     name_ar: يوسف
     role: customer
     asset: bakery-v2/youssef.webp
-    description: In the queue. Takes two loaves and walks off.
+    description: Late sixties, glasses, precise. Notices when a count is wrong.
     # Dignified man in his late sixties. White hair and moustache, small round eyeglasses, light-taupe galabeya, brown slippers.
     voice: ordinary, unhurried; a neighbour buying bread, not a character in a lesson
     beats: [reaction]
@@ -160,7 +165,7 @@ characters:
     name_ar: هدى
     role: customer
     asset: bakery-v2/hoda.webp
-    description: In the queue. Takes two loaves and walks off.
+    description: Buying for a household of six. Orders in multiples and expects them to add up.
     # Woman in her forties. Charcoal-black hijab, mustard-ochre knee-length tunic, dark-teal trousers, black flats.
     voice: ordinary, unhurried; a neighbour buying bread, not a character in a lesson
     beats: [reaction]
@@ -169,7 +174,7 @@ characters:
     name_ar: فريد
     role: customer
     asset: bakery-v2/farid-saidi.webp
-    description: In the queue. Takes two loaves and walks off.
+    description: Sa'idi, in a galabeya. Warm, talkative, tells you the total before you work it out.
     # Man in his fifties, Sa'idi. Galabeya and turban. Balding with a thick black moustache, tan-brown skin.
     voice: ordinary, unhurried; a neighbour buying bread, not a character in a lesson
     beats: [reaction]
@@ -336,6 +341,46 @@ simulation:
     - A bake is refused while the tray still holds bread.
     - A serve is refused below two loaves.
     - Two full batches clear the queue exactly. Sixteen loaves, eight customers.
+
+# -----------------------------------------------------------------------------
+# CONCEPT NOTES — what phase 3 says on the SECOND and THIRD mission of a concept.
+#
+# A concept is introduced once. The first mission's explanation is generated, because an
+# introduction should suit the scenario it arrives in. The next two are written here.
+#
+# They are authored rather than generated because generation would not stop defining the
+# concept. Told it was mission 2 of 3, given the previous explanation verbatim, and
+# instructed in both English and Arabic not to repeat it, the model produced "a variable
+# is like a box you put a value in" three times running — four different prompt shapes,
+# same result. The prior is stronger than the instruction, so the instruction was dropped.
+#
+# Keyed by concept slug, then by which mission of the three. Missing entries fall back to
+# whatever the model wrote, so adding a concept does not break generation.
+# -----------------------------------------------------------------------------
+concept_notes:
+  variables:
+    2: >
+      الاسم هو اللي بيفرق. لما تسمي المتغير loaves_per_tray، الكود بيقول لوحده هو بيعمل
+      إيه. ولو الرقم اتغير بكرة، بتغيره في مكان واحد بس والباقي كله بيمشي معاه.
+    3: >
+      خد بالك: المتغير بيفضل شايل آخر قيمة حطيتها فيه. لو كتبت اسمه قبل ما تديله قيمة،
+      بايثون هيقف ويقولك إنه مش عارفه. الترتيب مهم.
+
+  conditionals:
+    2: >
+      الشرط بيتنفذ لو الجواب أيوه بس. الجزء اللي جوه الـ if مش بيشتغل كل مرة — بيشتغل لما
+      الشرط يتحقق، والباقي بيعدي عليه عادي.
+    3: >
+      أشهر غلطة: علامة تساوي واحدة بدل اتنين. الـ = بتخزن قيمة، والـ == بتقارن. لو كتبت
+      واحدة مكان التانية بايثون هيقولك في غلطة، والسطر مش هيشتغل أصلاً.
+
+  loops:
+    2: >
+      اللوب بيوفر عليك التكرار. بدل ما تكتب نفس السطر لكل صينية، بتكتبه مرة واحدة وبايثون
+      بيعيده على كل واحدة لوحده — وده بيشتغل سواء كانوا تلاتة أو تلاتين.
+    3: >
+      المتغير اللي بتجمع فيه لازم يبدأ من صفر قبل اللوب، مش جواه. لو بدأته جوه، بيرجع صفر
+      مع كل لفة والمجموع بيضيع.
 
 # -----------------------------------------------------------------------------
 # MECHANICS — authored templates. Each becomes one mission_templates row.

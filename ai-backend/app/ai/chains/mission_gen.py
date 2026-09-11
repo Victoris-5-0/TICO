@@ -148,6 +148,9 @@ def generate(
     carried_concepts: list[str],
     scene_id: str,
     scaffold: dict[str, str] | None = None,
+    repetition: int = 1,
+    already_taught: list[str] | None = None,
+    speaker: str | None = None,
 ) -> GenerationOutcome:
     """Ask the model for a mission, check it for real, retry once with the reasons."""
     scaffold = scaffold or {}
@@ -163,6 +166,9 @@ def generate(
         carried_concepts=carried_concepts,
         scene_id=scene_id,
         scaffold=scaffold,
+        repetition=repetition,
+        already_taught=already_taught,
+        speaker=speaker,
     )
     outcome.model_name = settings.model_generate
 

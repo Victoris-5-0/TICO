@@ -218,6 +218,10 @@ class World(ManifestModel):
     visual: Visual
     #: Optional: only a world with a running interactive scene has one.
     simulation: Simulation | None = None
+    #: What phase 3 says on the second and third mission of a concept, keyed by concept
+    #: slug then by repetition. Authored, because generation would not stop defining the
+    #: concept however it was asked — see the block in `el_forn.yaml`.
+    concept_notes: dict[str, dict[int, str]] = Field(default_factory=dict)
     mechanics: list[Mechanic]
     carried_scaffold: dict[str, dict[str, str]] = Field(default_factory=dict)
     constraints: Constraints

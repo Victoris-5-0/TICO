@@ -1,0 +1,191 @@
+{
+  "data": {
+    "id": "cmtwksk09qt9s01z0djriqcnc",
+    "worldId": "el_forn",
+    "sceneId": "bakery_gameplay",
+    "targetConceptId": "loops",
+    "carriedConceptIds": [
+      "variables"
+    ],
+    "titleAr": "حسبة فريد الذكية",
+    "source": "model",
+    "validated": true,
+    "phases": {
+      "encounter": {
+        "speaker": "farid",
+        "speakerNameAr": "عم فريد",
+        "lineAr": "يا مرحب يا ولدي! الصواني طالعة سخنة وريحتها تجنن. الطابور واقف وكل زبون بطلب شكل، وعايز أحسب بسرعة إجمالي العيش اللي هنحتاجه للطلبات دي كلها قبل ما نطلع الصواني من الفرن عشان مفيش رغيف يبرد!",
+        "ctaAr": "يلا نبدأ",
+        "world": {
+          "props": {
+            "oven": "lit",
+            "counter": 1,
+            "tray": 2,
+            "loaf": 8
+          }
+        }
+      },
+      "explore": {
+        "ticoIntroAr": "عم فريد عاوز يحسب الحسبة بسرعة ومن غير لخطبة. تفتكر هنعمل ده إزاي؟",
+        "rounds": [
+          {
+            "questionAr": "لو عندنا قائمة فيها طلبات الزباين المكتوبة، إزاي نقدر نعرف إجمالي العيش اللي محتاجينه بالظبط؟",
+            "optionsAr": [
+              "نجمع كل الطلبات اللي جوه القائمة مع بعض",
+              "نعد الصواني الفاضية بس ونطنش الطلبات",
+              "نسأل أول زبون بس واخد كام ونمشي الباقي"
+            ],
+            "correctIndex": 0,
+            "nudgeAr": "فكر كدة، لو كل زبون طالب عدد معين، مش لازم نجمع طلباتهم كلها عشان نكفي الكل؟",
+            "highlight": [
+              "counter"
+            ]
+          },
+          {
+            "questionAr": "لو جالنا زباين كتير جدًا وطلباتهم مختلفة، هل تكرار عملية الجمع يدويًا لكل زبون هيكون سهل وسريع؟",
+            "optionsAr": [
+              "لا، الجمع اليدوي هياخد وقت وممكن نغلط في الحساب بسهولة",
+              "آه، الجمع اليدوي دايمًا أسرع وأضمن من أي حاجة",
+              "مش محتاجين نجمع أصلاً، الفرن بيطلع بالبركة"
+            ],
+            "correctIndex": 0,
+            "nudgeAr": "كل ما الزباين تزيد، الحساب اليدوي بيبقى أصعب وممكن نتلخبط في الأرقام.",
+            "highlight": []
+          }
+        ]
+      },
+      "discover": {
+        "conceptSlug": "loops",
+        "conceptNameAr": "حدود التكرار وتفادي الأخطاء",
+        "explanationAr": "المتغير اللي بتجمع فيه لازم يبدأ من صفر قبل اللوب، مش جواه. لو بدأته جوه، بيرجع صفر مع كل لفة والمجموع بيضيع.",
+        "ticoLineAr": "بالظبط كده! اللوب بيمشي على قد الطلبات الموجودة بالظبط، لا هيزود ولا هيقلل، وده بيخلي كودنا مرن ومضمون."
+      },
+      "understand": {
+        "introAr": "شوف كدة بنكتب اللوب ده إزاي في بايثون عشان نجمع الطلبات بأمان:",
+        "code": "def calculate_total_loaves(orders: list) -> int:\n    total_loaves = 0\n    for order in orders:\n        total_loaves = total_loaves + order\n    return total_loaves",
+        "annotations": [
+          {
+            "line": 1,
+            "textAr": "دالة بتاخد قائمة الطلبات وبترجع رقم صحيح",
+            "pointsAt": "counter"
+          },
+          {
+            "line": 2,
+            "textAr": "متغير بنبدأ بيه من الصفر عشان نجمع فيه العيش",
+            "pointsAt": "loaf"
+          },
+          {
+            "line": 3,
+            "textAr": "اللوب بيمر على كل طلب جوه القائمة واحد ورا التاني",
+            "pointsAt": "tray"
+          },
+          {
+            "line": 4,
+            "textAr": "بنضيف قيمة الطلب الحالي على المجموع الإجمالي",
+            "pointsAt": "loaf"
+          }
+        ],
+        "runLabelAr": "شغّل وشوف",
+        "onRun": {
+          "animate": "retrieving",
+          "props": {
+            "loaf": 8
+          },
+          "captionAr": "اللوب جمع كل الطلبات وطلع الإجمالي صح من غير أي غلطة!"
+        }
+      },
+      "guided": {
+        "steps": [
+          {
+            "code": "def calculate_total_loaves(orders: list) -> int:\n    total_loaves = 0\n    for order in ___:\n        total_loaves = total_loaves + order\n    return total_loaves",
+            "blanks": [
+              "orders"
+            ],
+            "promptAr": "اكتب اسم قائمة الطلبات اللي اللوب هيمر عليها:",
+            "hintAr": "القائمة اللي مبعوتة للدالة كمعطى اسمها orders"
+          },
+          {
+            "code": "def calculate_total_loaves(orders: list) -> int:\n    total_loaves = 0\n    for order in orders:\n        ___ = total_loaves + order\n    return total_loaves",
+            "blanks": [
+              "total_loaves"
+            ],
+            "promptAr": "اكتب اسم المتغير اللي بنجمع فيه العيش عشان نحدث قيمته جوه اللوب:",
+            "hintAr": "المتغير اللي بدأ بصفر وبنرجع قيمته في الآخر هو total_loaves"
+          }
+        ],
+        "solutionCode": "def calculate_total_loaves(orders: list) -> int:\n    total_loaves = 0\n    for order in orders:\n        total_loaves = total_loaves + order\n    return total_loaves",
+        "tests": [
+          {
+            "call": "calculate_total_loaves([2, 2, 2, 2])",
+            "expected": "8",
+            "name": null,
+            "hidden": false
+          },
+          {
+            "call": "calculate_total_loaves([])",
+            "expected": "0",
+            "name": null,
+            "hidden": false
+          },
+          {
+            "call": "calculate_total_loaves([2, 2])",
+            "expected": "4",
+            "name": null,
+            "hidden": false
+          }
+        ],
+        "onRun": {
+          "animate": "retrieving",
+          "props": {
+            "loaf": 8
+          },
+          "captionAr": "الله ينور! الكود شغال تمام وبيجمع الطلبات بدقة."
+        }
+      },
+      "remix": {
+        "twistAr": "بمناسبة الافتتاح، عم فريد قرر يعمل عرض كريم: كل زبون هياخد رغيف زيادة هدية فوق طلبه!",
+        "newRequirementAr": "عدّل الكود بحيث يضيف رغيف زيادة واحد لكل طلب جوه القائمة أثناء عملية الجمع.",
+        "worldChange": {
+          "animate": "handover",
+          "props": {
+            "oven": "lit",
+            "loaf": 8
+          },
+          "captionAr": null
+        },
+        "startingCode": "def calculate_total_loaves(orders: list) -> int:\n    total_loaves = 0\n    for order in orders:\n        total_loaves = total_loaves + order\n    return total_loaves",
+        "solutionCode": "def calculate_total_loaves(orders: list) -> int:\n    total_loaves = 0\n    for order in orders:\n        total_loaves = total_loaves + order + 1\n    return total_loaves",
+        "tests": [
+          {
+            "call": "calculate_total_loaves([2, 2, 2, 2])",
+            "expected": "12",
+            "name": null,
+            "hidden": false
+          },
+          {
+            "call": "calculate_total_loaves([])",
+            "expected": "0",
+            "name": null,
+            "hidden": false
+          }
+        ],
+        "onRun": {
+          "animate": "handover",
+          "props": {
+            "loaf": 8
+          },
+          "captionAr": null
+        }
+      }
+    },
+    "scaffold": {
+      "variables": "NONE"
+    },
+    "difficultyBand": 5
+  },
+  "meta": {
+    "request_id": "pregenerated",
+    "stub": false,
+    "cached": false
+  }
+}
