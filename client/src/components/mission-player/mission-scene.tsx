@@ -22,6 +22,14 @@ export type MissionSceneProps = {
   caption?: string | null;
   /** Sprite names a phase-2 question is pointing at. */
   highlight?: readonly string[];
+  /**
+   * Extra wall painted to the left of the artwork, for the mission panel to sit on.
+   *
+   * Only wanted when the panel overlays the scene. On a narrow screen the panel is below
+   * it, so the extension would just make the frame wider than the band it is drawn in and
+   * letterbox the bakery into a strip.
+   */
+  extendLeft?: number;
   label: string;
 };
 
@@ -32,7 +40,7 @@ export type MissionSceneProps = {
  * when the phase arrives or Run is pressed, then holds on its last frame. The scene
  * never autoplays on page load, which `docs/design.md` section 11 requires.
  */
-export function MissionScene({ locale, props, animate, playToken = 0, caption, highlight, label }: MissionSceneProps) {
+export function MissionScene({ locale, props, animate, playToken = 0, caption, highlight, extendLeft = 0, label }: MissionSceneProps) {
   const ar = locale === "ar-EG";
   const motionPreference = useReducedMotion();
   // Match the server markup first, then apply the browser preference before playback.
@@ -102,7 +110,7 @@ export function MissionScene({ locale, props, animate, playToken = 0, caption, h
   return (
     <figure className={styles.scene} data-ready={assets} data-animate={animate ?? "none"}>
       <div className={styles.sceneStage} dir="ltr">
-        <BakeryScene state={state} reducedMotion={reduced} counterView={false} label={label} highlight={highlight} />
+        <BakeryScene state={state} reducedMotion={reduced} counterView={false} label={label} highlight={highlight} extendLeft={extendLeft} />
         {assets !== "ready" && (
           <div className={styles.sceneLoading}>
             {assets === "loading"

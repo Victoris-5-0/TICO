@@ -23,8 +23,19 @@ function Prop({ name, x, y, width, height, opacity = 1, loaf, lit }: { name: str
     {image}
   </g>;
 }
-export function BakeryScene({ state, reducedMotion, counterView, label, highlight }: { state: BakeryState; reducedMotion: boolean; counterView: boolean; label: string; highlight?: readonly string[] }) {
+/**
+ * A plain stretch of the backdrop — plaster, dado band and pavement, no shopfront and no
+ * fixtures. Tiled to build wall that is not in the original 1600-wide artwork.
+ */
+const WALL_SLICE = { x: 20, width: 90 };
+
+export function BakeryScene({ state, reducedMotion, counterView, label, highlight, extendLeft = 0 }: { state: BakeryState; reducedMotion: boolean; counterView: boolean; label: string; highlight?: readonly string[]; extendLeft?: number }) {
   const isLit = (name: string) => Boolean(highlight?.includes(name));
+  // Extra wall to the left of the artwork, so a panel can sit over bare wall instead of
+  // over the shopfront. The viewBox simply starts further left and the gap is filled with
+  // tiles of `WALL_SLICE`, mirrored alternately so the repeat has no visible seam.
+  const ext = counterView ? 0 : Math.max(0, Math.round(extendLeft));
+  const tiles = ext ? Math.ceil(ext / WALL_SLICE.width) : 0;
   const raw = phaseProgress(state);
   const p = reducedMotion ? 0 : raw;
   const step = reducedMotion ? 0 : Math.min(3, Math.floor(raw * 4));
@@ -45,7 +56,16 @@ export function BakeryScene({ state, reducedMotion, counterView, label, highligh
     if (state.active === id && state.phase === "exiting") return { x: mix(scene.queue.first.x, -150, p), y: scene.queue.first.y + Math.sin(Math.min(1, p * 4) * Math.PI / 2) * 65 };
     return { x: scene.queue.first.x + (index + (state.phase === "advancing" ? 1 - p : 0)) * scene.queue.spacing, y: scene.queue.first.y };
   }
-  return <svg className="bakery-scene" viewBox={counterView ? "145 300 690 485" : "0 0 1600 900"} role="img" aria-label={label} data-phase={state.phase} data-elapsed={Math.round(state.elapsed)}>
+  return <svg className="bakery-scene" viewBox={counterView ? "145 300 690 485" : `${-ext} 0 ${1600 + ext} 900`} role="img" aria-label={label} data-phase={state.phase} data-elapsed={Math.round(state.elapsed)} data-extend={ext || undefined}>
+    {Array.from({ length: tiles }, (_, i) => {
+      const x = -ext + i * WALL_SLICE.width;
+      const mirrored = i % 2 === 1;
+      return <g key={i} transform={mirrored ? `translate(${x + WALL_SLICE.width} 0) scale(-1 1)` : `translate(${x} 0)`} data-layer="wall-extension">
+        <svg width={WALL_SLICE.width} height={900} viewBox={`${WALL_SLICE.x} 0 ${WALL_SLICE.width} 900`} overflow="hidden">
+          <image href={asset("environment")} width={1600} height={900} />
+        </svg>
+      </g>;
+    })}
     <Prop name="environment" x={0} y={0} width={1600} height={900} />
     <Prop name="awning" x={130} y={143} width={602} height={224} />
     <NeighborhoodDetails />
