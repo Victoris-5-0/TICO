@@ -23,27 +23,34 @@ import styles from "./mission-player.module.css";
  * requires for code, tracebacks and test values.
  */
 
-/** Painted from the repo tokens rather than a stock CodeMirror theme. */
+/**
+ * Painted from the repo tokens rather than a stock CodeMirror theme.
+ *
+ * Dark, because the editor sits inside the mission's glass panel over the bakery. The
+ * hues are the brand's — coral for keywords, teal for names, gold for numbers — lifted
+ * to hold contrast on a near-black ground instead of the light surface they were tuned
+ * for, where they would be unreadable.
+ */
 const ticoHighlight = HighlightStyle.define([
-  { tag: [tags.keyword, tags.modifier], color: "#C2410C", fontWeight: "700" },
-  { tag: [tags.controlKeyword], color: "#A64022", fontWeight: "700" },
-  { tag: [tags.definitionKeyword], color: "#A64022", fontWeight: "700" },
-  { tag: [tags.function(tags.variableName)], color: "#267977", fontWeight: "700" },
-  { tag: [tags.definition(tags.variableName)], color: "#1F1820", fontWeight: "700" },
-  { tag: [tags.variableName], color: "#1F1820" },
-  { tag: [tags.propertyName], color: "#267977" },
-  { tag: [tags.number, tags.bool], color: "#80550F", fontWeight: "700" },
-  { tag: [tags.string, tags.special(tags.string)], color: "#2B7A4B" },
-  { tag: [tags.comment], color: "#8D858D", fontStyle: "italic" },
-  { tag: [tags.operator], color: "#716A72" },
-  { tag: [tags.typeName, tags.className], color: "#267977" },
-  { tag: [tags.punctuation, tags.bracket], color: "#716A72" },
+  { tag: [tags.keyword, tags.modifier], color: "#FF9E6B", fontWeight: "700" },
+  { tag: [tags.controlKeyword], color: "#FF8A56", fontWeight: "700" },
+  { tag: [tags.definitionKeyword], color: "#FF8A56", fontWeight: "700" },
+  { tag: [tags.function(tags.variableName)], color: "#7FD8D5", fontWeight: "700" },
+  { tag: [tags.definition(tags.variableName)], color: "#FFFFFF", fontWeight: "700" },
+  { tag: [tags.variableName], color: "#EFE7E0" },
+  { tag: [tags.propertyName], color: "#7FD8D5" },
+  { tag: [tags.number, tags.bool], color: "#F3C06B", fontWeight: "700" },
+  { tag: [tags.string, tags.special(tags.string)], color: "#8FD6A6" },
+  { tag: [tags.comment], color: "#9A8F96", fontStyle: "italic" },
+  { tag: [tags.operator], color: "#C4B8BF" },
+  { tag: [tags.typeName, tags.className], color: "#7FD8D5" },
+  { tag: [tags.punctuation, tags.bracket], color: "#A99DA4" },
 ]);
 
 const ticoTheme = EditorView.theme(
   {
     "&": {
-      color: "#1F1820",
+      color: "#EFE7E0",
       backgroundColor: "transparent",
       fontSize: "15px",
       direction: "ltr",
@@ -59,13 +66,13 @@ const ticoTheme = EditorView.theme(
       fontVariantLigatures: "none",
       fontFeatureSettings: '"liga" 0, "calt" 0',
     },
-    ".cm-content": { padding: "0", caretColor: "#DB5B31" },
+    ".cm-content": { padding: "0", caretColor: "#FF9E6B" },
     ".cm-line": { padding: "0 18px" },
     ".cm-gutters": {
       backgroundColor: "transparent",
       border: "none",
-      borderInlineEnd: "1px solid rgba(31,24,32,.09)",
-      color: "#B6ADB4",
+      borderInlineEnd: "1px solid rgba(255,255,255,.10)",
+      color: "#6F656C",
       paddingInlineEnd: "4px",
       minWidth: "44px",
     },
@@ -73,16 +80,16 @@ const ticoTheme = EditorView.theme(
       padding: "0 10px 0 14px",
       fontVariantNumeric: "tabular-nums",
     },
-    ".cm-activeLine": { backgroundColor: "rgba(219,91,49,.055)" },
-    ".cm-activeLineGutter": { backgroundColor: "transparent", color: "#DB5B31" },
-    ".cm-cursor, .cm-dropCursor": { borderLeftWidth: "2px", borderLeftColor: "#DB5B31" },
+    ".cm-activeLine": { backgroundColor: "rgba(255,255,255,.05)" },
+    ".cm-activeLineGutter": { backgroundColor: "transparent", color: "#FF9E6B" },
+    ".cm-cursor, .cm-dropCursor": { borderLeftWidth: "2px", borderLeftColor: "#FF9E6B" },
     "&.cm-focused .cm-selectionBackground, .cm-selectionBackground, .cm-content ::selection": {
-      backgroundColor: "rgba(61,171,169,.22)",
+      backgroundColor: "rgba(61,171,169,.32)",
     },
-    ".cm-selectionMatch": { backgroundColor: "rgba(233,153,47,.22)" },
-    ".cm-placeholder": { color: "#B6ADB4", fontStyle: "italic" },
+    ".cm-selectionMatch": { backgroundColor: "rgba(233,153,47,.28)" },
+    ".cm-placeholder": { color: "#7E747B", fontStyle: "italic" },
   },
-  { dark: false },
+  { dark: true },
 );
 
 export type CodeEditorProps = {

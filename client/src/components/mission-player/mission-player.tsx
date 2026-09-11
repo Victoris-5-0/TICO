@@ -13,6 +13,7 @@ import * as telemetry from "@/lib/mission/telemetry";
 import { usePythonRunner, type RunResult } from "@/lib/runner/use-python-runner";
 import type { Locale } from "@/i18n/config";
 
+import { CharacterBust } from "./character-bust";
 import { MissionDebrief } from "./mission-debrief";
 import { NarrationControls, NarrationProvider } from "./narration";
 import { MissionScene } from "./mission-scene";
@@ -175,6 +176,10 @@ export function MissionPlayer({ locale, mission, worldSlug, worldTitle, lessonId
     : "Forn El Hara: Hassan at the oven and neighbours waiting in the queue.";
 
   const extras = undrawnProps(restProps);
+
+  // The encounter is spoken by whoever has the problem; every later phase is TICO.
+  const speaker = phaseKey === "encounter" ? phases.encounter.speaker || "tico" : "tico";
+  const speakerName = phaseKey === "encounter" ? phases.encounter.speakerNameAr : ar ? "تيكو" : "Tico";
   const blockedOnWidth = narrow && CODING.has(phaseKey);
   const runnerBusy = runner.state === "running";
 
@@ -235,7 +240,22 @@ export function MissionPlayer({ locale, mission, worldSlug, worldTitle, lessonId
             )}
           </section>
 
-          <section className={styles.panel}>
+          {/*
+            The speaker is a sibling of the panel, not a child: the panel's own
+            `backdrop-filter` creates a stacking context, and a child inside it cannot be
+            layered against the glass independently. Out here the figure sits in front of
+            the card, undimmed by the blur, with its top half clear of the frame.
+          */}
+          <div className={`${styles.panelDock} ${CODING.has(phaseKey) ? styles.panelDockWide : ""}`}>
+            <CharacterBust speaker={speaker} alt={speakerName} />
+
+            <section className={styles.panel}>
+              <div className={styles.bustName}>
+                <span>{STEP_LABELS[locale][phaseKey]}</span>
+                <strong>{speakerName}</strong>
+              </div>
+
+              <div className={styles.panelBody}>
             {/*
               A keyed remount with an entrance only — deliberately not AnimatePresence.
 
@@ -299,8 +319,10 @@ export function MissionPlayer({ locale, mission, worldSlug, worldTitle, lessonId
                   )}
                 </>
               )}
-            </motion.div>
-          </section>
+              </motion.div>
+              </div>
+            </section>
+          </div>
         </main>
 
         <RunnerStatus state={runner.state} error={runner.error} onRetry={runner.restart} locale={locale} />

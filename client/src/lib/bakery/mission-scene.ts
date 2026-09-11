@@ -64,6 +64,15 @@ export type MissionSceneOptions = {
   animate?: string | null;
   /** 0..1 through the animation. The player drives this from its own clock. */
   progress?: number;
+  /**
+   * How many of the eight customers to draw.
+   *
+   * All eight by default. The queue runs from x=550 to x=1595 — the right two thirds of
+   * the frame — which is exactly the part the mission panel leaves uncovered, so it is
+   * what the student is actually looking at. Trimming it would empty the half of the
+   * scene that is on show.
+   */
+  queueLength?: number;
 };
 
 /**
@@ -74,7 +83,7 @@ export type MissionSceneOptions = {
  * two trays would be the same class of lie the manifest's `simulation` block exists to
  * prevent.
  */
-export function missionSceneState({ props = {}, animate, progress = 0 }: MissionSceneOptions): BakeryState {
+export function missionSceneState({ props = {}, animate, progress = 0, queueLength = CUSTOMER_IDS.length }: MissionSceneOptions): BakeryState {
   const phase: Phase = animate && isScenePhase(animate) ? animate : "idle";
 
   const loafCount = toCount(props.loaf) ?? toCount(props.dough) ?? 0;
@@ -93,7 +102,7 @@ export function missionSceneState({ props = {}, animate, progress = 0 }: Mission
   const litWithoutPhase = props.oven === "lit" && phase === "idle";
 
   const served: CustomerId[] = [];
-  const queue: CustomerId[] = [...CUSTOMER_IDS];
+  const queue: CustomerId[] = CUSTOMER_IDS.slice(0, clamp(Math.round(queueLength), 0, CUSTOMER_IDS.length));
 
   return {
     phase: litWithoutPhase ? "baking" : phase,
