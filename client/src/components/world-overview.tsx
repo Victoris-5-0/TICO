@@ -13,9 +13,38 @@ const bakeryCast = [
   { id: "mariam", name: { "ar-EG": "مريم", en: "Mariam" }, role: { "ar-EG": "زبونة الفرن", en: "Bakery customer" }, size: [547, 1285] },
 ] as const;
 
-export function WorldOverview({ locale, world }: { locale: Locale; world: World }) {
+/** One lesson of this world, as the path list needs it. */
+export type WorldLesson = {
+  id: string;
+  slug: string;
+  title: string;
+  completed: boolean;
+};
+
+export function WorldOverview({
+  locale,
+  world,
+  lessons,
+  error,
+}: {
+  locale: Locale;
+  world: World;
+  /**
+   * Real lessons, in order, from the database — not the static names in `content/worlds`.
+   * Those described six missions for a world that has two, and the page's only CTA went
+   * to a demo route rather than to anything a student could be given.
+   */
+  lessons: readonly WorldLesson[];
+  error?: string;
+}) {
   const isArabic = locale === "ar-EG";
   const isBakery = world.slug === "el-forn";
+
+  // The first unfinished lesson is the one to offer. Finished ones stay replayable —
+  // `docs/02` is explicit that skipping is a suggestion and never a lock-out.
+  const nextLesson = lessons.find((lesson) => !lesson.completed) ?? lessons[0];
+  const nextLessonId = nextLesson?.id;
+  const startedAny = lessons.some((lesson) => lesson.completed);
 
   return (
     <div className={`world-page world-page--${world.accent}`}>
@@ -29,7 +58,7 @@ export function WorldOverview({ locale, world }: { locale: Locale; world: World 
             <p className="eyebrow">{world.number} · {world.kicker[locale]}</p>
             <h1>{world.title[locale]}</h1>
             <p>{world.description[locale]}</p>
-            <div className="world-hero__facts"><span>{world.missions.length} {isArabic ? "مهمات" : "missions"}</span><span>{world.concepts[locale]}</span></div>
+            <div className="world-hero__facts"><span>{lessons.length || world.missions.length} {isArabic ? "مهمات" : "missions"}</span><span>{world.concepts[locale]}</span></div>
           </div>
           <TicoFloat className="world-hero__tico" pose={isBakery ? "determined" : "thinking"} alt="" priority />
         </section>
@@ -39,17 +68,42 @@ export function WorldOverview({ locale, world }: { locale: Locale; world: World 
             <p className="eyebrow">{isArabic ? "المسار" : "THE PATH"}</p>
             <h2>{isArabic ? "مهمات العالم" : "World missions"}</h2>
             <ol className="mission-list">
-              {world.missions.map((mission, index) => (
-                <li key={mission.en} className={index === 0 ? "mission-list__active" : ""}>
+              {lessons.map((lesson, index) => (
+                <li key={lesson.id} className={lesson.id === nextLessonId ? "mission-list__active" : ""}>
                   <span>{String(index + 1).padStart(2, "0")}</span>
-                  <div><b>{mission[locale]}</b><small>{index === 0 ? (isArabic ? "جاهزة للبدء" : "Ready to begin") : (isArabic ? "بتتفتح بالترتيب" : "Unlocks in order")}</small></div>
-                  <i aria-hidden="true">{index === 0 ? "▶" : "◇"}</i>
+                  <div>
+                    <b>{lesson.title}</b>
+                    <small>
+                      {lesson.completed
+                        ? (isArabic ? "اتعملت" : "Completed")
+                        : lesson.id === nextLessonId
+                          ? (isArabic ? "جاهزة للبدء" : "Ready to begin")
+                          : (isArabic ? "بتتفتح بالترتيب" : "Unlocks in order")}
+                    </small>
+                  </div>
+                  {lesson.completed || lesson.id === nextLessonId ? (
+                    <Link className="mission-list__go" href={`/${locale}/worlds/${world.slug}/play/${lesson.slug}`}>
+                      <span className="sr-only">{isArabic ? `ابدأ ${lesson.title}` : `Start ${lesson.title}`}</span>
+                      <i aria-hidden="true">{lesson.completed ? "↻" : "▶"}</i>
+                    </Link>
+                  ) : (
+                    <i aria-hidden="true">◇</i>
+                  )}
                 </li>
               ))}
             </ol>
-            {isBakery ? (
-              <Link className="button button--primary button--large" href={`/${locale}/worlds/${world.slug}/missions/opening-message`}>
-                {isArabic ? "ابدأ المهمة الأولى" : "Start mission one"}
+            {error && (
+              <p className="mission-list__error" role="status">
+                {error === "no-mission"
+                  ? (isArabic ? "مفيش مهمة جاهزة دلوقتي. جرّب تاني بعد شوية." : "No mission is ready right now. Please try again shortly.")
+                  : (isArabic ? "المهمة دي مش موجودة." : "That lesson does not exist.")}
+              </p>
+            )}
+            {nextLesson ? (
+              <Link className="button button--primary button--large" href={`/${locale}/worlds/${world.slug}/play/${nextLesson.slug}`}>
+                {startedAny
+                  ? (isArabic ? "كمّل المهمة" : "Continue mission")
+                  : (isArabic ? "ابدأ المهمة الأولى" : "Start mission one")}
               </Link>
             ) : (
               <button className="button button--primary button--large" type="button" disabled>{isArabic ? "قريبًا" : "Coming soon"}</button>

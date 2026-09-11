@@ -2,6 +2,21 @@ import { db } from '@/lib/db';
 import { aiClient } from '@/lib/ai/client';
 import { PhasedMissionOut, GenerateMissionRequest, GenerateMissionResponse } from '@/lib/ai/types';
 
+/**
+ * The account the pre-generation script writes missions under. Its rows are a pool for
+ * real students, and its sessions are prep artefacts rather than anyone's play.
+ */
+const CONTENT_PREP_USER = "system-content-prep";
+
+/**
+ * A row whose `content` lost its phases renders as six empty panels, so it is treated as
+ * missing everywhere rather than shown.
+ */
+function hasPhases(content: unknown): boolean {
+  const mission = content as PhasedMissionOut | null;
+  return Boolean(mission?.phases?.encounter && mission.phases.guided && mission.phases.remix);
+}
+
 /** One stored mission plus the world context the player chrome needs. */
 export interface StoredMission {
   mission: PhasedMissionOut;
@@ -205,14 +220,17 @@ export class MissionService {
     // already unsure is the worst thing this system can do.
     if (!row.validated) return null;
 
-    // A session needs a lesson id. The mission itself does not carry one, so take the
-    // track's first lesson — `practice_sessions.lesson_id` rejects an unknown one with a
-    // 422, and a null is better than a wrong guess.
-    const lesson = await db.lesson.findFirst({
-      where: { trackId: row.template.trackId },
-      orderBy: { order: "asc" },
-      select: { id: true },
-    });
+    // The lesson the student launched this from, recorded by `claim`. Falling back to the
+    // track's first lesson keeps older rows playable, but it is a guess and is only right
+    // for lesson one — which is why `claim` records the real one going forward.
+    const recorded = (row.params as { lessonId?: unknown } | null)?.lessonId;
+    const lesson = typeof recorded === "string"
+      ? await db.lesson.findUnique({ where: { id: recorded }, select: { id: true } })
+      : await db.lesson.findFirst({
+          where: { trackId: row.template.trackId },
+          orderBy: { order: "asc" },
+          select: { id: true },
+        });
 
     return {
       mission,
@@ -231,6 +249,100 @@ export class MissionService {
     req: GenerateMissionRequest
   ): Promise<GenerateMissionResponse> {
     return aiClient.generateMission(token, req);
+  }
+
+  /**
+   * The mission this student should play for this lesson, claimed for them.
+   *
+   * Every student gets their own row. `generated_missions.user_id` is what makes a
+   * mission theirs, and `find_reusable` on the Python side skips anything another student
+   * has already opened a session on — so two children starting the same lesson get
+   * different scenarios rather than sharing one.
+   *
+   * Three sources, in order of preference:
+   *
+   *   1. A mission this student already has for this lesson. Re-entering a lesson must
+   *      return them to their own mission, not hand them a new one and lose their place.
+   *   2. `/v1/missions/next`, which reuses a pre-generated row when it can (~1s) and
+   *      composes a fresh one when it cannot (~25s).
+   *   3. An unclaimed pre-generated row, claimed directly here.
+   *
+   * The third exists because the AI service is the one part of this that can be down, and
+   * a pool of validated missions is already sitting in the database. Returning null means
+   * every source failed; the caller shows that rather than a broken player.
+   */
+  async startForStudent(userId: string, lessonId: string, token: string): Promise<string | null> {
+    const lesson = await db.lesson.findUnique({
+      where: { id: lessonId },
+      select: { id: true, trackId: true },
+    });
+    if (!lesson) return null;
+
+    // 1. Already theirs.
+    const claimed = await db.generatedMission.findFirst({
+      where: { userId, validated: true, template: { trackId: lesson.trackId } },
+      orderBy: { createdAt: "desc" },
+      select: { id: true, content: true },
+    });
+    if (claimed && hasPhases(claimed.content)) return claimed.id;
+
+    // 2. Ask the service.
+    try {
+      const playback = await this.getNextMission(userId, lessonId, token);
+      if (playback.isAiGenerated) {
+        await this.claim(playback.id, userId, lessonId);
+        return playback.id;
+      }
+    } catch (err) {
+      console.warn("mission start: AI service unavailable:", err instanceof Error ? err.message : err);
+    }
+
+    // 3. Claim one from the pre-generated pool.
+    const spare = await db.generatedMission.findFirst({
+      where: {
+        validated: true,
+        template: { trackId: lesson.trackId },
+        // Unclaimed, or held by the content-prep account that pre-generates them.
+        OR: [{ userId: null }, { userId: CONTENT_PREP_USER }],
+        // No *student* has played it. Pre-generation opens a session on each row as it
+        // validates it, so `sessions: { none: {} }` would rule out the entire pool — all
+        // 37 prepared missions, permanently. Only a session belonging to a real student
+        // means the mission is taken.
+        sessions: { none: { userId: { not: CONTENT_PREP_USER } } },
+      },
+      orderBy: { createdAt: "asc" },
+      select: { id: true, content: true },
+    });
+    if (!spare || !hasPhases(spare.content)) return null;
+
+    await this.claim(spare.id, userId, lessonId);
+    return spare.id;
+  }
+
+  /**
+   * Mark a mission as this student's, and remember which lesson they opened it from.
+   *
+   * Nothing on `generated_missions` ties a mission to a lesson — a template carries a
+   * track and a target concept, not a lesson — so the lesson was being guessed as "the
+   * first one in the track". That is right for lesson one and wrong for every lesson
+   * after it, and the guess propagates: the session records it, and the session is what
+   * decides which lesson gets marked complete and earns XP.
+   *
+   * `params` is where "how this row came to be" already lives (pre-generation stores
+   * repetition there), so the launching lesson belongs beside it. `content` stays
+   * untouched — that column is the contract with the frontend.
+   */
+  private async claim(missionId: string, userId: string, lessonId: string): Promise<void> {
+    const row = await db.generatedMission.findUnique({
+      where: { id: missionId },
+      select: { params: true },
+    });
+    const params = (row?.params && typeof row.params === "object" ? row.params : {}) as Record<string, unknown>;
+
+    await db.generatedMission.update({
+      where: { id: missionId },
+      data: { userId, params: { ...params, lessonId } },
+    });
   }
 
   /**

@@ -56,8 +56,31 @@ export class SessionService {
       console.warn('Database offline while checking existing session:', e instanceof Error ? e.message : e);
     }
 
-    // Determine lesson / level ID for AI session creation
+    // Determine lesson / level ID for AI session creation.
+    //
+    // Without one the session is lesson-less, and a lesson-less session is what stopped
+    // generated missions from ever recording progress: `submission.service` needs a
+    // lesson to mark complete, award XP and move the streak.
     let targetLessonId = lessonId || null;
+    if (!targetLessonId && generatedMissionId) {
+      try {
+        const mission = await db.generatedMission.findUnique({
+          where: { id: generatedMissionId },
+          select: { params: true, template: { select: { trackId: true } } },
+        });
+        const recorded = (mission?.params as { lessonId?: unknown } | null)?.lessonId;
+        if (typeof recorded === 'string') {
+          targetLessonId = recorded;
+        } else if (mission?.template.trackId) {
+          const first = await db.lesson.findFirst({
+            where: { trackId: mission.template.trackId },
+            orderBy: { order: 'asc' },
+            select: { id: true },
+          });
+          targetLessonId = first?.id ?? null;
+        }
+      } catch {}
+    }
     if (!targetLessonId && exerciseId) {
       try {
         const ex = await db.exercise.findUnique({
