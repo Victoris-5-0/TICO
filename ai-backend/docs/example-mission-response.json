@@ -133,8 +133,8 @@
         }
       },
       "remix": {
-        "twistAr": "درجة حرارة الفرن زادت، وعم حسن جاب صواني أكبر بتشيل 10 أرغفة بدل 8!",
-        "newRequirementAr": "عدل الكود عشان يحسب الأرغفة بناءً على السعة الجديدة للصينية (10 أرغفة).",
+        "twistAr": "الجيران حجزوا ٣ أرغفة من كل طلعة قبل ما العيش ينزل للبيع!",
+        "newRequirementAr": "عدل الكود عشان يطرح الأرغفة المحجوزة من الإجمالي.",
         "worldChange": {
           "animate": "steam",
           "props": {
@@ -144,17 +144,17 @@
           "captionAr": null
         },
         "startingCode": "def calculate_loaves(trays: int) -> int:\n    loaves_per_tray = 8\n    loaves = trays * loaves_per_tray\n    return loaves",
-        "solutionCode": "def calculate_loaves(trays: int) -> int:\n    loaves_per_tray = 10\n    loaves = trays * loaves_per_tray\n    return loaves",
+        "solutionCode": "def calculate_loaves(trays: int) -> int:\n    loaves_per_tray = 8\n    reserved = 3\n    loaves = trays * loaves_per_tray - reserved\n    return loaves",
         "tests": [
           {
             "call": "calculate_loaves(2)",
-            "expected": "20",
+            "expected": "13",
             "name": null,
             "hidden": false
           },
           {
             "call": "calculate_loaves(5)",
-            "expected": "50",
+            "expected": "37",
             "name": null,
             "hidden": false
           }

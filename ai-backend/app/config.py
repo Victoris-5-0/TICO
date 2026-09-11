@@ -55,6 +55,11 @@ class Settings(BaseSettings):
     # flash-lite has no reasoning overhead at all, which is the real reason the hint
     # ladder uses it: 1.1s and every token is visible output.
     max_tokens_hint: int = 400
+    #: The debrief writes one or two sentences, but the budget also has to cover whatever
+    #: reasoning the model emits before them. At 400 — borrowed from the hint budget — the
+    #: reasoning consumed it and the sentence arrived truncated mid-word, once with the
+    #: model's own notes about error tags in place of the sentence.
+    max_tokens_debrief: int = 1200
     max_tokens_npc: int = 400
     max_tokens_classify: int = 600
     max_tokens_review: int = 2000

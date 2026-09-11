@@ -86,12 +86,48 @@ because the first two cannot see it.
 3. **`simulation`** — the scene's own quantities and controls. Wrong here and *everything*
    looks correct: the Python runs, the tests pass, the validator signs it off, and the child
    is taught that a tray holds twelve loaves while watching eight land on it. This is the one
-   that shipped broken; see `phase_guards._check_arithmetic`.
+   that shipped broken, twice — once with no guard at all, and once with a guard that read
+   three of the four code surfaces. See `phase_guards._check_arithmetic` and "Recently
+   closed" below.
 
 `el_forn` is the only world with a `simulation` block, because it is the only one with a
 running interactive scene. The other two must keep loading without one.
 
 ## Recently closed
+
+**The debrief showed a child the model's scratchpad** (2026-09-11). `write_debrief`
+borrowed `max_tokens_hint` (400) for its budget. The model spends that budget reasoning
+before it writes, so the sentence arrived truncated mid-word — and once it did not arrive
+at all, leaving ``no_error`, `incomplete_assignment` (this means they`` on the
+mission-complete screen. Seen in the browser, not in a test.
+
+Two changes: `max_tokens_debrief = 1200` so the sentence has room after the reasoning, and
+`looks_like_tico()` — a shape check that rejects a reply carrying backticks, English
+narration about the learner, or too little Arabic to be a TICO line, and falls back to the
+authored text. The existing number guard catches a debrief that says something *false*;
+this catches one that is not a debrief at all.
+
+**The arithmetic fence had a hole at `remix.solution_code`** (2026-09-11).
+`_check_arithmetic` read `understand.code`, `guided.solution_code` and
+`remix.starting_code` — every code surface a student sees except the one phase 6 asks
+them to write. Told to change the world, the model reaches for the nearest number: a
+mission shipped `validated: true` announcing "Hassan brought bigger trays that hold 12"
+with an honest `= 8` in `starting_code` (so the checked field passed) and
+`loaves_per_tray = 12` in the solution, against a scene that draws eight. The committed
+`docs/example-mission-response.json` had the same shape at `= 10` and had been used as a
+test fixture in that state.
+
+Three things changed, because the guard alone was not the whole failure:
+
+- `_check_arithmetic` now reads `remix.solution_code` too.
+- `_simulation_block` tells the model the phase 6 twist may not renumber a fixed
+  quantity, next to the numbers themselves — the prompt already listed them and the
+  model overrode them anyway. `PROMPT_VERSION` is now `mission_gen/v3-remix-keeps-fixed-numbers`.
+- The example fixture's twist reserves loaves for neighbours instead of resizing the
+  tray, so it invents its own quantity rather than redefining one the scene owns.
+
+Phase 6 is still free to change the world; it is not free to renumber what the scene
+already draws. `test_a_remix_that_invents_its_own_quantity_is_fine` pins that difference.
 
 `practice_sessions.lesson_id` (migration `20260910120000_session_lesson_id`, applied
 2026-09-10). `SessionOut.levelId` used to be null for every generated mission because there

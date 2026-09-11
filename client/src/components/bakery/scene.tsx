@@ -12,10 +12,19 @@ function Sprite({ actor, frame, size = 310, flip = false }: { actor: ActorAsset;
     </svg>
   </g>;
 }
-function Prop({ name, x, y, width, height, opacity = 1, loaf }: { name: string; x: number; y: number; width: number; height: number; opacity?: number; loaf?: Loaf }) {
-  return <image href={asset(name)} x={x} y={y} width={width} height={height} opacity={opacity} preserveAspectRatio="none" data-loaf-id={loaf?.id} data-owner={loaf?.owner} />;
+function Prop({ name, x, y, width, height, opacity = 1, loaf, lit }: { name: string; x: number; y: number; width: number; height: number; opacity?: number; loaf?: Loaf; lit?: boolean }) {
+  const image = <image href={asset(name)} x={x} y={y} width={width} height={height} opacity={opacity} preserveAspectRatio="none" data-loaf-id={loaf?.id} data-owner={loaf?.owner} />;
+  if (!lit) return image;
+  // A phase-2 question names a prop; this is what "points at" it. A ring around the
+  // artwork itself, because tinting a label underneath the picture points at the label.
+  return <g data-lit={name}>
+    <rect x={x - 7} y={y - 7} width={width + 14} height={height + 14} rx={9} fill="none" stroke="#E9992F" strokeWidth={4} opacity={.95} />
+    <rect x={x - 7} y={y - 7} width={width + 14} height={height + 14} rx={9} fill="#E9992F" opacity={.17} />
+    {image}
+  </g>;
 }
-export function BakeryScene({ state, reducedMotion, counterView, label }: { state: BakeryState; reducedMotion: boolean; counterView: boolean; label: string }) {
+export function BakeryScene({ state, reducedMotion, counterView, label, highlight }: { state: BakeryState; reducedMotion: boolean; counterView: boolean; label: string; highlight?: readonly string[] }) {
+  const isLit = (name: string) => Boolean(highlight?.includes(name));
   const raw = phaseProgress(state);
   const p = reducedMotion ? 0 : raw;
   const step = reducedMotion ? 0 : Math.min(3, Math.floor(raw * 4));
@@ -40,7 +49,7 @@ export function BakeryScene({ state, reducedMotion, counterView, label }: { stat
     <Prop name="environment" x={0} y={0} width={1600} height={900} />
     <Prop name="awning" x={130} y={143} width={602} height={224} />
     <NeighborhoodDetails />
-    <Prop name="oven" x={202} y={349} width={195} height={346} />
+    <Prop name="oven" x={202} y={349} width={195} height={346} lit={isLit("oven")} />
     <OvenFire elapsed={state.elapsed} baking={baking} reducedMotion={reducedMotion} />
     <g data-layer="plants">
       <Prop name="olive" x={6} y={432} width={104} height={290} />
@@ -53,9 +62,9 @@ export function BakeryScene({ state, reducedMotion, counterView, label }: { stat
     {baking && state.phase !== "baking" && <motion.g transform={`translate(${peelX} ${peelY}) rotate(${reducedMotion ? 0 : peelAngle})`}>
       <Prop name="peel" x={-24} y={-7} width={peelLength} height={26} />
     </motion.g>}
-    <Prop name="counter" x={437} y={606} width={218} height={112} />
-    <Prop name="worktop" x={430} y={592} width={231} height={28} />
-    <Prop name="tray" x={468} y={580} width={165} height={33} />
+    <Prop name="counter" x={437} y={606} width={218} height={112} lit={isLit("counter")} />
+    <Prop name="worktop" x={430} y={592} width={231} height={28} lit={isLit("worktop")} />
+    <Prop name="tray" x={468} y={580} width={165} height={33} lit={isLit("tray")} />
     {(state.phase === "baking" || state.phase === "stocking") && !reducedMotion && <g transform={`translate(${state.phase === "baking" ? 291 : 551} ${state.phase === "baking" ? 507 : 566})`} fill="none" stroke="#FFF3DA" strokeWidth={3} strokeLinecap="round" opacity={.25 + Math.sin(p * Math.PI) * .3} aria-hidden="true">
       <path d="M-14 0 C-28 -10 -5 -17 -15 -28" /><path d="M4 -3 C-8 -16 18 -20 7 -34" />
     </g>}
@@ -68,7 +77,8 @@ export function BakeryScene({ state, reducedMotion, counterView, label }: { stat
       const trayY = 578 - Math.floor(n / 4) * 11;
       const x = stock ? trayX : placing ? mix(398 + (n % 4) * 15, trayX, p) : inOven ? 267 + (n % 4) * 15 : peelX - 19 + (n % 4) * 15;
       const y = stock ? trayY : placing ? mix(538 - Math.floor(n / 4) * 8, trayY, p) : (inOven ? 536 : peelY - 8) - Math.floor(n / 4) * 8;
-      return <Prop key={loaf.id} loaf={loaf} name={loaf.owner === "dough" || (inOven && raw < .6) ? "dough" : "loaf"} x={x} y={y} width={stock ? 34 : placing ? mix(24, 34, p) : 24} height={stock ? 15 : placing ? mix(11, 15, p) : 11} />;
+      const sprite = loaf.owner === "dough" || (inOven && raw < .6) ? "dough" : "loaf";
+      return <Prop key={loaf.id} loaf={loaf} lit={isLit(sprite)} name={sprite} x={x} y={y} width={stock ? 34 : placing ? mix(24, 34, p) : 24} height={stock ? 15 : placing ? mix(11, 15, p) : 11} />;
     })}
     {state.queue.map((id, index) => {
       const actor = scene.actors[id];

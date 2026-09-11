@@ -443,6 +443,60 @@ def test_a_quantity_the_scene_has_no_opinion_on_is_left_alone():
     assert not [f for f in validate_phases(mission, world).failures if "contradicts" in f]
 
 
+def test_the_remix_solution_is_checked_too():
+    """The phase most tempted to redefine a quantity, and the one that went unchecked.
+
+    A real mission shipped `validated: true` with this exact shape: the twist announced
+    bigger trays holding twelve, `remix.starting_code` kept the honest `= 8` so the
+    checked field passed, and the solution the child was asked to write set
+    `loaves_per_tray = 12` while the scene drew eight. `_check_arithmetic` read
+    `understand.code`, `guided.solution_code` and `remix.starting_code` — every code
+    surface except that one.
+    """
+    from app import manifests
+    from app.ai.phase_guards import validate_phases
+
+    world = manifests.get("el_forn")
+    mission = _example_mission()
+    honest = (
+        "def calculate_loaves(trays: int) -> int:\n"
+        "    loaves_per_tray = 8\n"
+        "    return trays * loaves_per_tray"
+    )
+    mission.phases.understand.code = honest
+    mission.phases.guided.solution_code = honest
+    mission.phases.remix.starting_code = honest
+    mission.phases.remix.solution_code = honest.replace("= 8", "= 12")
+
+    report = validate_phases(mission, world)
+    assert not report.ok
+    assert any(
+        "remix solution" in f and "contradicts the scene" in f and "tray_capacity = 8" in f
+        for f in report.failures
+    ), report.failures
+
+
+def test_a_remix_that_invents_its_own_quantity_is_fine():
+    """The fence must not make phase 6 impossible — only honest.
+
+    A twist is still allowed to change the world; it just may not renumber something the
+    scene has committed to drawing.
+    """
+    from app import manifests
+    from app.ai.phase_guards import validate_phases
+
+    world = manifests.get("el_forn")
+    mission = _example_mission()
+    mission.phases.remix.solution_code = (
+        "def calculate_loaves(trays: int) -> int:\n"
+        "    loaves_per_tray = 8\n"
+        "    reserved_for_neighbours = 3\n"
+        "    return trays * loaves_per_tray - reserved_for_neighbours"
+    )
+
+    assert not [f for f in validate_phases(mission, world).failures if "contradicts" in f]
+
+
 def test_the_scene_numbers_reach_the_model():
     """A guard that only rejects is a worse tool than a prompt that prevents."""
     from app import manifests
@@ -458,6 +512,9 @@ def test_the_scene_numbers_reach_the_model():
     assert "tray_capacity = 8" in task
     # And the buttons, because a mission needing a verb the scene lacks is unplayable.
     assert "bake" in task and "serve" in task
+    # The numbers alone were not enough: the model read them and still renumbered the
+    # tray in phase 6, because "the world changes" invites exactly that.
+    assert "PHASE 6 TWIST MAY NOT CHANGE" in task
 
 
 def test_a_world_with_no_interactive_scene_still_validates():

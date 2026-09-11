@@ -98,6 +98,14 @@ def _check_arithmetic(mission, world: World, report: ValidationReport) -> None:
 
     Only assignments of plain integers to known names are checked. A mission is free to
     invent its own quantities; it is not free to redefine one the scene has committed to.
+
+    **Every code surface a student reads has to be checked, and `remix.solution_code` is
+    the one that matters most.** It was missing until 2026-09-11, and the hole is not
+    academic: a mission shipped `validated: true` whose remix twist was "Hassan brought
+    bigger trays that hold 12", with `remix.starting_code` at the honest `= 8` — so the
+    checked field passed — and `loaves_per_tray = 12` in the solution the child is asked
+    to write. The phase where the mission is most tempted to redefine a quantity is
+    exactly the phase that was not looked at.
     """
     sim = world.simulation
     if sim is None:
@@ -109,6 +117,7 @@ def _check_arithmetic(mission, world: World, report: ValidationReport) -> None:
         ("understand", mission.phases.understand.code),
         ("guided", mission.phases.guided.solution_code),
         ("remix", mission.phases.remix.starting_code),
+        ("remix solution", mission.phases.remix.solution_code),
     ):
         if not code:
             continue

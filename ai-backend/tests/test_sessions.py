@@ -17,7 +17,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from langchain_core.messages import AIMessage
 
-from app.ai.chains.debrief import unsupported_number, write_debrief
+from app.ai.chains.debrief import looks_like_tico, unsupported_number, write_debrief
 from app.ai.prompts import debrief as prompt
 from app.services.sessions import MASTERY_THRESHOLD, stars_for
 
@@ -88,6 +88,35 @@ def test_the_guard_folds_arabic_digits_before_comparing():
     """٤ and 4 are the same number, and a model writing Arabic will use either."""
     assert unsupported_number("٤ محاولات", {4}) is None
     assert unsupported_number("4 محاولات", {4}) is None
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "برافو! غلطت مرتين وبعدين مسكتها لوحدك",
+        "خلصتها في ٤ محاولات، والغلطة اللي كررتها مسكتها في الآخر",
+        "استعملت calculate_loaves صح من غير ما حد يقولك",  # one Latin identifier is fine
+    ],
+)
+def test_a_real_tico_line_is_accepted(text):
+    assert looks_like_tico(text)
+
+
+@pytest.mark.parametrize(
+    ("text", "why"),
+    [
+        # What actually reached a child's screen: the model spent its budget reasoning and
+        # the sentence never arrived, so its notes about the error tag vocabulary did.
+        ("no_error`, `incomplete_assignment` (this means they", "leaked scratchpad"),
+        ("The student solved it on the first try, so I should say", "English reasoning"),
+        ("`incomplete_assignment`", "bare tag name"),
+        ("", "empty"),
+        ("Great job!", "not Arabic at all"),
+        ("تمام", "too short to be a debrief"),
+    ],
+)
+def test_model_scratchpad_never_reaches_a_child(text, why):
+    assert not looks_like_tico(text), why
 
 
 # ===================================================== the debrief chain
