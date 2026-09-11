@@ -43,7 +43,17 @@ export class AiClient {
   private baseUrl: string;
 
   constructor() {
-    this.baseUrl = process.env.AI_SERVICE_URL || process.env.AI_BACKEND_URL || 'https://54-75-53-43.sslip.io';
+    // Configuration only. There used to be a hardcoded EC2 host as a final fallback,
+    // which meant a deploy with no `AI_SERVICE_URL` looked healthy while quietly talking
+    // to whatever was at that address — including, after the box moved, nothing at all.
+    // An empty value fails loudly in `fetchAi`, and every caller already has a fallback
+    // path for an unreachable AI service.
+    this.baseUrl = (process.env.AI_SERVICE_URL || process.env.AI_BACKEND_URL || '').replace(/\/+$/, '');
+  }
+
+  /** Is the service configured at all? Callers log this rather than guessing. */
+  get configured(): boolean {
+    return this.baseUrl.length > 0;
   }
 
   /**
@@ -55,6 +65,10 @@ export class AiClient {
    * status number.
    */
   private async fetchAi<T>(path: string, token: string, body: unknown, requestId = newRequestId(), method: 'POST' | 'PATCH' = 'POST'): Promise<T> {
+    if (!this.configured) {
+      throw new AiServiceError('AI_SERVICE_URL is not set', 'NOT_CONFIGURED', requestId, false, 0);
+    }
+
     const response = await fetch(`${this.baseUrl}${path}`, {
       method,
       headers: {
@@ -142,6 +156,9 @@ export class AiClient {
    * removed when TICO became the single mascot, and it never existed server-side.
    */
   async streamTicoMessage(token: string, body: unknown): Promise<Response> {
+    if (!this.configured) {
+      throw new AiServiceError('AI_SERVICE_URL is not set', 'NOT_CONFIGURED', newRequestId(), false, 0);
+    }
     return fetch(`${this.baseUrl}/v1/tico/messages`, {
       method: 'POST',
       headers: {
@@ -155,6 +172,7 @@ export class AiClient {
 
   async checkHealth(): Promise<{ reachable: boolean; status?: number; latencyMs?: number }> {
     const start = Date.now();
+    if (!this.configured) return { reachable: false, latencyMs: 0 };
     try {
       // Note the /v1 prefix: every route on this service is versioned, health included.
       const res = await fetch(`${this.baseUrl}/v1/health`, {

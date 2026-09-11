@@ -196,6 +196,14 @@ html[lang="ar-EG"] .hero h1 { font-size: clamp(3rem, 5.3vw, 5.4rem); letter-spac
 .mission-list li small { color: var(--muted); font-size: .66rem; }
 .mission-list li i { color: var(--muted); font-style: normal; }
 .mission-list__active { border-color: rgba(219,91,49,.4) !important; background: #fff5ec !important; box-shadow: var(--shadow-small); }
+/* The play control is a link, not decoration: it needs a target big enough to hit and a
+   focus ring, because this is now how a student starts a lesson. */
+.mission-list__go { display: grid; place-items: center; inline-size: 42px; block-size: 42px; border-radius: 12px; background: var(--coral); color: white; transition: transform .2s ease, background .2s ease; }
+.mission-list__go i { color: inherit; font-size: .9rem; }
+.mission-list__go:hover { transform: translateY(-2px); background: var(--coral-dark); }
+.mission-list__error { margin: 0 0 18px; padding: 12px 15px; border-radius: 12px; background: #f9e3e3; color: #8d2a2c; font-size: .85rem; font-weight: 700; }
+.sr-only { position: absolute; inline-size: 1px; block-size: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+@media (prefers-reduced-motion: reduce) { .mission-list__go { transition: none; } .mission-list__go:hover { transform: none; } }
 .mission-list__active > span { background: var(--coral) !important; color: white !important; }
 .mission-list__active i { color: var(--coral) !important; }
 .world-note { position: sticky; inset-block-start: 35px; align-self: start; padding: 36px; border-radius: var(--radius-md); background: var(--ink); color: white; box-shadow: var(--shadow); }

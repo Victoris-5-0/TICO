@@ -164,15 +164,25 @@ export class SubmissionService {
     const yesterday = new Date(today);
     yesterday.setUTCDate(yesterday.getUTCDate() - 1);
 
-    // Prefetch read data outside transaction to minimize lock time
-    let targetLessonId: string | null = null;
-    if (session.exerciseId) {
+    // Prefetch read data outside transaction to minimize lock time.
+    //
+    // Which lesson does this credit? The session's own, first.
+    //
+    // `practice_sessions.lesson_id` is what the student actually opened. The exercise ids
+    // below are a different thing: a generated mission has no exercise row, so one is
+    // borrowed to satisfy the submission's foreign key — and the borrowed one is the
+    // track's first exercise whatever lesson is being played. Reading the lesson off it
+    // credited lesson one for every mission in the world, so finishing lesson two marked
+    // lesson one complete, awarded nothing, and left lesson two looking untouched.
+    let targetLessonId: string | null = session.lessonId ?? null;
+
+    if (!targetLessonId && session.exerciseId) {
       const exercise = await db.exercise.findUnique({
         where: { id: session.exerciseId },
         select: { lessonId: true }
       });
       targetLessonId = exercise?.lessonId || null;
-    } else if (resolvedExerciseId) {
+    } else if (!targetLessonId && resolvedExerciseId) {
       const exercise = await db.exercise.findUnique({
         where: { id: resolvedExerciseId },
         select: { lessonId: true }
