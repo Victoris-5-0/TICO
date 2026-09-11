@@ -239,7 +239,12 @@ export class MissionService {
         });
 
     return {
-      mission,
+      // The row's id is the identity; `content.id` is a copy inside a payload and cannot
+      // be trusted. Pre-generation wrote the prebuilt missions with `content.id = ""`,
+      // and everything downstream keys off it: the narration URL became
+      // `/audio/missions//encounter.mp3` and 404'd, and the session and hint calls were
+      // handed an empty mission id. Stamping the real one here fixes all of them at once.
+      mission: { ...mission, id: row.id },
       trackSlug: row.template.track.slug,
       trackTitle: row.template.track.title,
       difficultyBand: row.template.difficultyBand,

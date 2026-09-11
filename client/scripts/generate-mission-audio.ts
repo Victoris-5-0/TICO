@@ -36,6 +36,16 @@ const API = "https://api.elevenlabs.io/v1";
 
 const PREBUILT_DIR = resolve(process.cwd(), "../ai-backend/content/prebuilt");
 const OUT_DIR = resolve(process.cwd(), "public/audio/missions");
+/*
+ * The manifest is imported by the player rather than read from disk at runtime.
+ *
+ * It used to live beside the audio in `public/` and be `readFileSync`-ed by the page. That
+ * works in dev and on a plain node server, and silently returns nothing on any deploy
+ * where `public/` is served by a CDN and not bundled with the server code — so every
+ * mission would render with no narration controls and nobody would see an error.
+ * Importing it makes it part of the build.
+ */
+const MANIFEST_FILE = resolve(process.cwd(), "src/lib/mission/narration-manifest.json");
 
 type Options = { write: boolean; force: boolean; scope: "core" | "all"; voiceId: string };
 
@@ -182,7 +192,7 @@ async function main() {
     ),
   };
   mkdirSync(OUT_DIR, { recursive: true });
-  writeFileSync(join(OUT_DIR, "manifest.json"), JSON.stringify(manifest, null, 2) + "\n");
+  writeFileSync(MANIFEST_FILE, JSON.stringify(manifest, null, 2) + "\n");
 
   console.log(`\n  wrote ${written} file(s) and refreshed the manifest.`);
 }

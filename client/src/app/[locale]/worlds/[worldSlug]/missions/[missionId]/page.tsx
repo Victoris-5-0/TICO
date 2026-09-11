@@ -1,11 +1,9 @@
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
-
 import { cache } from "react";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import { MissionPlayer } from "@/components/mission-player/mission-player";
+import narrationManifest from "@/lib/mission/narration-manifest.json";
 import { db } from "@/lib/db";
 import { isLocale } from "@/i18n/config";
 import { missionService } from "@/services/mission.service";
@@ -24,20 +22,13 @@ const loadMission = cache((missionId: string) => missionService.getPhasedMission
 /**
  * Which lines of this mission have a recording.
  *
- * Read from the generated manifest on the server, so the player ships with the answer
- * rather than fetching it and briefly rendering controls that may not work. A missing or
- * unreadable manifest means no audio — the mission plays silently, which is the correct
- * behaviour for anything outside the pinned set.
+ * Imported rather than read from disk: `public/` is not part of the server bundle on most
+ * deploys, so a `readFileSync` there works locally and quietly returns nothing in
+ * production — every mission silent, with no error to notice. A mission absent from the
+ * manifest simply has no audio, which is correct for anything outside the pinned set.
  */
-const narrationKeys = cache((missionId: string): string[] => {
-  try {
-    const file = join(process.cwd(), "public/audio/missions/manifest.json");
-    const manifest = JSON.parse(readFileSync(file, "utf8")) as { missions?: Record<string, string[]> };
-    return manifest.missions?.[missionId] ?? [];
-  } catch {
-    return [];
-  }
-});
+const narrationKeys = (missionId: string): string[] =>
+  (narrationManifest as { missions?: Record<string, string[]> }).missions?.[missionId] ?? [];
 
 export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
   const { locale, missionId } = await params;
