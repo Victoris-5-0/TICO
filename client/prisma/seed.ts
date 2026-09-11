@@ -310,6 +310,173 @@ async function main() {
     create: { exerciseId: fornExercise2.id, conceptId: conceptVariables.id, isPrimary: true, weight: 1.0 },
   });
 
+  // ---------------------------------------------------------------------------
+  // Bakery lessons 4 and 5.
+  //
+  // `docs/02-python-curriculum.md` fixes six bakery lessons. Two were seeded, both
+  // targeting `variables`, so every mission generated for `conditionals` or `loops` had
+  // no lesson to hang off and was unreachable from the world page — fifteen of them.
+  //
+  // `order` follows the curriculum numbering rather than counting from what exists, so
+  // "Family Order" (#3) and "Bakery Calculator" (#6) drop straight into the gaps when
+  // content for them lands. A lesson also needs at least one exercise: it carries the
+  // primary concept, and `getNextMission` falls back to it when the AI service is down.
+  // ---------------------------------------------------------------------------
+
+  const fornLesson4 = await prisma.lesson.upsert({
+    where: { trackId_slug: { trackId: elForn.id, slug: 'fair-share' } },
+    update: {
+      title: 'النصيب العادل (Fair Share)',
+      description: 'قارن الطلب بالحد المسموح، وقرر تقبله ولا تعدّله.',
+      order: 4,
+    },
+    create: {
+      trackId: elForn.id,
+      slug: 'fair-share',
+      title: 'النصيب العادل (Fair Share)',
+      description: 'قارن الطلب بالحد المسموح، وقرر تقبله ولا تعدّله.',
+      content: 'العيش مش بيكفي الكل لو حد خد أكتر من نصيبه. في الدرس ده هنتعلم إزاي الكود ياخد قرار.',
+      order: 4,
+    },
+  });
+
+  const fornExercise4 = await prisma.exercise.upsert({
+    where: { id: 'exercise-forn-04' },
+    update: {
+      title: 'حد الطلب (Order Limit)',
+      lessonId: fornLesson4.id,
+      instructions: 'اكتب دالة `check_order(loaves: int, limit: int) -> str` ترجع "تمام" لو الطلب في حدود المسموح، و"كتير" لو أكتر.',
+      starterCode: `def check_order(loaves: int, limit: int) -> str:
+    # قارن الطلب بالحد المسموح
+    pass
+`,
+      solutionCode: `def check_order(loaves: int, limit: int) -> str:
+    if loaves <= limit:
+        return "تمام"
+    return "كتير"
+`,
+      testCases: [
+        { input: 'check_order(4, 6)', expectedOutput: 'تمام', isHidden: false },
+        { input: 'check_order(9, 6)', expectedOutput: 'كتير', isHidden: false },
+      ],
+      hints: ['استخدم `if` مع علامة `<=` عشان تقارن الرقمين.'],
+      difficulty: Difficulty.BEGINNER,
+      order: 1,
+    },
+    create: {
+      id: 'exercise-forn-04',
+      lessonId: fornLesson4.id,
+      title: 'حد الطلب (Order Limit)',
+      instructions: 'اكتب دالة `check_order(loaves: int, limit: int) -> str` ترجع "تمام" لو الطلب في حدود المسموح، و"كتير" لو أكتر.',
+      starterCode: `def check_order(loaves: int, limit: int) -> str:
+    # قارن الطلب بالحد المسموح
+    pass
+`,
+      solutionCode: `def check_order(loaves: int, limit: int) -> str:
+    if loaves <= limit:
+        return "تمام"
+    return "كتير"
+`,
+      testCases: [
+        { input: 'check_order(4, 6)', expectedOutput: 'تمام', isHidden: false },
+        { input: 'check_order(9, 6)', expectedOutput: 'كتير', isHidden: false },
+      ],
+      hints: ['استخدم `if` مع علامة `<=` عشان تقارن الرقمين.'],
+      difficulty: Difficulty.BEGINNER,
+      order: 1,
+    },
+  });
+
+  await prisma.exerciseConcept.upsert({
+    where: { exerciseId_conceptId: { exerciseId: fornExercise4.id, conceptId: conceptConditionals.id } },
+    update: { isPrimary: true, weight: 1.0 },
+    create: { exerciseId: fornExercise4.id, conceptId: conceptConditionals.id, isPrimary: true, weight: 1.0 },
+  });
+
+  await prisma.exerciseConcept.upsert({
+    where: { exerciseId_conceptId: { exerciseId: fornExercise4.id, conceptId: conceptVariables.id } },
+    update: { isPrimary: false, weight: 0.3 },
+    create: { exerciseId: fornExercise4.id, conceptId: conceptVariables.id, isPrimary: false, weight: 0.3 },
+  });
+
+  const fornLesson5 = await prisma.lesson.upsert({
+    where: { trackId_slug: { trackId: elForn.id, slug: 'morning-batches' } },
+    update: {
+      title: 'دفعات الصبح (Morning Batches)',
+      description: 'لُف على دفعات الخبز واجمع إجمالي الأرغفة.',
+      order: 5,
+    },
+    create: {
+      trackId: elForn.id,
+      slug: 'morning-batches',
+      title: 'دفعات الصبح (Morning Batches)',
+      description: 'لُف على دفعات الخبز واجمع إجمالي الأرغفة.',
+      content: 'الفرن بيطلع أكتر من دفعة كل صبح. هنعدّها كلها بحلقة تكرار واحدة.',
+      order: 5,
+    },
+  });
+
+  const fornExercise5 = await prisma.exercise.upsert({
+    where: { id: 'exercise-forn-05' },
+    update: {
+      title: 'مجموع الدفعات (Total Batches)',
+      lessonId: fornLesson5.id,
+      instructions: 'اكتب دالة `total_loaves(batches: list) -> int` تجمع كل الأرغفة في الدفعات.',
+      starterCode: `def total_loaves(batches: list) -> int:
+    # لُف على الدفعات واجمعها
+    pass
+`,
+      solutionCode: `def total_loaves(batches: list) -> int:
+    total = 0
+    for batch in batches:
+        total = total + batch
+    return total
+`,
+      testCases: [
+        { input: 'total_loaves([8, 8, 8])', expectedOutput: '24', isHidden: false },
+        { input: 'total_loaves([])', expectedOutput: '0', isHidden: false },
+      ],
+      hints: ['ابدأ بمتغير `total = 0` وبعدين لُف بـ `for` وزوّد عليه.'],
+      difficulty: Difficulty.BEGINNER,
+      order: 1,
+    },
+    create: {
+      id: 'exercise-forn-05',
+      lessonId: fornLesson5.id,
+      title: 'مجموع الدفعات (Total Batches)',
+      instructions: 'اكتب دالة `total_loaves(batches: list) -> int` تجمع كل الأرغفة في الدفعات.',
+      starterCode: `def total_loaves(batches: list) -> int:
+    # لُف على الدفعات واجمعها
+    pass
+`,
+      solutionCode: `def total_loaves(batches: list) -> int:
+    total = 0
+    for batch in batches:
+        total = total + batch
+    return total
+`,
+      testCases: [
+        { input: 'total_loaves([8, 8, 8])', expectedOutput: '24', isHidden: false },
+        { input: 'total_loaves([])', expectedOutput: '0', isHidden: false },
+      ],
+      hints: ['ابدأ بمتغير `total = 0` وبعدين لُف بـ `for` وزوّد عليه.'],
+      difficulty: Difficulty.BEGINNER,
+      order: 1,
+    },
+  });
+
+  await prisma.exerciseConcept.upsert({
+    where: { exerciseId_conceptId: { exerciseId: fornExercise5.id, conceptId: conceptLoops.id } },
+    update: { isPrimary: true, weight: 1.0 },
+    create: { exerciseId: fornExercise5.id, conceptId: conceptLoops.id, isPrimary: true, weight: 1.0 },
+  });
+
+  await prisma.exerciseConcept.upsert({
+    where: { exerciseId_conceptId: { exerciseId: fornExercise5.id, conceptId: conceptVariables.id } },
+    update: { isPrimary: false, weight: 0.3 },
+    create: { exerciseId: fornExercise5.id, conceptId: conceptVariables.id, isPrimary: false, weight: 0.3 },
+  });
+
   // World 2 - Lesson 1: Ticket Queue
   const mahattaLesson1 = await prisma.lesson.upsert({
     where: { trackId_slug: { trackId: elMahatta.id, slug: 'ticket-queue' } },

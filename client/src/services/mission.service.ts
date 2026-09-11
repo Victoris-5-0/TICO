@@ -274,13 +274,46 @@ export class MissionService {
   async startForStudent(userId: string, lessonId: string, token: string): Promise<string | null> {
     const lesson = await db.lesson.findUnique({
       where: { id: lessonId },
-      select: { id: true, trackId: true },
+      select: {
+        id: true,
+        trackId: true,
+        exercises: {
+          orderBy: { order: "asc" },
+          select: { concepts: { where: { isPrimary: true }, select: { conceptId: true } } },
+        },
+      },
     });
     if (!lesson) return null;
 
-    // 1. Already theirs.
+    // What this lesson teaches. `Lesson` has no concept column — `docs/02` says every
+    // lesson targets one concept, but the link lives on its exercises — so it comes from
+    // the primary concept of the lesson's first exercise.
+    //
+    // Matching on it matters: filtering by track alone meant opening a `variables` lesson
+    // could hand out a `loops` mission from the same world, and the fifteen missions
+    // generated for concepts no lesson targeted were unreachable either way.
+    const concept = lesson.exercises.flatMap((e) => e.concepts.map((c) => c.conceptId))[0] ?? null;
+    const forThisLesson = concept
+      ? { trackId: lesson.trackId, targetConceptId: concept }
+      : { trackId: lesson.trackId };
+
+    // 1. Already theirs, for *this lesson*.
+    //
+    // Keyed on the lesson `claim` recorded, not on the concept: two lessons can teach the
+    // same concept — `opening-message` and `count-the-trays` both teach `variables` — and
+    // matching by concept handed a student the identical mission for both, which makes
+    // the second stop a re-run of the first.
+    //
+    // A mission claimed before `claim` started recording the lesson has no `params.lessonId`
+    // and so will not be found here; the student is given a fresh one. That self-corrects
+    // on first play and only affects rows claimed before this landed.
     const claimed = await db.generatedMission.findFirst({
-      where: { userId, validated: true, template: { trackId: lesson.trackId } },
+      where: {
+        userId,
+        validated: true,
+        template: forThisLesson,
+        params: { path: ["lessonId"], equals: lessonId },
+      },
       orderBy: { createdAt: "desc" },
       select: { id: true, content: true },
     });
@@ -301,7 +334,7 @@ export class MissionService {
     const spare = await db.generatedMission.findFirst({
       where: {
         validated: true,
-        template: { trackId: lesson.trackId },
+        template: forThisLesson,
         // Unclaimed, or held by the content-prep account that pre-generates them.
         OR: [{ userId: null }, { userId: CONTENT_PREP_USER }],
         // No *student* has played it. Pre-generation opens a session on each row as it
