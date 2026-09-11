@@ -1,0 +1,203 @@
+{
+  "data": {
+    "id": "cmtwkqr4aqt8i01z0d8hat2ld",
+    "worldId": "el_forn",
+    "sceneId": "bakery_gameplay",
+    "targetConceptId": "loops",
+    "carriedConceptIds": [
+      "variables"
+    ],
+    "titleAr": "حساب الطابور السريع",
+    "source": "model",
+    "validated": true,
+    "phases": {
+      "encounter": {
+        "speaker": "nour",
+        "speakerNameAr": "نور",
+        "lineAr": "يا عم حسن، الزباين كتير وكل واحد طالب كمية عيش شكل! لو قعدنا نجمعهم واحد واحد بإيدينا هنعطل والناس واقفة مستعجلة. مش فيه طريقة سريعة نجمع بيها كل الطلبات دي عشان نطلع الصواني بالظبط؟",
+        "ctaAr": "يلا نبدأ",
+        "world": {
+          "props": {
+            "oven": "lit",
+            "counter": 1,
+            "tray": 1,
+            "loaf": 8
+          }
+        }
+      },
+      "explore": {
+        "ticoIntroAr": "يا هلا بيك في الفرن البلدي! يلا نبص بصة على الطابور ونشوف هنحلها إزاي.",
+        "rounds": [
+          {
+            "questionAr": "لو قدامنا 3 زباين في الطابور، وكل واحد طالب رغيفين، يبقى حسن محتاج يجهز كام رغيف في الفرن؟",
+            "optionsAr": [
+              "6 أرغفة",
+              "4 أرغفة",
+              "8 أرغفة"
+            ],
+            "correctIndex": 0,
+            "nudgeAr": "اجمع طلبات التلات زباين مع بعض: 2 + 2 + 2.",
+            "highlight": [
+              "counter"
+            ]
+          },
+          {
+            "questionAr": "عشان نحسب إجمالي الطلبات دي كلها بسرعة ورا بعض، إيه الحركة اللي بنعملها؟",
+            "optionsAr": [
+              "بنمر على الزباين واحد واحد ونضيف طلباتهم للمجموع",
+              "بناخد طلب أول زبون بس ونمشي",
+              "بنعد العجين اللي لسه متخمرش"
+            ],
+            "correctIndex": 0,
+            "nudgeAr": "فكر في الطريقة اللي بتخلينا نعدي على كل واحد بالدور من غير ما نسيب حد.",
+            "highlight": [
+              "counter"
+            ]
+          }
+        ]
+      },
+      "discover": {
+        "conceptSlug": "loops",
+        "conceptNameAr": "حلقات التكرار (Loops)",
+        "explanationAr": "التكرار في البرمجة زي الطابور بالظبط! بدل ما نكتب كود متكرر لكل زبون، بنكتب حلقة تكرار (Loop) بتمر تلقائيًا على قائمة الطلبات واحد ورا التاني وتنفذ عليهم نفس العملية لحد ما القائمة تخلص.",
+        "ticoLineAr": "الله ينور! التكرار هيخلينا نجمع آلاف الطلبات في لمح البصر!"
+      },
+      "understand": {
+        "introAr": "بص كده على الكود ده، بنستخدم حلقة التكرار (for) عشان نلف على الطلبات ونجمعها:",
+        "code": "def total_loaves_needed(orders: list) -> int:\n    total = 0\n    for order in orders:\n        total = total + order\n    return total",
+        "annotations": [
+          {
+            "line": 1,
+            "textAr": "عملنا وظيفة بتاخد قائمة الطلبات",
+            "pointsAt": "counter"
+          },
+          {
+            "line": 2,
+            "textAr": "بدأنا المجموع بصفر",
+            "pointsAt": "worktop"
+          },
+          {
+            "line": 3,
+            "textAr": "حلقة التكرار بتمر على كل طلب في القائمة",
+            "pointsAt": "counter"
+          },
+          {
+            "line": 4,
+            "textAr": "بنضيف قيمة الطلب الحالي للمجموع الكلي",
+            "pointsAt": "tray"
+          },
+          {
+            "line": 5,
+            "textAr": "بنرجع المجموع النهائي لكل الأرغفة المطلوبة",
+            "pointsAt": "peel"
+          }
+        ],
+        "runLabelAr": "شغّل وشوف",
+        "onRun": {
+          "animate": "retrieving",
+          "props": {
+            "loaf": 8
+          },
+          "captionAr": "البرنامج جمع كل الطلبات بسرعة وحسن بدأ يجهز العيش!"
+        }
+      },
+      "guided": {
+        "steps": [
+          {
+            "code": "def total_loaves_needed(orders: list) -> int:\n    total = 0\n    for order in ___:\n        total = total + order\n    return total",
+            "blanks": [
+              "orders"
+            ],
+            "promptAr": "اكتب اسم قائمة الطلبات اللي حلقة التكرار هتلف عليها.",
+            "hintAr": "القائمة مبعوتة للوظيفة فوق كمعامل واسمها orders."
+          },
+          {
+            "code": "def total_loaves_needed(orders: list) -> int:\n    total = 0\n    for order in orders:\n        ___ = total + order\n    return total",
+            "blanks": [
+              "total"
+            ],
+            "promptAr": "اكتب اسم المتغير اللي بنجمع فيه الأرغفة وبنزوده في كل لفة.",
+            "hintAr": "المتغير ده بدأ بـ 0 واسمه total."
+          }
+        ],
+        "solutionCode": "def total_loaves_needed(orders: list) -> int:\n    total = 0\n    for order in orders:\n        total = total + order\n    return total",
+        "tests": [
+          {
+            "call": "total_loaves_needed([2, 2, 2, 2, 2, 2, 2, 2])",
+            "expected": "16",
+            "name": null,
+            "hidden": false
+          },
+          {
+            "call": "total_loaves_needed([])",
+            "expected": "0",
+            "name": null,
+            "hidden": false
+          },
+          {
+            "call": "total_loaves_needed([2, 2])",
+            "expected": "4",
+            "name": null,
+            "hidden": false
+          }
+        ],
+        "onRun": {
+          "animate": "handover",
+          "props": {
+            "loaf": 2
+          },
+          "captionAr": "ممتاز! الكود شغال وبنحسب الطلبات بدقة متناهية!"
+        }
+      },
+      "remix": {
+        "twistAr": "الفرن قرر يحسب الدخل المالي! عايزين نعرف الطلبات دي هتدخلنا كام قرش بالظبط.",
+        "newRequirementAr": "عدّل الكود عشان يحسب إجمالي الفلوس (بالقرش). الوظيفة هتاخد قائمة الطلبات وكمان سعر الرغيف الواحد (price) بالقرش، وتلف تحسب المجموع الكلي للفلوس.",
+        "worldChange": {
+          "animate": "stocking",
+          "props": {
+            "counter": 2
+          },
+          "captionAr": null
+        },
+        "startingCode": "def total_loaves_needed(orders: list) -> int:\n    total = 0\n    for order in orders:\n        total = total + order\n    return total",
+        "solutionCode": "def total_income(orders: list, price: int) -> int:\n    total_money = 0\n    for order in orders:\n        total_money = total_money + (order * price)\n    return total_money",
+        "tests": [
+          {
+            "call": "total_income([2, 2, 2], 50)",
+            "expected": "300",
+            "name": null,
+            "hidden": false
+          },
+          {
+            "call": "total_income([], 50)",
+            "expected": "0",
+            "name": null,
+            "hidden": false
+          },
+          {
+            "call": "total_income([2, 2], 100)",
+            "expected": "400",
+            "name": null,
+            "hidden": false
+          }
+        ],
+        "onRun": {
+          "animate": "handover",
+          "props": {
+            "loaf": 0
+          },
+          "captionAr": null
+        }
+      }
+    },
+    "scaffold": {
+      "variables": "NONE"
+    },
+    "difficultyBand": 5
+  },
+  "meta": {
+    "request_id": "pregenerated",
+    "stub": false,
+    "cached": false
+  }
+}

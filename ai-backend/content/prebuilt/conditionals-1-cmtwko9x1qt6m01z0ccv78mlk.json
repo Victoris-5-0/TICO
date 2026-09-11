@@ -1,0 +1,197 @@
+{
+  "data": {
+    "id": "cmtwko9x1qt6m01z0ccv78mlk",
+    "worldId": "el_forn",
+    "sceneId": "bakery_gameplay",
+    "targetConceptId": "conditionals",
+    "carriedConceptIds": [
+      "variables"
+    ],
+    "titleAr": "مراقبة عجين الفرن",
+    "source": "model",
+    "validated": true,
+    "phases": {
+      "encounter": {
+        "speaker": "farid",
+        "speakerNameAr": "عم فريد",
+        "lineAr": "يا ولدي، الزباين واقفة في الطابور والفرن حامي، بس مش عارف عجين الطبلية ده هيكفي نطلع الـ 16 رغيف ونمشي الناس دي ولا محتاجين نعجن تاني؟",
+        "ctaAr": "يلا نبدأ",
+        "world": {
+          "props": {
+            "dough": 1,
+            "oven": "lit"
+          }
+        }
+      },
+      "explore": {
+        "ticoIntroAr": "تعال نساعد عم فريد ونشوف الطبلية والفرن جاهزين ولا لأ.",
+        "rounds": [
+          {
+            "questionAr": "شايف كام دفعة عجين جاهزة قدامك على الطبلية دلوقتي؟",
+            "optionsAr": [
+              "دفعة واحدة",
+              "تلات دفعات",
+              "مفيش خالص"
+            ],
+            "correctIndex": 0,
+            "nudgeAr": "بص كويس على الطبلية، هتلاقي طبق عجين واحد بس جاهز.",
+            "highlight": [
+              "dough"
+            ]
+          },
+          {
+            "questionAr": "عشان نخلص طابور الزباين ده كله، محتاجين نخبز كام رغيف؟",
+            "optionsAr": [
+              "16 رغيف",
+              "8 أرغفة",
+              "4 أرغفة"
+            ],
+            "correctIndex": 0,
+            "nudgeAr": "الطابور فيه 8 زباين، وكل واحد بياخد رغيفين، يعني الإجمالي 16 رغيف.",
+            "highlight": [
+              "counter"
+            ]
+          }
+        ]
+      },
+      "discover": {
+        "conceptSlug": "conditionals",
+        "conceptNameAr": "الشروط (Conditionals)",
+        "explanationAr": "الشروط بتخلي البرنامج ياخد قرار ذكي. بنقول للكمبيوتر: لو (if) الشرط ده صح، نفذ أمر معين.. وإلا (else) نفذ أمر تاني خالص.",
+        "ticoLineAr": "برافو! بكده نقدر نبرمج الفرن ياخد قرارات الخبز لوحده ويوقف لو العجين مش كفاية."
+      },
+      "understand": {
+        "introAr": "بص كده الكود ده بيتأكد إن عجين الطبلية كافي (دفعتين أو أكتر) عشان نخبز:",
+        "code": "def check_bakery(dough: int) -> str:\n    if dough >= 2:\n        return \"جاهز\"\n    else:\n        return \"انتظر\"",
+        "annotations": [
+          {
+            "line": 1,
+            "textAr": "بنعمل وظيفة بتاخد عدد دفعات العجين الجاهزة",
+            "pointsAt": "dough"
+          },
+          {
+            "line": 2,
+            "textAr": "لو عدد دفعات العجين أكبر من أو يساوي 2",
+            "pointsAt": "dough"
+          },
+          {
+            "line": 3,
+            "textAr": "رجع كلمة جاهز عشان نبدأ نخبز للزباين",
+            "pointsAt": "oven"
+          },
+          {
+            "line": 5,
+            "textAr": "غير كده، رجع كلمة انتظر عشان نجهز عجين زيادة",
+            "pointsAt": "worktop"
+          }
+        ],
+        "runLabelAr": "شغّل وشوف",
+        "onRun": {
+          "animate": "baking",
+          "props": {
+            "dough": 0,
+            "loaf": 8
+          },
+          "captionAr": "الفرن شغال وبيخبز العجين الجاهز!"
+        }
+      },
+      "guided": {
+        "steps": [
+          {
+            "code": "def check_bakery(dough: int) -> str:\n    ___ dough >= 2:\n        return \"جاهز\"\n    else:\n        return \"انتظر\"",
+            "blanks": [
+              "if"
+            ],
+            "promptAr": "اكتب الكلمة السحرية اللي بتفحص الشرط!",
+            "hintAr": "بنبدأ الشرط بكلمة 'if' في بايثون."
+          },
+          {
+            "code": "def check_bakery(dough: int) -> str:\n    if dough >= 2:\n        return \"جاهز\"\n    ___\n        return \"انتظر\"",
+            "blanks": [
+              "else:"
+            ],
+            "promptAr": "اكتب الكلمة اللي بتشتغل لو الشرط ما تحققش، وما تنساش النقطتين فوق بعض!",
+            "hintAr": "الكلمة البديلة هي 'else:' مع النقطتين الرأسيتين."
+          }
+        ],
+        "solutionCode": "def check_bakery(dough: int) -> str:\n    if dough >= 2:\n        return \"جاهز\"\n    else:\n        return \"انتظر\"",
+        "tests": [
+          {
+            "call": "check_bakery(2)",
+            "expected": "'جاهز'",
+            "name": null,
+            "hidden": false
+          },
+          {
+            "call": "check_bakery(1)",
+            "expected": "'انتظر'",
+            "name": null,
+            "hidden": false
+          },
+          {
+            "call": "check_bakery(5)",
+            "expected": "'جاهز'",
+            "name": null,
+            "hidden": false
+          }
+        ],
+        "onRun": {
+          "animate": "baking",
+          "props": {
+            "dough": 0
+          },
+          "captionAr": "ممتاز! الكود اتأكد من العجين وبقى شغال تمام."
+        }
+      },
+      "remix": {
+        "twistAr": "النار قادت في الفرن! بس دلوقتي لازم نتأكد إن حرارة الفرن كمان سخنة كفاية (مش أقل من 200 درجة) مع العجين قبل ما نخبز.",
+        "newRequirementAr": "عدّل الوظيفة عشان تستقبل درجة الحرارة `oven_temperature` كمان، وتتأكد إن العجين `>= 2` والحرارة `>= 200` مع بعض عشان ترجع 'جاهز'، وإلا ترجع 'انتظر'.",
+        "worldChange": {
+          "animate": "oven_fire",
+          "props": {
+            "oven": "lit"
+          },
+          "captionAr": null
+        },
+        "startingCode": "def check_bakery(dough: int) -> str:\n    if dough >= 2:\n        return \"جاهز\"\n    else:\n        return \"انتظر\"",
+        "solutionCode": "def check_bakery(dough: int, oven_temperature: int) -> str:\n    if dough >= 2 and oven_temperature >= 200:\n        return \"جاهز\"\n    else:\n        return \"انتظر\"",
+        "tests": [
+          {
+            "call": "check_bakery(2, 220)",
+            "expected": "'جاهز'",
+            "name": null,
+            "hidden": false
+          },
+          {
+            "call": "check_bakery(2, 180)",
+            "expected": "'انتظر'",
+            "name": null,
+            "hidden": false
+          },
+          {
+            "call": "check_bakery(1, 250)",
+            "expected": "'انتظر'",
+            "name": null,
+            "hidden": false
+          }
+        ],
+        "onRun": {
+          "animate": "oven_fire",
+          "props": {
+            "oven": "lit"
+          },
+          "captionAr": null
+        }
+      }
+    },
+    "scaffold": {
+      "variables": "NONE"
+    },
+    "difficultyBand": 5
+  },
+  "meta": {
+    "request_id": "pregenerated",
+    "stub": false,
+    "cached": false
+  }
+}

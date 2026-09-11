@@ -1,0 +1,190 @@
+{
+  "data": {
+    "id": "cmtwkp4a4qt7801z0a156a0j4",
+    "worldId": "el_forn",
+    "sceneId": "bakery_gameplay",
+    "targetConceptId": "conditionals",
+    "carriedConceptIds": [
+      "variables"
+    ],
+    "titleAr": "حرارة الفرن المظبوطة",
+    "source": "model",
+    "validated": true,
+    "phases": {
+      "encounter": {
+        "speaker": "mariam",
+        "speakerNameAr": "مريم",
+        "lineAr": "يا حسن يا خويا، الفرن شكله لسه بارد والناس واقفة مستنية على الرصيف! لازم نتأكد إن الحرارة وصلت 200 درجة على الأقل قبل ما نرمي العجين في الفرن عشان العيش ما يهبطش مننا.",
+        "ctaAr": "يلا نبدأ",
+        "world": {
+          "props": {
+            "oven": "cold",
+            "dough": 8
+          }
+        }
+      },
+      "explore": {
+        "ticoIntroAr": "تعالوا نساعد مريم وعم حسن يظبطوا الفرن البلدي قبل ما نكتب أي كود!",
+        "rounds": [
+          {
+            "questionAr": "تفتكر إيه اللي هيحصل لو عم حسن رمى العجين والفرن لسه بارد؟",
+            "optionsAr": [
+              "العيش مش هيستوي وهيطلع عجين ومهبط",
+              "العيش هيستوي بسرعة جداً",
+              "الفرن هيسخن لوحده تلقائيًا"
+            ],
+            "correctIndex": 0,
+            "nudgeAr": "لو الفرن بارد، العجين مش هيلاقي النار اللي تخليه يتنفخ ويستوي صح.",
+            "highlight": [
+              "oven"
+            ]
+          },
+          {
+            "questionAr": "وعشان العيش يطلع منفوخ ومظبوط، مريم قالت الحرارة لازم تكون كام على الأقل؟",
+            "optionsAr": [
+              "200 درجة أو أكتر",
+              "أقل من 100 درجة",
+              "مش مهم الحرارة خالص"
+            ],
+            "correctIndex": 0,
+            "nudgeAr": "بص على كلام مريم تاني، هي حددت درجة حرارة معينة عشان العيش ما يبوظش.",
+            "highlight": [
+              "oven"
+            ]
+          }
+        ]
+      },
+      "discover": {
+        "conceptSlug": "conditionals",
+        "conceptNameAr": "اتخاذ القرار بالشروط",
+        "explanationAr": "الشرط بيتنفذ لو الجواب أيوه بس. الجزء اللي جوه الـ if مش بيشتغل كل مرة — بيشتغل لما الشرط يتحقق، والباقي بيعدي عليه عادي.",
+        "ticoLineAr": "يا سلام! الشروط دي هي اللي بتخلي الفرن بتاعنا ذكي وبيفهم."
+      },
+      "understand": {
+        "introAr": "ده الكود اللي هيخلي الفرن يقرر يخبز الـ 8 أرغفة لما الحرارة تكون مظبوطة، أو يستنى لو الفرن لسه بارد:",
+        "code": "def check_baking_temp(oven_temperature: int) -> int:\n    if oven_temperature >= 200:\n        return 8\n    else:\n        return 0",
+        "annotations": [
+          {
+            "line": 1,
+            "textAr": "هنا بنعرف الدالة وبنديها درجة الحرارة الحالية للفرن",
+            "pointsAt": "oven"
+          },
+          {
+            "line": 2,
+            "textAr": "لو درجة الحرارة أكبر من أو تساوي 200",
+            "pointsAt": "oven"
+          },
+          {
+            "line": 3,
+            "textAr": "اخبز دفعة كاملة من العيش (8 أرغفة)",
+            "pointsAt": "dough"
+          },
+          {
+            "line": 5,
+            "textAr": "وإلا (لو الحرارة أقل)، ما تخبزش حاجة ورجع صفر",
+            "pointsAt": "oven"
+          }
+        ],
+        "runLabelAr": "شغّل وشوف",
+        "onRun": {
+          "animate": "baking",
+          "props": {
+            "oven": "lit"
+          },
+          "captionAr": "الفرن سخن والعيش البلدي طالع منفوخ وجميل!"
+        }
+      },
+      "guided": {
+        "steps": [
+          {
+            "code": "def check_baking_temp(oven_temperature: int) -> int:\n    ___ oven_temperature >= 200:\n        return 8\n    else:\n        return 0",
+            "blanks": [
+              "if"
+            ],
+            "promptAr": "اكتب الكلمة اللي بنبدأ بيها الشرط في بايثون عشان نختبر درجة الحرارة.",
+            "hintAr": "بنستخدم الكلمة دي لما نكون عاوزين نقول 'لو' الشرط ده تحقق."
+          },
+          {
+            "code": "def check_baking_temp(oven_temperature: int) -> int:\n    if oven_temperature >= 200:\n        return 8\n    ___:\n        return 0",
+            "blanks": [
+              "else"
+            ],
+            "promptAr": "اكتب الكلمة اللي بنستخدمها عشان نحدد اللي هيحصل لو الشرط ما تحققش.",
+            "hintAr": "الكلمة دي معناها 'وإلا' أو 'في حال لم يتحقق الشرط السابق'."
+          }
+        ],
+        "solutionCode": "def check_baking_temp(oven_temperature: int) -> int:\n    if oven_temperature >= 200:\n        return 8\n    else:\n        return 0",
+        "tests": [
+          {
+            "call": "check_baking_temp(210)",
+            "expected": "8",
+            "name": null,
+            "hidden": false
+          },
+          {
+            "call": "check_baking_temp(150)",
+            "expected": "0",
+            "name": null,
+            "hidden": false
+          },
+          {
+            "call": "check_baking_temp(200)",
+            "expected": "8",
+            "name": null,
+            "hidden": false
+          }
+        ],
+        "onRun": {
+          "animate": "oven_fire",
+          "props": {
+            "oven": "lit"
+          },
+          "captionAr": "كده الكود شغال تمام والفرن بياخد القرار الصح لوحده!"
+        }
+      },
+      "remix": {
+        "twistAr": "الجو النهاردة برد جداً والهوا شديد في السيدة زينب!",
+        "newRequirementAr": "عم حسن بيقول عشان العيش يستوي صح في البرد ده، محتاجين الفرن يسخن أكتر ويوصل لـ 250 درجة على الأقل. عدل الشرط في الكود عشان يرجع 8 أرغفة بس لو الحرارة وصلت 250 أو أكتر.",
+        "worldChange": {
+          "animate": "steam",
+          "props": {
+            "oven": "cold"
+          },
+          "captionAr": null
+        },
+        "startingCode": "def check_baking_temp(oven_temperature: int) -> int:\n    if oven_temperature >= 200:\n        return 8\n    else:\n        return 0",
+        "solutionCode": "def check_baking_temp(oven_temperature: int) -> int:\n    if oven_temperature >= 250:\n        return 8\n    else:\n        return 0",
+        "tests": [
+          {
+            "call": "check_baking_temp(260)",
+            "expected": "8",
+            "name": null,
+            "hidden": false
+          },
+          {
+            "call": "check_baking_temp(220)",
+            "expected": "0",
+            "name": null,
+            "hidden": false
+          }
+        ],
+        "onRun": {
+          "animate": "baking",
+          "props": {
+            "oven": "lit"
+          },
+          "captionAr": null
+        }
+      }
+    },
+    "scaffold": {
+      "variables": "NONE"
+    },
+    "difficultyBand": 5
+  },
+  "meta": {
+    "request_id": "pregenerated",
+    "stub": false,
+    "cached": false
+  }
+}

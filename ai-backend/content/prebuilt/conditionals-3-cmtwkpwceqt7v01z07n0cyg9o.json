@@ -1,0 +1,185 @@
+{
+  "data": {
+    "id": "cmtwkpwceqt7v01z07n0cyg9o",
+    "worldId": "el_forn",
+    "sceneId": "bakery_gameplay",
+    "targetConceptId": "conditionals",
+    "carriedConceptIds": [
+      "variables"
+    ],
+    "titleAr": "حسبة العجين السريعة",
+    "source": "model",
+    "validated": true,
+    "phases": {
+      "encounter": {
+        "speaker": "omar",
+        "speakerNameAr": "عمر",
+        "lineAr": "يا جماعة أنا ورايا شغل ومستعجل جداً. عايز 16 رغيف بس مش شايف عجين كفاية جاهز على الطبلية. لو العجين اللي مرتاح مش هيكفي طلبي قولولي فوراً عشان ماضيعش وقتي ع الفاضي!",
+        "ctaAr": "يلا نبدأ",
+        "world": {
+          "props": {
+            "oven": "lit",
+            "dough": 1,
+            "loaf": 0
+          }
+        }
+      },
+      "explore": {
+        "ticoIntroAr": "عم عمر مستعجل وعايز يعرف الفرن جاهز لطلبه ولا لأ من غير ما يعطل نفسه ويستنى ع الفاضي.",
+        "rounds": [
+          {
+            "questionAr": "لو كل كورة عجين بتعمل 8 أرغفة، وعمر عايز 16 رغيف. محتاجين كام كورة عجين جاهزة؟",
+            "optionsAr": [
+              "2 كورة عجين",
+              "1 كورة عجين",
+              "8 كور عجين"
+            ],
+            "correctIndex": 0,
+            "nudgeAr": "فكر تاني، الرغيف الواحد بيحتاج جزء من العجين، والـ 8 أرغفة بيطلعوا من كورة عجين واحدة كاملة.",
+            "highlight": []
+          },
+          {
+            "questionAr": "لو مفيش غير كورة عجين واحدة بس جاهزة على الطبلية، هل نقدر نلبي طلب عمر (16 رغيف) فوراً؟",
+            "optionsAr": [
+              "لأ، مش هتكفي",
+              "أيوه، هتكفي وزيادة",
+              "ممكن لو سخنا الفرن أكتر"
+            ],
+            "correctIndex": 0,
+            "nudgeAr": "الكورة الواحدة بتعمل 8 أرغفة بس، وعمر طالب 16!",
+            "highlight": []
+          }
+        ]
+      },
+      "discover": {
+        "conceptSlug": "conditionals",
+        "conceptNameAr": "مصيدة ترتيب الشروط",
+        "explanationAr": "أشهر غلطة: علامة تساوي واحدة بدل اتنين. الـ = بتخزن قيمة، والـ == بتقارن. لو كتبت واحدة مكان التانية بايثون هيقولك في غلطة، والسطر مش هيشتغل أصلاً.",
+        "ticoLineAr": "يلا نكتب شرط ذكي ينقذ وقت عم عمر!"
+      },
+      "understand": {
+        "introAr": "ده الكود اللي هيحسب لعم عمر هل العجين الجاهز هيكفي طلبه ولا لأ ويرد عليه بـ True أو False.",
+        "code": "def check_dough_for_order(dough: int, loaves: int) -> bool:\n    if dough * 8 >= loaves:\n        return True\n    else:\n        return False",
+        "annotations": [
+          {
+            "line": 1,
+            "textAr": "بنعمل فانكشن بتاخد عدد كور العجين وعدد الأرغفة المطلوبة",
+            "pointsAt": "worktop"
+          },
+          {
+            "line": 2,
+            "textAr": "بنضرب العجين في 8 ونشوف هل هو أكبر من أو بيساوي الطلب",
+            "pointsAt": "dough"
+          },
+          {
+            "line": 3,
+            "textAr": "لو كفاية بنرجع True عشان نجهزه فوراً",
+            "pointsAt": "tray"
+          }
+        ],
+        "runLabelAr": "شغّل وشوف",
+        "onRun": {
+          "animate": "baking",
+          "props": {
+            "dough": 2,
+            "loaf": 16
+          },
+          "captionAr": "الكود اتأكد إن العجين كفاية وبدأ الخبز فوراً!"
+        }
+      },
+      "guided": {
+        "steps": [
+          {
+            "code": "def check_dough_for_order(dough: int, loaves: int) -> bool:\n    if dough * 8 ___ loaves:\n        return True\n    else:\n        return False",
+            "blanks": [
+              ">="
+            ],
+            "promptAr": "اكتب علامة المقارنة المناسبة عشان نتأكد إن العجين اللي عندنا أكبر من أو بيساوي الطلب.",
+            "hintAr": "بنستخدم علامة أكبر من أو يساوي (>=) للمقارنة."
+          },
+          {
+            "code": "def check_dough_for_order(dough: int, loaves: int) -> bool:\n    if dough * 8 >= loaves:\n        ___ True\n    else:\n        return False",
+            "blanks": [
+              "return"
+            ],
+            "promptAr": "رجع الإجابة الصحيحة لو الشرط تحقق.",
+            "hintAr": "بنستخدم كلمة return عشان نرجع النتيجة من الفانكشن."
+          }
+        ],
+        "solutionCode": "def check_dough_for_order(dough: int, loaves: int) -> bool:\n    if dough * 8 >= loaves:\n        return True\n    else:\n        return False",
+        "tests": [
+          {
+            "call": "check_dough_for_order(2, 16)",
+            "expected": "True",
+            "name": null,
+            "hidden": false
+          },
+          {
+            "call": "check_dough_for_order(1, 16)",
+            "expected": "False",
+            "name": null,
+            "hidden": false
+          },
+          {
+            "call": "check_dough_for_order(3, 10)",
+            "expected": "True",
+            "name": null,
+            "hidden": false
+          }
+        ],
+        "onRun": {
+          "animate": "handover",
+          "props": {
+            "loaf": 16
+          },
+          "captionAr": "ممتاز! الفانكشن شغالة وبتجاوب عم عمر بدقة."
+        }
+      },
+      "remix": {
+        "twistAr": "عم عمر شكرك جداً، بس الفرن اتزحم فجأة! دلوقتي لو العجين مش كفاية، عايزين نعرف بالظبط ناقصنا كام رغيف عشان نلحق نعجنهم بسرعة.",
+        "newRequirementAr": "عدل الفانكشن بحيث لو العجين كفاية ترجع 0 (يعني مش ناقصنا عيش). ولو مش كفاية، ترجع عدد الأرغفة الناقصة بالظبط.",
+        "worldChange": {
+          "animate": "advancing",
+          "props": {
+            "dough": 1,
+            "loaf": 0
+          },
+          "captionAr": null
+        },
+        "startingCode": "def check_dough_for_order(dough: int, loaves: int) -> bool:\n    if dough * 8 >= loaves:\n        return True\n    else:\n        return False",
+        "solutionCode": "def check_dough_for_order(dough: int, loaves: int) -> int:\n    available_loaves = dough * 8\n    if available_loaves >= loaves:\n        return 0\n    else:\n        return loaves - available_loaves",
+        "tests": [
+          {
+            "call": "check_dough_for_order(1, 16)",
+            "expected": "8",
+            "name": null,
+            "hidden": false
+          },
+          {
+            "call": "check_dough_for_order(3, 16)",
+            "expected": "0",
+            "name": null,
+            "hidden": false
+          }
+        ],
+        "onRun": {
+          "animate": "retrieving",
+          "props": {
+            "dough": 1,
+            "loaf": 8
+          },
+          "captionAr": null
+        }
+      }
+    },
+    "scaffold": {
+      "variables": "NONE"
+    },
+    "difficultyBand": 5
+  },
+  "meta": {
+    "request_id": "pregenerated",
+    "stub": false,
+    "cached": false
+  }
+}

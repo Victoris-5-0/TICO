@@ -23,6 +23,7 @@ from app.schemas import phases as P
 from app.schemas.common import ScaffoldLevel
 from app.manifests.models import World
 from app.models_tables import (
+    PracticeSession,
     Concept,
     Exercise,
     ExerciseConcept,
@@ -237,13 +238,24 @@ def persist(
     *,
     user_id: str,
     template: MissionTemplate | None,
+    repetition: int = 1,
 ) -> GeneratedMission:
-    """Write the mission. `content` holds every phase, exactly as the client renders it."""
+    """Write the mission. `content` holds every phase, exactly as the client renders it.
+
+    `repetition` goes in `params`, not in `content`: it is how the row was made, not part
+    of the mission the client renders, and `content` is a contract with the frontend. It
+    is stored because `find_reusable` needs it — a second-attempt mission has a different
+    phase 3 and is not interchangeable with a first.
+    """
     row = GeneratedMission(
         template_id=template.id if template else None,
         user_id=user_id,
         scene_id=mission.scene_id,
-        params={"title_ar": mission.title_ar, "source": mission.source},
+        params={
+            "title_ar": mission.title_ar,
+            "source": mission.source,
+            "repetition": repetition,
+        },
         # by_alias so the stored JSON is camelCase — the same shape the client receives,
         # which means a stored mission can be replayed without a translation step.
         content=mission.model_dump(mode="json", by_alias=True),
@@ -258,6 +270,59 @@ def persist(
 
 
 # ---------------------------------------------------------------------- the pipeline
+
+
+
+def find_reusable(
+    db: Session, *, user_id: str, world_id: str, concept_id: str, repetition: int
+) -> tuple[GeneratedMission, "P.PhasedMissionOut"] | None:
+    """A validated mission for this concept the student has not played yet.
+
+    **This is what makes pre-generation worth anything.** `force_regenerate` was a
+    parameter that nothing read, so every call generated: twenty-five seconds and a Gemini
+    request per mission, with a 503 whenever the model was busy. In front of a judge that
+    is the whole demo.
+
+    Matched on world, target concept and repetition, because a repeat is not
+    interchangeable with a first attempt — phase 3 differs. Missions the student has
+    already opened a session on are skipped so nobody is handed the same scenario twice.
+
+    Anything unvalidated is ignored. A mission is only reusable if the validator ran the
+    code and passed it.
+    """
+    played = set(
+        db.execute(
+            select(PracticeSession.generated_mission_id).where(
+                PracticeSession.user_id == user_id,
+                PracticeSession.generated_mission_id.isnot(None),
+            )
+        ).scalars()
+    )
+
+    rows = db.execute(
+        select(GeneratedMission)
+        .where(GeneratedMission.validated.is_(True))
+        .order_by(GeneratedMission.created_at.desc())
+        .limit(80)
+    ).scalars()
+
+    for row in rows:
+        if row.id in played or not row.content:
+            continue
+        if row.content.get("worldId") != world_id:
+            continue
+        if row.content.get("targetConceptId") != concept_id:
+            continue
+        if int((row.params or {}).get("repetition") or 1) != repetition:
+            continue
+        try:
+            mission = P.PhasedMissionOut.model_validate(row.content)
+        except Exception:  # noqa: BLE001 - a row written by an older shape is not reusable
+            continue
+        mission.id = row.id
+        log.info("reusing mission %s for %s (%s rep %d)", row.id, user_id, concept_id, repetition)
+        return row, mission
+    return None
 
 
 def next_mission(
@@ -285,6 +350,21 @@ def next_mission(
     world = world_for(db, concept.slug, lesson_id)
     scaffold = scaffold_plan(db, user_id, world, concept.slug, lesson_id=lesson_id)
 
+    # Which of the concept's three stops this is, and what phase 3 already told them.
+    repetition, already_taught = _repetition_context(db, user_id, concept.id)
+
+    # Serve a pre-generated one if there is a suitable one going spare. Twenty-five
+    # seconds and a model call saved, and no 503 if the model is having a bad afternoon —
+    # which is the entire reason `scripts/pregenerate_missions.py` exists.
+    if not force_regenerate:
+        existing = find_reusable(
+            db, user_id=user_id, world_id=world.id,
+            concept_id=concept.id, repetition=repetition,
+        )
+        if existing is not None:
+            row, mission = existing
+            return row, mission, world
+
     # The scene the mission is set in. Any scene the world has; generation dresses it.
     scene_id = world.scenes[0].id
     for mech in world.mechanics_for(concept.slug):
@@ -299,6 +379,9 @@ def next_mission(
             carried_concepts=sorted(scaffold),
             scene_id=scene_id,
             scaffold=scaffold,
+            repetition=repetition,
+            already_taught=already_taught,
+            speaker=_speaker_for(concept.id, repetition),
         )
     except mission_gen.GenerationFailed as exc:
         # There is no six-phase template fallback yet, so a failure here is terminal.
@@ -328,7 +411,7 @@ def next_mission(
     )
 
     template = _template_for(db, world, concept)
-    row = persist(db, mission, user_id=user_id, template=template)
+    row = persist(db, mission, user_id=user_id, template=template, repetition=repetition)
     mission.id = row.id
 
     log.info(
@@ -349,6 +432,8 @@ def generate_explicit(
     concept_slug: str | None = None,
     scaffold_level: ScaffoldLevel | None = None,
     is_teacher: bool = False,
+    repetition: int | None = None,
+    already_taught: list[str] | None = None,
 ) -> tuple[GeneratedMission, "P.PhasedMissionOut"]:
     """Build a mission when the caller already knows what they want.
 
@@ -378,6 +463,10 @@ def generate_explicit(
     if scaffold_level is not None and is_teacher:
         log.info("teacher %s overrode the scaffold to %s", user_id, scaffold_level.value)
 
+    derived_rep, derived_taught = _repetition_context(db, user_id, concept.id)
+    repetition = repetition if repetition is not None else derived_rep
+    taught = already_taught if already_taught is not None else derived_taught
+
     return _compose(
         db,
         user_id=user_id,
@@ -385,6 +474,8 @@ def generate_explicit(
         concept=concept,
         carried=sorted(scaffold),
         scaffold=scaffold,
+        repetition=repetition,
+        already_taught=taught,
     )
 
 
@@ -480,6 +571,81 @@ def next_challenge(
 # ================================================================================= shared
 
 
+
+def _repetition_context(db: Session, user_id: str, concept_id: str) -> tuple[int, list[str]]:
+    """Which stop of this concept the student is on, and what phase 3 already told them.
+
+    The number is `concept_mastery.evidence_count + 1` — the same count the map draws, so
+    phase 3 and the path on screen cannot disagree about which of the three this is.
+
+    The explanations come from the student's own earlier missions on this concept. Without
+    them the model reworded the definition every time: three missions on `variables` each
+    opened by explaining what a variable is, and a child who played all three was taught
+    the same sentence three times.
+    """
+    row = student_q.mastery_for(db, user_id, concept_id)
+    repetition = (row.evidence_count if row else 0) + 1
+
+    if repetition <= 1:
+        return 1, []
+
+    previous = db.execute(
+        select(GeneratedMission.content)
+        .where(GeneratedMission.user_id == user_id)
+        .order_by(GeneratedMission.created_at.desc())
+        .limit(12)
+    ).scalars()
+
+    taught: list[str] = []
+    for content in previous:
+        if not content or content.get("targetConceptId") != concept_id:
+            continue
+        explanation = (content.get("phases") or {}).get("discover", {}).get("explanationAr")
+        if explanation:
+            taught.append(explanation)
+    return repetition, taught
+
+
+
+#: Who opens phase 1, by repetition. Hassan is the baker and belongs behind the oven, so
+#: he is not in the rotation — a mission about counting somebody's order belongs to the
+#: person waiting for it. Salma runs the queue and is likewise not a customer.
+#:
+#: A fixed rotation rather than a random pick: three missions on a concept then always
+#: introduce three different people, which is the thing that was actually wanted.
+_SPEAKERS = ["mariam", "omar", "dina", "youssef", "amina", "nour", "hoda", "farid"]
+
+
+def _speaker_for(concept_id: str, repetition: int) -> str:
+    """A different customer for each of a concept's three stops.
+
+    Chosen here rather than asked for. Seven missions out of seven opened with Hassan when
+    the customers had no descriptions, and three out of three opened with Mariam once they
+    did — a model has no memory of the previous mission, so "vary this" is not an
+    instruction it can follow.
+    """
+    offset = sum(ord(c) for c in concept_id)
+    return _SPEAKERS[(offset + max(repetition, 1) - 1) % len(_SPEAKERS)]
+
+
+def _apply_authored_note(mission, world: World, concept_slug: str, repetition: int) -> None:
+    """Replace phase 3's explanation with the authored one, on repeats.
+
+    Written over after generation rather than asked for in the prompt, because asking did
+    not work: four prompt shapes, and the model defined the concept every time. This cannot
+    be ignored.
+
+    The first mission keeps whatever the model wrote — an introduction should suit the
+    scenario it arrives in. A concept with no authored note keeps it too.
+    """
+    if repetition < 2:
+        return
+    note = (world.concept_notes.get(concept_slug) or {}).get(repetition)
+    if not note:
+        return
+    mission.phases.discover.explanation_ar = " ".join(note.split())
+
+
 def _compose(
     db: Session,
     *,
@@ -488,6 +654,8 @@ def _compose(
     concept: Concept,
     carried: list[str],
     scaffold: dict,
+    repetition: int = 1,
+    already_taught: list[str] | None = None,
 ) -> tuple[GeneratedMission, "P.PhasedMissionOut"]:
     """Generate, log, persist. The half of `next_mission` after the decision is made."""
     scene_id = world.scenes[0].id
@@ -503,6 +671,9 @@ def _compose(
             carried_concepts=carried,
             scene_id=scene_id,
             scaffold=scaffold,
+            repetition=repetition,
+            already_taught=already_taught,
+            speaker=_speaker_for(concept.id, repetition),
         )
     except mission_gen.GenerationFailed as exc:
         ai_log.log(
@@ -517,6 +688,11 @@ def _compose(
         raise NoMissionAvailable(str(exc)) from exc
 
     mission = outcome.mission
+
+    # Phase 3 on a repeat is authored, not generated. Applied before persisting so the row
+    # and the response carry the same text.
+    _apply_authored_note(mission, world, concept.slug, repetition)
+
     ai_log.log(
         db,
         capability=ai_log.GENERATE,
@@ -528,6 +704,7 @@ def _compose(
         status=ai_log.SUCCESS,
     )
 
-    row = persist(db, mission, user_id=user_id, template=_template_for(db, world, concept))
+    row = persist(db, mission, user_id=user_id,
+                  template=_template_for(db, world, concept), repetition=repetition)
     mission.id = row.id
     return row, mission
