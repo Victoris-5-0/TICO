@@ -8,6 +8,12 @@ import { PhasedMissionOut, GenerateMissionRequest, GenerateMissionResponse } fro
  */
 const CONTENT_PREP_USER = "system-content-prep";
 
+/** Pre-generation records which of a concept's three stops a mission is. */
+function repetitionOf(params: unknown): number {
+  const n = (params as { repetition?: unknown } | null)?.repetition;
+  return typeof n === "number" ? n : Number.MAX_SAFE_INTEGER;
+}
+
 /**
  * A row whose `content` lost its phases renders as six empty panels, so it is treated as
  * missing everywhere rather than shown.
@@ -290,12 +296,26 @@ export class MissionService {
     // the primary concept of the lesson's first exercise.
     //
     // Matching on it matters: filtering by track alone meant opening a `variables` lesson
-    // could hand out a `loops` mission from the same world, and the fifteen missions
-    // generated for concepts no lesson targeted were unreachable either way.
+    // could hand out a `loops` mission from the same world.
     const concept = lesson.exercises.flatMap((e) => e.concepts.map((c) => c.conceptId))[0] ?? null;
     const forThisLesson = concept
       ? { trackId: lesson.trackId, targetConceptId: concept }
       : { trackId: lesson.trackId };
+
+    // 0. The pinned set, if this concept has one.
+    //
+    // Prebuilt missions are authored content with pre-recorded narration, so every student
+    // gets the *same* mission — that is the point. Generated missions were per-student and
+    // claimed with `user_id`; these are shared and deliberately not claimed, because audio
+    // recorded once has to match whatever is on screen for everyone.
+    //
+    // The three per concept are the three stops `docs/STATE.md` describes: a student moves
+    // to the next one after solving the current, and replays the last once they are all
+    // done — skipping is a suggestion, never a lock-out.
+    if (concept) {
+      const pinned = await this.pinnedForLesson(lesson.trackId, concept, lessonId);
+      if (pinned) return pinned;
+    }
 
     // 1. Already theirs, for *this lesson*.
     //
@@ -303,10 +323,6 @@ export class MissionService {
     // same concept — `opening-message` and `count-the-trays` both teach `variables` — and
     // matching by concept handed a student the identical mission for both, which makes
     // the second stop a re-run of the first.
-    //
-    // A mission claimed before `claim` started recording the lesson has no `params.lessonId`
-    // and so will not be found here; the student is given a fresh one. That self-corrects
-    // on first play and only affects rows claimed before this landed.
     const claimed = await db.generatedMission.findFirst({
       where: {
         userId,
@@ -338,9 +354,8 @@ export class MissionService {
         // Unclaimed, or held by the content-prep account that pre-generates them.
         OR: [{ userId: null }, { userId: CONTENT_PREP_USER }],
         // No *student* has played it. Pre-generation opens a session on each row as it
-        // validates it, so `sessions: { none: {} }` would rule out the entire pool — all
-        // 37 prepared missions, permanently. Only a session belonging to a real student
-        // means the mission is taken.
+        // validates it, so `sessions: { none: {} }` would rule out the entire pool. Only a
+        // session belonging to a real student means the mission is taken.
         sessions: { none: { userId: { not: CONTENT_PREP_USER } } },
       },
       orderBy: { createdAt: "asc" },
@@ -350,6 +365,56 @@ export class MissionService {
 
     await this.claim(spare.id, userId, lessonId);
     return spare.id;
+  }
+
+  /**
+   * The pinned mission for a lesson.
+   *
+   * A concept has three prepared missions — the three stops `docs/STATE.md` describes —
+   * and a concept can be taught by more than one lesson: `opening-message` and
+   * `count-the-trays` both teach `variables`. So the stop is chosen by the lesson's
+   * position among its concept's lessons, in curriculum order. Lesson one gets stop one,
+   * lesson two gets stop two.
+   *
+   * Picking the student's *next unsolved* stop instead would be closer to the adaptive
+   * model, but it made both bakery `variables` lessons show the same mission until one
+   * was finished — two differently-named lessons with identical content. It also made the
+   * mapping depend on who was looking, and narration recorded once has to match what is
+   * on screen for everyone.
+   *
+   * Returns null when the concept has no pinned set, so an unprepared world falls through
+   * to generation exactly as before.
+   */
+  private async pinnedForLesson(trackId: string, concept: string, lessonId: string): Promise<string | null> {
+    const rows = await db.generatedMission.findMany({
+      where: {
+        validated: true,
+        template: { trackId, targetConceptId: concept },
+        params: { path: ["prebuilt"], equals: true },
+      },
+      select: { id: true, params: true, content: true },
+    });
+
+    const stops = rows
+      .filter((r) => hasPhases(r.content))
+      .sort((a, b) => repetitionOf(a.params) - repetitionOf(b.params));
+
+    if (!stops.length) return null;
+
+    // Which stop this lesson is, among the lessons teaching this concept.
+    const siblings = await db.lesson.findMany({
+      where: {
+        trackId,
+        exercises: { some: { concepts: { some: { conceptId: concept, isPrimary: true } } } },
+      },
+      orderBy: { order: "asc" },
+      select: { id: true },
+    });
+
+    const index = siblings.findIndex((l) => l.id === lessonId);
+    // More lessons than prepared stops is possible; the last stop repeats rather than
+    // leaving a lesson with nothing to play.
+    return stops[Math.min(index < 0 ? 0 : index, stops.length - 1)].id;
   }
 
   /**

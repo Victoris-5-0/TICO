@@ -653,3 +653,35 @@ html[lang="ar-EG"] .testsTitle { letter-spacing: 0; }
   .stepChip { padding: 6px 11px; font-size: 0.72rem; }
   .debriefStats { flex-wrap: wrap; justify-content: center; }
 }
+
+/* ---------------------------------------------------------------- narration */
+
+/* Two controls in the header: silence it, or hear it again. Lines play themselves. */
+.narrationControls { display: flex; gap: 8px; }
+
+.narrationButton {
+  display: grid;
+  place-items: center;
+  inline-size: 42px;
+  block-size: 42px;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  background: var(--paper);
+  font-size: 0.95rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+}
+
+.narrationButton:hover {
+  border-color: var(--coral);
+  background: color-mix(in srgb, var(--coral) 10%, var(--paper));
+  transform: translateY(-1px);
+}
+
+.narrationMuted { border-color: var(--border-strong, #cfc3b9); background: var(--sand); }
+
+@media (prefers-reduced-motion: reduce) {
+  .narrationButton { transition: none; }
+  .narrationButton:hover { transform: none; }
+}

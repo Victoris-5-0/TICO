@@ -14,6 +14,7 @@ import { usePythonRunner, type RunResult } from "@/lib/runner/use-python-runner"
 import type { Locale } from "@/i18n/config";
 
 import { MissionDebrief } from "./mission-debrief";
+import { NarrationControls, NarrationProvider } from "./narration";
 import { MissionScene } from "./mission-scene";
 import { DiscoverPhase, EncounterPhase, ExplorePhase, GuidedPhase, RemixPhase, UnderstandPhase } from "./phases";
 import styles from "./mission-player.module.css";
@@ -21,6 +22,21 @@ import styles from "./mission-player.module.css";
 /** The six phases, in the fixed order the AI backend composes them in. */
 const ORDER = ["encounter", "explore", "discover", "understand", "guided", "remix"] as const;
 type PhaseKey = (typeof ORDER)[number];
+
+/**
+ * What each phase reads aloud, in order.
+ *
+ * Coding phases are silent on purpose: a student is reading code and thinking, and a
+ * voice over that is an interruption rather than help.
+ */
+const NARRATION: Record<PhaseKey, readonly string[]> = {
+  encounter: ["encounter"],
+  explore: ["explore.intro"],
+  discover: ["discover.explanation", "discover.tico"],
+  understand: [],
+  guided: [],
+  remix: ["remix.twist"],
+};
 
 /** Phases that need a real editor, and therefore a real screen. */
 const CODING: ReadonlySet<PhaseKey> = new Set(["understand", "guided", "remix"]);
@@ -42,9 +58,11 @@ export type MissionPlayerProps = {
   worldSlug: string;
   worldTitle: string;
   lessonId?: string | null;
+  /** Line keys with a pre-recorded reading. Empty means this mission has no audio. */
+  narrationKeys?: readonly string[];
 };
 
-export function MissionPlayer({ locale, mission, worldSlug, worldTitle, lessonId }: MissionPlayerProps) {
+export function MissionPlayer({ locale, mission, worldSlug, worldTitle, lessonId, narrationKeys = [] }: MissionPlayerProps) {
   const ar = locale === "ar-EG";
   const reduced = useReducedMotion();
   const router = useRouter();
@@ -162,6 +180,7 @@ export function MissionPlayer({ locale, mission, worldSlug, worldTitle, lessonId
 
   return (
     <MotionConfig reducedMotion="user">
+     <NarrationProvider missionId={mission.id} keys={narrationKeys} sequence={NARRATION[phaseKey]}>
       <div className={styles.page} dir={ar ? "rtl" : "ltr"}>
         <header className={styles.header}>
           <SiteLogo href={`/${locale}`} />
@@ -169,6 +188,7 @@ export function MissionPlayer({ locale, mission, worldSlug, worldTitle, lessonId
             <span className={styles.world}>{worldTitle}</span>
             <h1 className={styles.title}>{mission.titleAr}</h1>
           </div>
+          <NarrationControls locale={locale} />
           <button
             type="button"
             className={styles.close}
@@ -312,6 +332,7 @@ export function MissionPlayer({ locale, mission, worldSlug, worldTitle, lessonId
           />
         </MissionDialog>
       </div>
+     </NarrationProvider>
     </MotionConfig>
   );
 }

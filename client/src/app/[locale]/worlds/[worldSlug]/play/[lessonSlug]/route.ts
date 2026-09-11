@@ -52,5 +52,9 @@ export async function GET(
     return NextResponse.redirect(new URL(`${world}?error=no-mission`, req.url));
   }
 
-  return NextResponse.redirect(new URL(`${world}/missions/${missionId}`, req.url));
+  // The lesson travels in the URL. A pinned mission is shared by every student, so it
+  // cannot record which lesson it belongs to — and two bakery lessons teach `variables`,
+  // so the concept does not identify one either. Without this the session would open
+  // against the wrong lesson and credit the wrong one on completion.
+  return NextResponse.redirect(new URL(`${world}/missions/${missionId}?lesson=${lessonSlug}`, req.url));
 }
