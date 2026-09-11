@@ -5,11 +5,17 @@
 .action { border: 2px solid var(--coral); border-radius: 100px; background: var(--coral); color: var(--ink); padding: 14px 30px; min-height: 64px; font: inherit; font-size: 24px; line-height: 1.2; cursor: pointer; }
 .secondary { background: transparent; color: #0d1114; }
 .action:focus-visible,.close:focus-visible { outline: 3px solid var(--focus, #267977); outline-offset: 4px; }
-.success { max-width: 548px; border-radius: 40px; padding: 40px; display: flex; flex-direction: column; align-items: center; gap: 38px; background: linear-gradient(242deg,var(--panel-peach) 9.37%,#fff 49.45%,var(--panel-peach) 93.58%); }
-.successArt { width: 366px; height: auto; max-width: 100%; aspect-ratio: 366/448; object-fit: contain; }
+/* Figma drew this as a full-bleed celebration, so its art and type were fixed at 366px
+   and 64px with responsive clamps only below 700px. Inside the mission dialog — which is
+   already capped at `100dvh - 32px` — that overflowed into a scrolling modal with the
+   mascot cropped. The Figma proportions are kept; they are now the ceiling of a fluid
+   scale rather than the size at every viewport, and the art is bounded by height too,
+   because a dialog runs out of vertical room long before horizontal. */
+.success { max-width: 548px; border-radius: 40px; padding: clamp(24px,2.6vw,40px); display: flex; flex-direction: column; align-items: center; gap: clamp(18px,2.4vw,38px); background: linear-gradient(242deg,var(--panel-peach) 9.37%,#fff 49.45%,var(--panel-peach) 93.58%); }
+.successArt { width: clamp(150px,22vw,366px); height: auto; max-width: 100%; max-height: 34dvh; aspect-ratio: 366/448; object-fit: contain; }
 .successCopy { text-align: center; display: grid; gap: 13px; }
-.successCopy h2 { font-size: 64px; font-weight: 600; line-height: 1.2; }
-.successCopy p { font-size: 32px; font-weight: 600; line-height: 1.2; }
+.successCopy h2 { font-size: clamp(32px,3.6vw,64px); font-weight: 600; line-height: 1.2; }
+.successCopy p { font-size: clamp(18px,1.9vw,32px); font-weight: 600; line-height: 1.2; }
 .success .actions { flex-wrap: nowrap; width: 100%; }
 .success .action { padding-inline: 30px; white-space: nowrap; }
 .confirmation { max-width: 875px; min-height: 414px; padding: 60px 56px 54px; display: flex; align-items: flex-end; gap: 14px; }

@@ -2,6 +2,16 @@ import { db } from '@/lib/db';
 import { aiClient } from '@/lib/ai/client';
 import { PhasedMissionOut, GenerateMissionRequest, GenerateMissionResponse } from '@/lib/ai/types';
 
+/** One stored mission plus the world context the player chrome needs. */
+export interface StoredMission {
+  mission: PhasedMissionOut;
+  trackSlug: string;
+  trackTitle: string;
+  difficultyBand: number;
+  /** The lesson this mission belongs to, so a session can be opened against it. */
+  lessonId: string | null;
+}
+
 export interface MissionPlayback {
   id: string;
   lessonId: string;
@@ -162,6 +172,55 @@ export class MissionService {
         isFallback: true,
       };
     }
+  }
+
+  /**
+   * One stored mission, with all six phases intact.
+   *
+   * The counterpart to `getNextMission`, which flattens a mission down to what a code
+   * editor can show. The player renders the whole loop, so it needs `content` as the
+   * Python service wrote it — that column is the mission, not a cache of one.
+   *
+   * Reads the database directly rather than calling the AI service: the row is already
+   * here, and a student re-entering a mission they are halfway through must not depend
+   * on the AI service being up. Returns null rather than throwing so the route can
+   * answer 404 without unwrapping an error message.
+   */
+  async getPhasedMission(missionId: string): Promise<StoredMission | null> {
+    const row = await db.generatedMission.findUnique({
+      where: { id: missionId },
+      include: { template: { include: { track: true } } },
+    });
+    if (!row) return null;
+
+    const mission = row.content as unknown as PhasedMissionOut | null;
+
+    // A row whose `content` lost its phases is the failure the long comment in
+    // `getNextMission` describes. Treat it as missing rather than rendering a player
+    // with six empty panels.
+    if (!mission?.phases?.encounter || !mission.phases.guided) return null;
+
+    // `validated` is set by a Python validator that actually runs the code. False is
+    // never shown to a student — an unsolvable mission in front of a child who is
+    // already unsure is the worst thing this system can do.
+    if (!row.validated) return null;
+
+    // A session needs a lesson id. The mission itself does not carry one, so take the
+    // track's first lesson — `practice_sessions.lesson_id` rejects an unknown one with a
+    // 422, and a null is better than a wrong guess.
+    const lesson = await db.lesson.findFirst({
+      where: { trackId: row.template.trackId },
+      orderBy: { order: "asc" },
+      select: { id: true },
+    });
+
+    return {
+      mission,
+      trackSlug: row.template.track.slug,
+      trackTitle: row.template.track.title,
+      difficultyBand: row.template.difficultyBand,
+      lessonId: lesson?.id ?? null,
+    };
   }
 
   /**

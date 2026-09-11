@@ -26,6 +26,47 @@ _ARABIC_DIGITS = str.maketrans("٠١٢٣٤٥٦٧٨٩", "0123456789")
 
 _NUMBER = re.compile(r"\d+")
 
+#: Arabic letters, and Latin letters. Used to decide whether a reply is TICO talking or
+#: the model talking to itself.
+_ARABIC_LETTERS = re.compile(r"[\u0600-\u06FF]")
+_LATIN_LETTERS = re.compile(r"[A-Za-z]")
+
+#: Markers that never appear in a sentence a child should read, but do appear in a model's
+#: working: backticks around a tag name, and English narration about the learner.
+#:
+#: A bare underscore is deliberately NOT here. It was, and it rejected
+#: "استعملت calculate_loaves صح" — a perfectly good line that happens to name the function
+#: the child wrote. Snake_case is what their own code looks like; it is not evidence of a
+#: leak, and the Arabic-dominance check below already covers a reply that is mostly code.
+_SCAFFOLDING = re.compile(r"`|\bthis means\b|\bthe student\b|\bI should\b", re.IGNORECASE)
+
+
+def looks_like_tico(text: str) -> bool:
+    """Is this a finished Egyptian Arabic sentence, or the model thinking out loud?
+
+    The number guard below catches a debrief that says something false. This catches one
+    that is not a debrief at all — which is what actually shipped: the reply arrived as
+    ``no_error`, `incomplete_assignment` (this means they`` because the model spent its
+    whole token budget reasoning and the sentence never came. A child was shown the error
+    tag vocabulary.
+
+    Deliberately a shape check, not a content check. It cannot tell a good sentence from a
+    dull one; it can tell Arabic prose from a leaked scratchpad, and that is the failure
+    worth defending against.
+    """
+    if not text or _SCAFFOLDING.search(text):
+        return False
+
+    arabic = len(_ARABIC_LETTERS.findall(text))
+    latin = len(_LATIN_LETTERS.findall(text))
+
+    # A TICO line is Arabic. A stray Latin word (a function name) is tolerable; a reply
+    # that is mostly Latin is not this.
+    if arabic < 10 or latin > arabic:
+        return False
+
+    return True
+
 
 def unsupported_number(text: str, allowed: set[int]) -> int | None:
     """The first number in the text that the counts do not support, if any."""
@@ -76,7 +117,7 @@ def write_debrief(
         llm = get_model(
             AICapability.CHAT,
             temperature=0.8,  # warmth matters more here than precision; the guard handles precision
-            max_output_tokens=settings.max_tokens_hint,
+            max_output_tokens=settings.max_tokens_debrief,
             timeout=15.0,
         )
         reply = llm.invoke([("system", system), ("human", task)])
@@ -87,6 +128,10 @@ def write_debrief(
 
     text = _tidy(text)
     if not text:
+        return fallback
+
+    if not looks_like_tico(text):
+        log.warning("debrief did not look like a TICO line; using the authored text: %r", text[:120])
         return fallback
 
     bad = unsupported_number(text, allowed)

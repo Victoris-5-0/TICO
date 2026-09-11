@@ -25,7 +25,7 @@ import json
 
 from app.manifests.models import World
 
-PROMPT_VERSION = "mission_gen/v2-phases"
+PROMPT_VERSION = "mission_gen/v3-remix-keeps-fixed-numbers"
 
 
 SYSTEM = """أنت مصمم رحلات تعليمية لأطفال مصريين من 10 لـ 17 سنة بيتعلموا بايثون.
@@ -211,6 +211,20 @@ def _simulation_block(world: World) -> str:
         "Use these exact values; never invent a different one for the same thing:",
     ]
     lines += [f"  {name} = {value}" for name, value in sim.quantities.items()]
+
+    # The remix phase is where this instruction actually gets overridden. Told to change
+    # the world, a model reaches for the nearest number and writes "Hassan brought bigger
+    # trays that hold 12" — obeying phase 6 at the cost of the fixed values above. Naming
+    # the conflict here, next to the numbers, is what stops it; `_check_arithmetic`
+    # catches it afterwards either way.
+    lines += [
+        "",
+        "THE PHASE 6 TWIST MAY NOT CHANGE ANY NUMBER ABOVE. Bigger trays, a longer queue "
+        "or a different batch size are exactly the twists you may not write — the scene "
+        "cannot draw them, so the child would read one number and watch another. Twist "
+        "something else: a new requirement, an extra rule, a second thing to count. Any "
+        "quantity you invent needs its own name.",
+    ]
 
     if sim.rules:
         lines.append("")
