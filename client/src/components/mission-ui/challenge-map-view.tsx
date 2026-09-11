@@ -24,6 +24,7 @@ export function ChallengeMapView({
   stages,
   unlocked,
   pending,
+  bannerTitle,
 }: {
   locale: Locale;
   stages: readonly MapStage[];
@@ -31,6 +32,8 @@ export function ChallengeMapView({
   unlocked?: { nodeId: string; label: string } | null;
   /** A world that has no map artwork yet, named rather than quietly dropped. */
   pending?: string | null;
+  /** What the painted banner says, when the world's own name would only repeat the page. */
+  bannerTitle?: string;
 }) {
   const ar = locale === "ar-EG";
   const router = useRouter();
@@ -76,6 +79,7 @@ export function ChallengeMapView({
         locale={locale}
         stages={stages}
         onSelect={select}
+        bannerTitle={bannerTitle}
         emptyMessage={ar ? "مفيش مهام لسه." : "No missions yet."}
       />
 

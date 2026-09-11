@@ -25,26 +25,18 @@
 .empty { padding: 48px 24px; text-align: center; }
 .page { background: #f8f9fb; color: var(--ink); font-family: var(--font-mission),var(--font-latin),sans-serif; }
 .page:dir(rtl) { font-family: var(--font-arabic),sans-serif; }
-.header { background: #174e58; min-height: 88px; padding: 16px max(24px,calc((100vw - 1240px)/2)); display: flex; align-items: center; justify-content: space-between; gap: 24px; color: #fff; }
-.logo { width: 147px; height: auto; }
-.header nav { display: flex; gap: 36px; align-items: center; }
-.header a { min-height: 44px; display: inline-flex; align-items: center; text-decoration: none; font-size: 18px; }
-.header a[aria-current] { background: var(--coral); color: var(--ink); border-radius: 10px; padding: 10px 14px; }
-.header a:focus-visible { outline: 3px solid #fff; outline-offset: 4px; }
-.previewNotice { max-width: 1440px; margin: auto; padding: 12px 24px; font-size: 14px; background: #fffdf9; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
-.previewNotice h1 { font-size: 16px; margin: 0; }
-.previewNotice p { margin: 0; }
+/* A title strip, not a second site header: the page wears the site's own bar. */
+.mapIntro { max-width: 1440px; margin: auto; padding: 14px 24px; font-size: 14px; background: #fffdf9; border-bottom: 1px solid var(--line); display: flex; align-items: baseline; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.mapIntro h1 { font-size: 18px; margin: 0; }
+.mapIntro p { margin: 0; margin-inline-end: auto; color: var(--muted); }
+.mapIntro a { font-weight: 700; color: var(--coral-dark); }
 @media(max-width: 700px) {
- .header { padding: 12px 16px; gap: 12px; flex-wrap: wrap; }
- .logo { width: 100px; }
- .header nav { order: 3; width: 100%; justify-content: center; gap: 24px; }
- .header a { font-size: 15px; }
  .banner { min-height: 160px; }
  .scene { aspect-ratio: 1440/2500; }
  .nodePosition { width: 16%; margin-left: -1.6%; }
  .nodeNumber { font-size: 20px; }
  .speech { font-size: 12px; padding: 8px 10px; border-width: 2px; border-radius: 14px; max-width: 46vw; margin-bottom: 4px; }
- .previewNotice { padding: 12px 16px; }
+ .mapIntro { padding: 12px 16px; }
 }
 
 /* ------------------------------------------------- real map: unlock and launch */

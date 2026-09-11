@@ -6,9 +6,10 @@ import { worlds } from "@/content/worlds";
 import { getCurrentUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { isLocale } from "@/i18n/config";
+import { buildChallengeMap } from "@/services/challenge-map.service";
 
 type Params = Promise<{ locale: string; worldSlug: string }>;
-type Search = Promise<{ error?: string }>;
+type Search = Promise<{ error?: string; done?: string }>;
 
 export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
   const { locale, worldSlug } = await params;
@@ -18,13 +19,18 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
 }
 
 /**
- * A world, and the lessons a student can actually start inside it.
+ * A world, and the missions a student can actually start inside it.
  *
  * The art, copy and cast still come from `content/worlds`; the path does not. It used to,
  * and it listed six missions for a world with two, above a button that went to the demo
  * route — so nothing on this page could put a student into a real mission.
  *
- * No longer statically generated: the list now depends on who is reading it.
+ * Entering a world lands on its painted challenge map, which is the same data and the
+ * same rules as `/challenges` filtered to one world — a student should not have to learn
+ * two different pictures of their own progress. A world with no map artwork falls back to
+ * the plain list.
+ *
+ * No longer statically generated: what it shows depends on who is reading it.
  */
 export default async function Page({ params, searchParams }: { params: Params; searchParams: Search }) {
   const { locale, worldSlug } = await params;
@@ -33,7 +39,7 @@ export default async function Page({ params, searchParams }: { params: Params; s
   const world = worlds.find((item) => item.slug === worldSlug);
   if (!world) notFound();
 
-  const { error } = await searchParams;
+  const { error, done } = await searchParams;
   const user = await getCurrentUser();
 
   const rows = await db.lesson.findMany({
@@ -43,7 +49,7 @@ export default async function Page({ params, searchParams }: { params: Params; s
   });
 
   // One query for the whole list rather than one per lesson.
-  const done = user
+  const completed = user
     ? new Set(
         (
           await db.userProgress.findMany({
@@ -58,8 +64,24 @@ export default async function Page({ params, searchParams }: { params: Params; s
     id: row.id,
     slug: row.slug,
     title: row.title,
-    completed: done.has(row.id),
+    completed: completed.has(row.id),
   }));
 
-  return <WorldOverview locale={locale} world={world} lessons={lessons} error={error} />;
+  const { stages, unlocked } = await buildChallengeMap({
+    userId: user?.id,
+    ar: locale === "ar-EG",
+    trackSlug: worldSlug,
+    done,
+  });
+
+  return (
+    <WorldOverview
+      locale={locale}
+      world={world}
+      lessons={lessons}
+      map={stages[0] ?? null}
+      unlocked={unlocked}
+      error={error}
+    />
+  );
 }

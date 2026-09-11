@@ -1,5 +1,6 @@
 import { db } from '@/lib/db';
 import { aiClient } from '@/lib/ai/client';
+import { progressService } from '@/services/progress.service';
 import { Phase, SessionOutcome, SessionKind } from '@prisma/client';
 import { Phase as AiPhase, SessionOutcome as AiOutcome } from '@/lib/ai/types';
 
@@ -286,7 +287,7 @@ export class SessionService {
       }
     }
 
-    return db.practiceSession.update({
+    const updated = await db.practiceSession.update({
       where: { id: sessionId },
       data: {
         outcome,
@@ -294,6 +295,23 @@ export class SessionService {
         timeSpentMs,
       },
     });
+
+    // Finishing the mission is what completes the lesson.
+    //
+    // It used to be a side effect of a passing submission and nothing else, and that
+    // write is fire-and-forget from the player: when it failed, the student saw the
+    // debrief, the session was marked SOLVED, and the next mission stayed locked with
+    // nothing anywhere saying why. A student only reaches this call from the "finish
+    // mission" button, which appears once every test passes.
+    if (outcome === SessionOutcome.SOLVED && session.lessonId) {
+      try {
+        await progressService.completeLesson(userId, session.lessonId, { sessionId });
+      } catch (err) {
+        console.error('Could not record lesson completion for session', sessionId, err);
+      }
+    }
+
+    return updated;
   }
 
   /**
