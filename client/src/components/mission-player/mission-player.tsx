@@ -59,15 +59,22 @@ export type MissionPlayerProps = {
   worldSlug: string;
   worldTitle: string;
   lessonId?: string | null;
+  /** Used to point the map at whatever this mission just unlocked. */
+  lessonSlug?: string | null;
   /** Line keys with a pre-recorded reading. Empty means this mission has no audio. */
   narrationKeys?: readonly string[];
 };
 
-export function MissionPlayer({ locale, mission, worldSlug, worldTitle, lessonId, narrationKeys = [] }: MissionPlayerProps) {
+export function MissionPlayer({ locale, mission, worldSlug, worldTitle, lessonId, lessonSlug, narrationKeys = [] }: MissionPlayerProps) {
   const ar = locale === "ar-EG";
   const reduced = useReducedMotion();
   const router = useRouter();
   const worldHref = `/${locale}/worlds/${worldSlug}`;
+  // Finishing sends them to the map rather than back to the world list: the point of the
+  // moment is seeing what opened up, and `?done=` is what tells the map which one.
+  const mapHref = lessonSlug
+    ? `/${locale}/challenges?done=${encodeURIComponent(lessonSlug)}`
+    : `/${locale}/challenges`;
 
   const [step, setStep] = useState(0);
   const [exiting, setExiting] = useState(false);
@@ -351,7 +358,7 @@ export function MissionPlayer({ locale, mission, worldSlug, worldTitle, lessonId
             worldLine={phases.remix.onRun?.captionAr || phases.guided.onRun?.captionAr || (ar ? "الفرن اشتغل بالكود اللي كتبته." : "The bakery ran on the code you wrote.")}
             debrief={debrief}
             onReplay={() => { setDone(false); setStep(0); setChange(null); setRan({}); }}
-            onNext={() => router.push(worldHref)}
+            onNext={() => router.push(mapHref)}
           />
         </MissionDialog>
       </div>

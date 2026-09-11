@@ -131,7 +131,7 @@ export function MissionDebrief({
           {ar ? "العب تاني" : "Play again"}
         </button>
         <button type="button" className={styles.primaryAction} onClick={onNext}>
-          {ar ? "ارجع للعالم" : "Back to the world"}
+          {ar ? "شوف الخريطة" : "See the map"}
         </button>
       </div>
 

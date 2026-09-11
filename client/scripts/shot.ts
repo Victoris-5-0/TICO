@@ -51,6 +51,11 @@ async function main() {
     const context = await browser.newContext({
       viewport: { width: Number(width), height: Number(height) },
       deviceScaleFactor: 2,
+      // The cookie gets past the middleware, but Better Auth signs its cookies and will
+      // not validate a hand-minted one — so `getCurrentUser` would see nobody and every
+      // progress-dependent page would render logged-out. The Bearer path looks the token
+      // up directly, which is what makes a real student's view photographable.
+      extraHTTPHeaders: { Authorization: `Bearer ${token}` },
       // The world pages only require the cookie to exist; the page itself reads the
       // database directly. Enough to photograph what a signed-in student sees.
       storageState: {

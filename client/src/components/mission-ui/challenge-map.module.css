@@ -46,3 +46,38 @@
  .speech { font-size: 12px; padding: 8px 10px; border-width: 2px; border-radius: 14px; max-width: 46vw; margin-bottom: 4px; }
  .previewNotice { padding: 12px 16px; }
 }
+
+/* ------------------------------------------------- real map: unlock and launch */
+
+/* Announced once, above the map. docs/design.md section 11: the unlock resolves quietly —
+   no explosive effect, no looping pulse. */
+.unlockBanner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  justify-content: center;
+  margin: 0 auto 18px;
+  padding: 12px 20px;
+  max-inline-size: min(560px, calc(100% - 32px));
+  border: 1px solid rgba(233, 153, 47, 0.55);
+  border-radius: 16px;
+  background: rgba(233, 153, 47, 0.16);
+  color: #80550f;
+  font-weight: 800;
+  text-align: center;
+}
+
+.launching, .pendingWorld {
+  margin: 18px auto 0;
+  max-inline-size: min(560px, calc(100% - 32px));
+  text-align: center;
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
+.launching { color: var(--coral-dark); }
+.pendingWorld { color: var(--muted); font-weight: 600; }
+
+/* The node that just opened. A ring rather than motion, so it survives reduced-motion
+   and does not compete with the current-step marker. */
+.node[data-status="current"] { position: relative; }

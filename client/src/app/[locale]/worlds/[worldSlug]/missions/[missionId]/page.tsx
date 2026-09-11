@@ -64,7 +64,7 @@ export default async function Page({ params, searchParams }: { params: Params; s
   const fromUrl = lessonSlug
     ? await db.lesson.findFirst({
         where: { slug: lessonSlug, track: { slug: worldSlug } },
-        select: { id: true },
+        select: { id: true, slug: true },
       })
     : null;
 
@@ -75,6 +75,7 @@ export default async function Page({ params, searchParams }: { params: Params; s
       worldSlug={stored.trackSlug}
       worldTitle={stored.trackTitle}
       lessonId={fromUrl?.id ?? stored.lessonId}
+      lessonSlug={fromUrl?.slug ?? lessonSlug ?? null}
       narrationKeys={narrationKeys(missionId)}
     />
   );
