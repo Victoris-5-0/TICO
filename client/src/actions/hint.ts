@@ -10,15 +10,16 @@ const RequestHintSchema = z.object({
   codeExcerpt: z.string().default(''),
   lastResult: z.enum(['PASSED', 'FAILED', 'ERROR', 'TIMEOUT']).nullable().default(null),
   locale: z.string().default('ar-EG'),
+  // The AI service rations the ladder by phase and aims the hint at a guided step.
+  // Optional here because a caller that genuinely does not know lets the service default.
+  phase: z
+    .enum(['ENCOUNTER', 'EXPLORE', 'DISCOVER', 'UNDERSTAND', 'GUIDED_CODING', 'ADAPT_REMIX', 'INDEPENDENT'])
+    .optional(),
+  guidedStep: z.number().int().min(0).nullable().default(null),
+  errorText: z.string().max(8000).nullable().default(null),
 });
 
-export async function requestHintAction(data: {
-  sessionId: string;
-  exerciseId: string;
-  codeExcerpt?: string;
-  lastResult?: 'PASSED' | 'FAILED' | 'ERROR' | 'TIMEOUT' | null;
-  locale?: string;
-}) {
+export async function requestHintAction(data: z.input<typeof RequestHintSchema>) {
   try {
     const user = await requireUser();
     const token = await getAuthToken();
@@ -27,12 +28,8 @@ export async function requestHintAction(data: {
 
     const result = await hintService.requestHint({
       userId: user.id,
-      sessionId: validated.sessionId,
-      exerciseId: validated.exerciseId,
-      codeExcerpt: validated.codeExcerpt,
-      lastResult: validated.lastResult,
-      locale: validated.locale,
       token,
+      ...validated,
     });
 
     return { success: true, ...result };

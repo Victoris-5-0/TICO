@@ -84,8 +84,14 @@ export function reportSubmission(
 /**
  * Ask for the next hint.
  *
- * The rung is decided server-side from the count of prior `hint_events` — never here.
+ * The rung is decided server-side from the prior `hint_events` — never here — and the
+ * rung that comes back is the one the hint was written for, so it is what gets shown.
  * Returning null lets the caller fall back to the mission's authored hint.
+ *
+ * `phase` and `guidedStep` are sent because the ladder depends on both: `ADAPT_REMIX`
+ * starts a rung higher than `GUIDED_CODING` since the student has already seen this code
+ * work, and the step keeps a hint about step 2 from talking about step 1. Omitting them
+ * made every remix hint arrive as though it were a first encounter.
  */
 export async function requestHint(input: {
   sessionId: string | null;
@@ -93,6 +99,11 @@ export async function requestHint(input: {
   codeExcerpt: string;
   lastResult: LastResult;
   locale: string;
+  phase: Phase;
+  /** Which guided step they are on. Null in the remix, which has a single edit. */
+  guidedStep?: number | null;
+  /** The failing message from the local runner, when there is one. */
+  errorText?: string | null;
 }): Promise<{ text: string; rung: number } | null> {
   if (!input.sessionId) return null;
   const data = await post<{ hint?: string; text?: string; hintLevel?: number; rung?: number }>(
@@ -103,6 +114,9 @@ export async function requestHint(input: {
       codeExcerpt: input.codeExcerpt.slice(0, 4000),
       lastResult: input.lastResult,
       locale: input.locale,
+      phase: input.phase,
+      guidedStep: input.guidedStep ?? null,
+      errorText: input.errorText?.slice(0, 8000) ?? null,
     },
   );
   const text = data?.hint ?? data?.text;

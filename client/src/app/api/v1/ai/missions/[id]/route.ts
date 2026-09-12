@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getCurrentUser } from '@/lib/auth';
+import { getCurrentUser, getAuthToken } from '@/lib/auth';
 import { missionService } from '@/services/mission.service';
 
 /**
@@ -20,7 +20,18 @@ export async function GET(
     }
 
     const { id } = await params;
-    const stored = await missionService.getPhasedMission(id);
+
+    // Read the phases through the AI service, like the player page does, so both routes
+    // render the same mission. A missing token only costs that hop — `getPhasedMission`
+    // falls back to the stored row.
+    let token = '';
+    try {
+      token = await getAuthToken();
+    } catch {
+      // Not signed in for the service call; the stored row still answers.
+    }
+
+    const stored = await missionService.getPhasedMission(id, token);
 
     if (!stored) {
       return NextResponse.json({ error: { message: 'Mission not found' } }, { status: 404 });

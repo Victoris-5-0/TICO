@@ -54,7 +54,12 @@ route handler or a component — the wrapper is where four contract requirements
   the `data` half, so callers get the payload type directly.
 - **`AiServiceError`.** Failures carry `code`, `requestId` and `retryable` from the
   documented error shape. Retry only when `retryable` is true.
-- **A 15s timeout.** These calls sit inside a student's interaction loop.
+- **A 15s timeout**, because these calls sit inside a student's interaction loop.
+  The generating endpoints — `/v1/missions/next`, `/v1/missions/by-lesson`,
+  `/v1/challenges/next`, `/v1/missions/generate` — pass 45s instead, because the
+  service spends 20-30s there writing a mission and validating it. Under 15s those
+  aborted client-side while the service was still working, and every one of them
+  looked like the service being down.
 
 The one exception is `POST /v1/tico/messages`, which streams SSE and is never enveloped.
 `streamTicoMessage` returns the raw `Response` for that reason.

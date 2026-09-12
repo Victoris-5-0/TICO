@@ -8,7 +8,7 @@ this file is a bug.
 
 ---
 
-## All thirteen endpoints are real
+## All fifteen endpoints are real
 
 No stubs. `meta.stub` is `false` everywhere, and `docs/endpoint-examples.md` has a captured
 request and response for each — captured against the live database, not hand-written.
@@ -24,10 +24,34 @@ request and response for each — captured against the live database, not hand-w
 | `POST /v1/submissions/analyze` | open tag vocabulary, read and written per call |
 | `POST /v1/tico/messages` | SSE, no envelope |
 | `POST /v1/missions/next` | 20–30s, Gemini + validator |
+| `POST /v1/missions/by-lesson` | ~1s by default; 20–30s when `LIVE_MISSION_GENERATION` is on |
+| `GET /v1/missions/{id}` | read-only, no model call |
 | `POST /v1/missions/generate` | 20–30s, exercise-shaped and lossy |
 | `POST /v1/challenges/next` | 20–30s, 409 when too few concepts mastered |
 | `POST /v1/students/{id}/refresh` | rule proposes, model reviews conflicts only |
 | `POST /v1/students/{id}/plan` | every skip model-reviewed; reviewer may only refuse |
+
+## Generation is off unless someone turns it on
+
+`LIVE_MISSION_GENERATION` defaults to false and is a hard gate: with it unset, **no
+mission endpoint calls Gemini**. `/v1/missions/next`, `/v1/missions/by-lesson`,
+`/v1/missions/generate` and `/v1/challenges/next` serve from the prepared set and the
+validated pool, or answer 503. `forceRegenerate` does not lift it — a gate a client can
+talk its way past is not a gate.
+
+The check is `services/missions.require_generation`, sitting in front of both
+`mission_gen.generate` call sites. It is in the service rather than the routers because
+the routers are not the only way in: `scripts/pregenerate_missions.py` sets the flag on
+itself, which is the one job that is meant to spend model calls.
+
+It defaults off because the failure is silent and expensive: an unset variable is the
+normal state of a fresh deploy, `validate_production_keys` guarantees a usable key is
+sitting next to it, and the cost of the other default is a 25-second wait and a Gemini
+bill on somebody's first click.
+
+**Mission generation only.** Hints, TICO chat, the debrief and error classification still
+call the model — short, cached, inside the student's loop. `DAILY_MODEL_CALL_CAP` bounds
+those.
 
 ## How to run the tests
 

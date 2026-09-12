@@ -6,6 +6,7 @@ import {
   PhasedMissionOut,
   GenerateMissionRequest, GenerateMissionResponse,
   HintRequest, HintResponse,
+  LessonMissionOut, LessonMissionRequest,
   NextMissionRequest,
   PlanRequest, PlanResponse,
   RefreshRequest, RefreshResponse,
@@ -39,6 +40,16 @@ function newRequestId(): string {
   return globalThis.crypto?.randomUUID?.() ?? `req-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
+/**
+ * How long a generating endpoint is given.
+ *
+ * `/v1/missions/next`, `/v1/missions/by-lesson` and `/v1/challenges/next` call Gemini and
+ * then run a Python validator over the result, which the service's own docs put at 20-30
+ * seconds. Under the default 15s those calls aborted client-side while the service was
+ * still working, and every one of them looked like the service being down.
+ */
+const GENERATION_TIMEOUT_MS = 45000;
+
 export class AiClient {
   private baseUrl: string;
 
@@ -64,7 +75,14 @@ export class AiClient {
    * back as `AiServiceError` carrying the code and request id rather than a bare
    * status number.
    */
-  private async fetchAi<T>(path: string, token: string, body: unknown, requestId = newRequestId(), method: 'POST' | 'PATCH' = 'POST'): Promise<T> {
+  private async fetchAi<T>(
+    path: string,
+    token: string,
+    body: unknown,
+    requestId = newRequestId(),
+    method: 'POST' | 'PATCH' | 'GET' = 'POST',
+    timeoutMs = 15000,
+  ): Promise<T> {
     if (!this.configured) {
       throw new AiServiceError('AI_SERVICE_URL is not set', 'NOT_CONFIGURED', requestId, false, 0);
     }
@@ -76,9 +94,12 @@ export class AiClient {
         'Authorization': `Bearer ${token}`,
         'X-Request-ID': requestId,
       },
-      body: JSON.stringify(body),
-      // AI calls sit in a student's interaction loop; 15s is already generous.
-      signal: AbortSignal.timeout(15000),
+      // GET with a body is not legal and `fetch` rejects it outright.
+      body: method === 'GET' ? undefined : JSON.stringify(body),
+      // AI calls sit in a student's interaction loop; 15s is already generous. The
+      // exception is generation, which takes 20-30s because a model is writing a whole
+      // mission — those callers pass their own.
+      signal: AbortSignal.timeout(timeoutMs),
     });
 
     const payload = await response.json().catch(() => null);
@@ -120,7 +141,35 @@ export class AiClient {
 
   /** Decides what this student should play next. Contrast `generateMission`. */
   async getNextMission(token: string, req: NextMissionRequest): Promise<PhasedMissionOut> {
-    return this.fetchAi<PhasedMissionOut>('/v1/missions/next', token, req);
+    return this.fetchAi<PhasedMissionOut>('/v1/missions/next', token, req, newRequestId(), 'POST', GENERATION_TIMEOUT_MS);
+  }
+
+  /**
+   * The mission behind one stop on the map — a world, and which lesson along it.
+   *
+   * This is how a lesson is served now. `getNextMission` answers "what should this
+   * student play now" from mastery, which is the wrong question when they have just
+   * clicked a specific node; this answers "what is behind stop 3 of the bakery".
+   *
+   * `delivery` and `live` on the response say whether the service handed back its
+   * prepared mission or composed one on the spot, so a caller never has to infer it.
+   * Either way it is a validated six-phase mission.
+   *
+   * Allowed the generation timeout because the service may legitimately spend 20-30s
+   * here: with `LIVE_MISSION_GENERATION` on, every call writes a new mission.
+   */
+  async getMissionForLesson(token: string, req: LessonMissionRequest): Promise<LessonMissionOut> {
+    return this.fetchAi<LessonMissionOut>('/v1/missions/by-lesson', token, req, newRequestId(), 'POST', GENERATION_TIMEOUT_MS);
+  }
+
+  /**
+   * One stored mission by id, all six phases. Reads only — no model call, no generation.
+   *
+   * What the player uses on a reload, and what makes the mission the service's to serve
+   * rather than something the client reassembles from `generated_missions` itself.
+   */
+  async getMissionById(token: string, missionId: string): Promise<PhasedMissionOut> {
+    return this.fetchAi<PhasedMissionOut>(`/v1/missions/${encodeURIComponent(missionId)}`, token, undefined, newRequestId(), 'GET');
   }
 
   async createSession(token: string, req: SessionCreate): Promise<SessionOut> {
@@ -137,11 +186,11 @@ export class AiClient {
 
   /** Builds a mission when you already know what you want. Contrast `getNextMission`. */
   async generateMission(token: string, req: GenerateMissionRequest): Promise<GenerateMissionResponse> {
-    return this.fetchAi<GenerateMissionResponse>('/v1/missions/generate', token, req);
+    return this.fetchAi<GenerateMissionResponse>('/v1/missions/generate', token, req, newRequestId(), 'POST', GENERATION_TIMEOUT_MS);
   }
 
   async getNextChallenge(token: string, req: ChallengeRequest): Promise<PhasedMissionOut> {
-    return this.fetchAi<PhasedMissionOut>('/v1/challenges/next', token, req);
+    return this.fetchAi<PhasedMissionOut>('/v1/challenges/next', token, req, newRequestId(), 'POST', GENERATION_TIMEOUT_MS);
   }
 
   async getSessionDebrief(token: string, sessionId: string): Promise<SessionDebriefResponse> {

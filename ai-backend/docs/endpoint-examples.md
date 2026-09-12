@@ -16,7 +16,7 @@ Base URL: `https://54-75-53-43.sslip.io` · Swagger: `/docs`
    Better Auth session token the Next.js app already holds; this service looks it up in the
    shared database. It never issues credentials.
 
-**Nothing here is a stub any more.** All thirteen endpoints run real logic against Postgres,
+**Nothing here is a stub any more.** All fifteen endpoints run real logic against Postgres,
 and `meta.stub` is `false` everywhere.
 
 Three of them call Gemini and take **20–30 seconds**: `/v1/missions/next`,
@@ -465,7 +465,131 @@ showing a broken mission. A child cannot tell the difference and will blame them
 
 ---
 
-## 11. `POST /v1/missions/generate`
+## 11. `POST /v1/missions/by-lesson`
+
+The mission behind **one stop on the map**. `/missions/next` answers "what should this
+student play now" from mastery; this answers "what is behind stop 3 of the bakery", which is
+what a student clicking a node is actually asking — and what the Next.js client used to
+answer for itself by reading `generated_missions` directly.
+
+⏱ **~1 second** on the default setting. 20–30 seconds when generation is live.
+
+**Send:**
+```json
+{ "worldSlug": "el-forn", "lessonNumber": 2 }
+```
+
+| Field | Required | Notes |
+| --- | --- | --- |
+| `worldSlug` | **yes** | The world's `tracks.slug` |
+| `lessonNumber` | one of the two | The stop's **position**, 1-based, counting the way the map draws them |
+| `lessonSlug` | one of the two | The lesson's own slug. Wins when both are sent |
+| `forceRegenerate` | no | Skip the reuse check and compose fresh. Ignored unless `LIVE_MISSION_GENERATION` is on |
+
+`lessonNumber` is a position, **not `lessons.order`**. El-forn's orders run 1, 2, 4, 5 —
+lesson 3 was never written — and the map draws four stops, so stop 3 is `fair-share` and
+stop 4 is `morning-batches`. The map is what the student can see, so the map wins.
+
+**Get:** the same mission shape as `/v1/missions/next`, plus six fields saying how it got
+here.
+
+```json
+{
+  "id": "cmtwkm8raqt5d01z04ksf3jl8",
+  "worldId": "el_forn",
+  "sceneId": "bakery_gameplay",
+  "targetConceptId": "variables",
+  "carriedConceptIds": [],
+  "titleAr": "حساب طابور العيش",
+  "source": "model",
+  "validated": true,
+  "scaffold": {},
+  "difficultyBand": 5,
+  "lessonId": "cmtr2mkve000cuejsso9qvsj1",
+  "lessonSlug": "count-the-trays",
+  "lessonNumber": 2,
+  "worldSlug": "el-forn",
+  "stop": 2,
+  "delivery": "prebuilt",
+  "live": false,
+  "phases": { "encounter": "…", "explore": "…", "discover": "…", "understand": "…", "guided": "…", "remix": "…" }
+}
+```
+
+`stop` is which of the *concept's* stops this lesson is. A concept is taught over several
+lessons — `opening-message` and `count-the-trays` both teach `variables` — and each gets its
+own scenario, so stop is what distinguishes them. Stops 1 and 2 above are two different
+missions about the same idea, not the same mission twice.
+
+### Where the mission comes from
+
+One setting, `LIVE_MISSION_GENERATION`, decides:
+
+| Setting | `delivery` | `live` | What happened |
+| --- | --- | --- | --- |
+| off (default) | `prebuilt` | `false` | The prepared mission for this stop. One query, no model call |
+| off, nothing prepared | `reused` | `false` | An unplayed validated row from the pool |
+| off, nothing prepared or spare | — | — | **503.** Generation is not permitted, so there is nothing left to serve |
+| on | `generated` | `true` | Gemini wrote it just now; the validator ran its code |
+
+**`LIVE_MISSION_GENERATION` off is a hard gate, not a preference.** With it unset — the
+normal state of a fresh deploy — no mission endpoint calls a model at all, including
+`/v1/missions/next`, `/v1/missions/generate` and `/v1/challenges/next`. `forceRegenerate`
+does not lift it; it only skips the reuse check, and only where generating is already
+permitted. A request that would have to generate gets a 503 saying so, which the client
+already falls back from.
+
+**The mission is identical in shape either way** — both went through the same validator — so
+nothing downstream has to branch on this. `delivery` and `live` exist so a caller never has
+to guess whether it is looking at prepared content or something that did not exist a minute
+ago.
+
+The default is the demo setting on purpose: the prepared set is the same scenario every
+time, which is what lets narration be recorded against it. Turn the flag on to show the
+generator is real.
+
+Returns **404** for an unknown world or a stop that world does not have
+(`"world 'el-forn' has 4 lessons; there is no stop 5"`), and **503** when generation was the
+only option left — either because it is switched off, or because it ran and could not
+produce something playable.
+
+---
+
+## 12. `GET /v1/missions/{missionId}`
+
+All six phases of a mission you already have the id of — a student reloading the player, or
+coming back tomorrow to the mission in their address bar. No model call, no generation: this
+only reads.
+
+**Send:** nothing but the id in the path.
+
+**Get:** exactly the `/v1/missions/next` body — same fields, no extras.
+
+```json
+{
+  "id": "cmtwklihyqt4p01z00z8ue6zx",
+  "worldId": "el_forn",
+  "sceneId": "bakery_gameplay",
+  "targetConceptId": "variables",
+  "titleAr": "حسبة الدقيق السريعة",
+  "source": "model",
+  "validated": true,
+  "phases": { "encounter": "…", "explore": "…", "discover": "…", "understand": "…", "guided": "…", "remix": "…" }
+}
+```
+
+**404 covers three different things and does not distinguish between them**, because none of
+them is something a student should be looking at, and telling an attacker apart from a typo is
+not worth confirming a row exists:
+
+- no such mission;
+- a mission the validator never passed — it may be unsolvable;
+- a mission claimed by a different student. Prepared missions are shared content and stay
+  readable by everyone.
+
+---
+
+## 13. `POST /v1/missions/generate`
 
 Build a mission when you already know what you want — for authoring, and for pre-warming a
 lesson before a class. `/missions/next` **decides**; this one **builds**.
@@ -513,7 +637,7 @@ or a guard rejects what it wrote.
 
 ---
 
-## 12. `POST /v1/challenges/next`
+## 14. `POST /v1/challenges/next`
 
 The arena, for students who finished the roadmap. Six phases like any other mission, but
 **no scaffolding** and a shorter hint ladder.
@@ -555,7 +679,7 @@ two mastered concepts are the minimum needed to mix anything worth calling a cha
 
 ---
 
-## 13. `POST /v1/tico/messages`
+## 15. `POST /v1/tico/messages`
 
 Chat. **Server-sent events, not JSON** — this is the one endpoint with no envelope.
 

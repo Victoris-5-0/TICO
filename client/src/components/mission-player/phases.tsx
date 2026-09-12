@@ -10,6 +10,7 @@ import type {
   PhaseDiscover,
   PhaseEncounter,
   PhaseExplore,
+  Phase,
   PhaseGuided,
   PhaseRemix,
   PhaseUnderstand,
@@ -378,7 +379,19 @@ function HintNote({ hint, locale }: { hint: { text: string; rung: number } | nul
 }
 
 export type RunCode = (source: string, tests: MissionTest[]) => Promise<RunResult>;
-export type RequestHint = (code: string, lastResult: LastResult) => Promise<{ text: string; rung: number } | null>;
+/**
+ * Ask for a hint about a specific place in the mission.
+ *
+ * The extra arguments are not optional decoration: the AI service rations the ladder by
+ * phase — `ADAPT_REMIX` starts a rung higher because the student has already seen this
+ * code work — and aims the hint at one guided step, so a hint for step 2 does not talk
+ * about step 1. Without them every hint arrived as "first attempt, step 1".
+ */
+export type RequestHint = (
+  code: string,
+  lastResult: LastResult,
+  where: { phase: Phase; guidedStep?: number | null; errorText?: string | null },
+) => Promise<{ text: string; rung: number } | null>;
 export type LastResult = "PASSED" | "FAILED" | "ERROR" | "TIMEOUT" | null;
 
 const lastResultOf = (result: RunResult | null): LastResult => {
@@ -474,7 +487,12 @@ function GuidedStepView({
   async function askForHint() {
     setAsking(true);
     try {
-      setHint(await requestHint(code, lastResultOf(result)));
+      setHint(await requestHint(code, lastResultOf(result), {
+        phase: "GUIDED_CODING",
+        // The step they are on, so the hint is about this blank and not an earlier one.
+        guidedStep: index,
+        errorText: result?.error ?? null,
+      }));
     } finally {
       setAsking(false);
     }
@@ -552,7 +570,13 @@ export function RemixPhase({
   async function askForHint() {
     setAsking(true);
     try {
-      setHint(await requestHint(code, lastResultOf(result)));
+      // No step: the remix is one edit to code they already have working. The service
+      // starts this phase's ladder at rung 2 for that reason.
+      setHint(await requestHint(code, lastResultOf(result), {
+        phase: "ADAPT_REMIX",
+        guidedStep: null,
+        errorText: result?.error ?? null,
+      }));
     } finally {
       setAsking(false);
     }

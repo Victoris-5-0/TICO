@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 
 import { MissionPlayer } from "@/components/mission-player/mission-player";
 import narrationManifest from "@/lib/mission/narration-manifest.json";
+import { getAuthToken } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { isLocale } from "@/i18n/config";
 import { missionService } from "@/services/mission.service";
@@ -17,7 +18,19 @@ type Search = Promise<{ lesson?: string }>;
  * request-deduped the way `fetch` is, so without this every page view took two
  * connections out of the pool to read the same row.
  */
-const loadMission = cache((missionId: string) => missionService.getPhasedMission(missionId));
+const loadMission = cache(async (missionId: string) => {
+  // The phases come from `GET /v1/missions/{id}` when there is a token to call with, so
+  // the player renders what the AI service serves. `getPhasedMission` falls back to the
+  // stored row when the call fails, which is what keeps a reload working during an
+  // outage — so a missing token is not an error here.
+  let token = "";
+  try {
+    token = await getAuthToken();
+  } catch {
+    // Not signed in, or no session. The stored row still renders.
+  }
+  return missionService.getPhasedMission(missionId, token);
+});
 
 /**
  * Which lines of this mission have a recording.

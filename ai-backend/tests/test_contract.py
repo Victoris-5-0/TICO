@@ -143,14 +143,26 @@ pytestmark_client = pytest.mark.skipif(
 
 
 def _paths_the_client_calls() -> set[str]:
+    """Every `/v1/...` path in the client wrapper, spelled the way FastAPI spells it.
+
+    Interpolations are normalised generically — `${sessionId}` and
+    `${encodeURIComponent(missionId)}` both become the matching `{snake_case}` parameter.
+    They used to be a hardcoded pair of `.replace()` calls, which had two costs: the first
+    method to wrap an id in `encodeURIComponent` failed this test as an *unserved path*
+    rather than for its spelling, and a path not preceded by a quote was never matched at
+    all, so `/v1/health` and `/v1/tico/messages` were outside the check entirely.
+    """
     src = AI_CLIENT_TS.read_text(encoding="utf-8")
+
+    def as_param(m: re.Match) -> str:
+        # Whatever is wrapped around it, the last identifier in the interpolation is the
+        # variable itself.
+        name = re.findall(r"[A-Za-z_]\w*", m.group(1))[-1]
+        return "{" + re.sub(r"(?<!^)(?=[A-Z])", "_", name).lower() + "}"
+
     found = set()
-    for m in re.finditer(r"[('`](/v1/[^'`\s)]*|/health)[)'`,]", src):
-        found.add(
-            m.group(1)
-            .replace("${studentId}", "{student_id}")
-            .replace("${sessionId}", "{session_id}")
-        )
+    for m in re.finditer(r"(/v1/[^'`\s]*|/health)[`'\",)]", src):
+        found.add(re.sub(r"\$\{([^}]*)\}", as_param, m.group(1)))
     return found
 
 
@@ -284,6 +296,7 @@ def test_every_endpoint_appears_in_the_examples_doc():
     world that was deleted, and a Supabase auth flow the client had migrated off.
     """
     import pathlib
+    import re
 
     from app.main import app
 
@@ -291,12 +304,19 @@ def test_every_endpoint_appears_in_the_examples_doc():
         encoding="utf-8"
     )
 
-    missing = [
-        path
-        for path in app.openapi()["paths"]
-        if path.replace("{session_id}", "{sessionId}").replace("{student_id}", "{studentId}")
-        not in doc
-    ]
+    def as_documented(path: str) -> str:
+        """FastAPI's `{session_id}` is `{sessionId}` in the doc, which is camelCase
+        throughout. Converted generically rather than by a list of known parameters —
+        that list was `session_id` and `student_id`, and the first route to add a third
+        failed this test for its spelling rather than for being undocumented.
+        """
+        return re.sub(
+            r"\{(\w+)\}",
+            lambda m: "{" + re.sub(r"_(\w)", lambda c: c.group(1).upper(), m.group(1)) + "}",
+            path,
+        )
+
+    missing = [path for path in app.openapi()["paths"] if as_documented(path) not in doc]
     assert not missing, f"undocumented endpoints: {missing}"
 
 
