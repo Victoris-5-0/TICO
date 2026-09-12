@@ -5,7 +5,7 @@ import { AccountForm } from "@/components/account-form";
 import { isLocale } from "@/i18n/config";
 import { auth } from "@/lib/better-auth";
 import { accountDestination } from "@/lib/auth/entry";
-import { ensureOnboardingState } from "@/lib/auth/account-store";
+import { getOnboardingState } from "@/lib/auth/account-store";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-auth", display: "swap" });
 
@@ -19,8 +19,8 @@ export default async function LoginPage({ params, searchParams }: {
   let destination: string | undefined;
   const session = await auth.api.getSession({ headers: await headers() });
   if (session?.user) {
-    const account = await ensureOnboardingState(session.user.id, locale);
-    if (account) destination = accountDestination(locale, !account.completed);
+    const account = await getOnboardingState(session.user.id);
+    destination = accountDestination(locale, !account?.completed);
   }
   if (destination) redirect(destination);
   return <div className={inter.variable}><AccountForm locale={locale} authFailed={Boolean(error)} /></div>;

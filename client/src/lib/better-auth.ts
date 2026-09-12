@@ -11,8 +11,20 @@ export const auth = betterAuth({
   database: prismaAdapter(db, { provider: 'postgresql' }),
   user: {
     fields: { image: 'avatarUrl' },
+    additionalFields: {
+      role: { type: 'string', required: false, defaultValue: 'STUDENT' },
+      xp: { type: 'number', required: false, defaultValue: 0 },
+      streak: { type: 'number', required: false, defaultValue: 0 },
+      bio: { type: 'string', required: false },
+    },
   },
-  session: { modelName: 'authSession' },
+  session: {
+    modelName: 'authSession',
+    cookieCache: {
+      enabled: true,
+      maxAge: 5 * 60,
+    },
+  },
   account: {
     modelName: 'authAccount',
     accountLinking: { disableImplicitLinking: true },

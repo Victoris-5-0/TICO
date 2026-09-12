@@ -52,10 +52,10 @@ export function MarketingHeader({
             ) : (
               <>
                 <KineticButton delay={0.08} hoverY={-2} hoverScale={1.04} tapScale={0.95}>
-                  <Link className={styles.primary} href={`/${locale}/signup`}>{copy.signUp}</Link>
+                  <Link prefetch={false} className={styles.primary} href={`/${locale}/signup`}>{copy.signUp}</Link>
                 </KineticButton>
                 <KineticButton delay={0.14} hoverY={-2} hoverScale={1.03} tapScale={0.95}>
-                  <Link className={styles.login} href={`/${locale}/login`}>{copy.login}</Link>
+                  <Link prefetch={false} className={styles.login} href={`/${locale}/login`}>{copy.login}</Link>
                 </KineticButton>
               </>
             )}

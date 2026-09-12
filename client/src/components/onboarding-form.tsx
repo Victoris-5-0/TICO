@@ -168,6 +168,7 @@ export function OnboardingForm({
     <main className={styles.onboardingPage}>
       <div className={styles.onboardingTop}>
         <Link
+          prefetch={false}
           href={`/${locale}/login`}
           aria-label={ar ? "ارجع لتسجيل الدخول" : "Back to login"}
         >
@@ -236,7 +237,7 @@ export function OnboardingForm({
                 >
                   {ar ? "تعديل البيانات" : "Edit details"}
                 </button>
-                <Link className={styles.primary} href={`/${locale}/login`}>
+                <Link prefetch={false} className={styles.primary} href={`/${locale}/login`}>
                   {ar ? "كمّل باستخدام Google" : "Continue with Google"}
                 </Link>
               </div>
@@ -609,7 +610,7 @@ export function OnboardingForm({
                     {error && (
                       <p className={styles.error} role="alert">
                         {error === "unauthorized" ? (
-                          <Link href={`/${locale}/login`}>
+                          <Link prefetch={false} href={`/${locale}/login`}>
                             {ar
                               ? "سجّل دخولك تاني علشان تكمّل."
                               : "Sign in again to continue."}

@@ -43,7 +43,7 @@ export function AccountForm({ locale, authFailed = false }: { locale: Locale; au
       <header className={styles.windowBar}>
         <div className={styles.windowDots} aria-hidden="true"><i /><i /><i /></div>
         <Link className={styles.windowHome} href={`/${locale}`} aria-label={ar ? "تيكو — الرئيسية" : "TICO home"}>TICO</Link>
-        <Link href={`/${ar ? "en" : "ar-EG"}/login`} lang={ar ? "en" : "ar"}>{ar ? "English" : "العربية"}</Link>
+        <Link prefetch={false} href={`/${ar ? "en" : "ar-EG"}/login`} lang={ar ? "en" : "ar"}>{ar ? "English" : "العربية"}</Link>
       </header>
       <div className={styles.loginBody}>
         <section className={styles.loginContent} aria-labelledby="account-title">

@@ -1,3 +1,4 @@
+import { cache } from 'react';
 import { headers } from 'next/headers';
 import { auth } from './better-auth';
 import { db } from './db';
@@ -16,9 +17,9 @@ async function getBearerTokenFromHeader(): Promise<string | null> {
 
 /**
  * Returns the active Better Auth session in the small shape used by the AI
- * proxy routes. The token is opaque and is validated against PostgreSQL.
+ * proxy routes. Deduped per-request via React cache.
  */
-export async function getSession() {
+export const getSession = cache(async () => {
   try {
     const session = await auth.api.getSession({ headers: await headers() });
     if (!session) return null;
@@ -29,7 +30,7 @@ export async function getSession() {
   } catch {
     return null;
   }
-}
+});
 
 export async function getAuthToken(): Promise<string> {
   const headerToken = await getBearerTokenFromHeader();
@@ -40,8 +41,8 @@ export async function getAuthToken(): Promise<string> {
   return session.access_token;
 }
 
-/** Resolve either a request Bearer token or the signed Better Auth cookie. */
-export async function getCurrentUser() {
+/** Resolve either a request Bearer token or the signed Better Auth cookie. Deduped per-request. */
+export const getCurrentUser = cache(async () => {
   try {
     const bearerToken = await getBearerTokenFromHeader();
     if (bearerToken) {
@@ -54,11 +55,24 @@ export async function getCurrentUser() {
 
     const session = await auth.api.getSession({ headers: await headers() });
     if (!session?.user) return null;
-    return db.user.findUnique({ where: { id: session.user.id } });
+
+    const u = session.user as Record<string, unknown>;
+    return {
+      id: String(u.id),
+      name: (u.name as string | null) ?? null,
+      email: (u.email as string | null) ?? null,
+      avatarUrl: (u.avatarUrl as string | null) ?? (u.image as string | null) ?? null,
+      role: (u.role as 'STUDENT' | 'TEACHER' | 'ADMIN') ?? 'STUDENT',
+      bio: (u.bio as string | null) ?? null,
+      xp: typeof u.xp === 'number' ? u.xp : 0,
+      streak: typeof u.streak === 'number' ? u.streak : 0,
+      createdAt: u.createdAt ? new Date(u.createdAt as string | number | Date) : new Date(),
+      updatedAt: u.updatedAt ? new Date(u.updatedAt as string | number | Date) : new Date(),
+    };
   } catch {
     return null;
   }
-}
+});
 
 export async function requireUser() {
   const user = await getCurrentUser();
