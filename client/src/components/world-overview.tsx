@@ -162,17 +162,6 @@ export function WorldOverview({
         {/* Challenge Map Section */}
         {map && (
           <section className={styles.mapCard}>
-            <div className={styles.mapHeader}>
-              <h2 className={styles.mapHeading}>
-                {isArabic ? "خريطة مسار التحديات" : "Challenge Path Map"}
-              </h2>
-              <p className={styles.mapLede}>
-                {isArabic
-                  ? "تيكو واقف جنب المهمة اللي دورك عليها. المحطات بتفتح بالترتيب خطوة بخطوة."
-                  : "TICO stands beside the current mission. Nodes unlock sequentially as you progress."}
-              </p>
-            </div>
-
             <div className={styles.mapContainer}>
               <ChallengeMapView
                 locale={locale}
