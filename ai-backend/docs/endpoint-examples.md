@@ -484,7 +484,7 @@ answer for itself by reading `generated_missions` directly.
 | `worldSlug` | **yes** | The world's `tracks.slug` |
 | `lessonNumber` | one of the two | The stop's **position**, 1-based, counting the way the map draws them |
 | `lessonSlug` | one of the two | The lesson's own slug. Wins when both are sent |
-| `forceRegenerate` | no | Compose a fresh mission for this one call, whatever the service is configured to do |
+| `forceRegenerate` | no | Skip the reuse check and compose fresh. Ignored unless `LIVE_MISSION_GENERATION` is on |
 
 `lessonNumber` is a position, **not `lessons.order`**. El-forn's orders run 1, 2, 4, 5 —
 lesson 3 was never written — and the map draws four stops, so stop 3 is `fair-share` and
@@ -529,8 +529,15 @@ One setting, `LIVE_MISSION_GENERATION`, decides:
 | --- | --- | --- | --- |
 | off (default) | `prebuilt` | `false` | The prepared mission for this stop. One query, no model call |
 | off, nothing prepared | `reused` | `false` | An unplayed validated row from the pool |
-| off, nothing prepared or spare | `generated` | `false` | Composed on this request |
-| on, or `forceRegenerate` | `generated` | `true` | Gemini wrote it just now; the validator ran its code |
+| off, nothing prepared or spare | — | — | **503.** Generation is not permitted, so there is nothing left to serve |
+| on | `generated` | `true` | Gemini wrote it just now; the validator ran its code |
+
+**`LIVE_MISSION_GENERATION` off is a hard gate, not a preference.** With it unset — the
+normal state of a fresh deploy — no mission endpoint calls a model at all, including
+`/v1/missions/next`, `/v1/missions/generate` and `/v1/challenges/next`. `forceRegenerate`
+does not lift it; it only skips the reuse check, and only where generating is already
+permitted. A request that would have to generate gets a 503 saying so, which the client
+already falls back from.
 
 **The mission is identical in shape either way** — both went through the same validator — so
 nothing downstream has to branch on this. `delivery` and `live` exist so a caller never has
@@ -543,7 +550,8 @@ generator is real.
 
 Returns **404** for an unknown world or a stop that world does not have
 (`"world 'el-forn' has 4 lessons; there is no stop 5"`), and **503** when generation was the
-only option left and could not produce something playable.
+only option left — either because it is switched off, or because it ran and could not
+produce something playable.
 
 ---
 

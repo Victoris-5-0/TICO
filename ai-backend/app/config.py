@@ -74,18 +74,29 @@ class Settings(BaseSettings):
     # --- app ----------------------------------------------------------------
     environment: str = "development"
 
-    #: Does `/v1/missions/by-lesson` compose a fresh mission, or serve the prepared one?
+    #: May this service call Gemini to compose a mission at all?
     #:
-    #: False — the default, and the demo setting — serves the validated pre-generated
-    #: mission for that lesson: one query, no model call, and the narration recorded for
-    #: it still matches what is on screen. True sends every request through the real
-    #: generation pipeline instead: Gemini writes a new scenario, the Python validator
-    #: runs its code, and the student plays something that did not exist a minute ago.
-    #: Twenty to thirty seconds, and a 503 when generation cannot produce something
-    #: playable — which is why it is not the default in front of a judge.
+    #: **False is the default, and it is a hard gate rather than a preference.** Every
+    #: path that would reach `ai/chains/mission_gen` refuses instead — `/v1/missions/next`,
+    #: `/v1/missions/by-lesson`, `/v1/missions/generate` and `/v1/challenges/next`.
+    #: Missions come from the prepared set and the validated pool, or the caller gets a
+    #: 503. `forceRegenerate` on a request does **not** lift it: a gate a client can talk
+    #: its way past is not a gate.
     #:
-    #: `forceRegenerate` on the request does the same thing for one call, so the live
-    #: path can be shown without restarting the service.
+    #: It defaults off, and stays off when nobody sets it, because the failure is silent
+    #: and expensive in exactly the place it is least wanted. An unset variable is the
+    #: normal state of a fresh production deploy, `validate_production_keys` guarantees
+    #: there is a usable `GOOGLE_API_KEY` sitting next to it, and the cost of defaulting
+    #: the other way is a 25-second wait and a Gemini bill on somebody's first click.
+    #: Off, the worst case is a 503 the client already has a fallback for.
+    #:
+    #: True sends mission requests through the real pipeline: Gemini writes a scenario,
+    #: the Python validator runs its code, and the student plays something that did not
+    #: exist a minute ago. Twenty to thirty seconds each.
+    #:
+    #: **Mission generation only.** Hints, TICO chat, the debrief and error
+    #: classification still call the model — they are short, cached, and sit inside the
+    #: student's own loop. `daily_model_call_cap` is what bounds those.
     live_mission_generation: bool = False
 
     allow_demo_auth: bool = False

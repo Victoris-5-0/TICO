@@ -71,6 +71,13 @@ def main() -> int:
         print("no GOOGLE_API_KEY — nothing to generate with", file=sys.stderr)
         return 1
 
+    # `LIVE_MISSION_GENERATION` defaults off, and every path into `mission_gen` honours
+    # it — including this one, because the gate is in the service rather than in the
+    # routers. Turning it on here is the point of the script: filling the prepared set is
+    # the one job that is *supposed* to spend model calls, and doing it explicitly is what
+    # lets the serving path stay shut by default.
+    settings.live_mission_generation = True
+
     from app import manifests
     from app.ai.phase_guards import validate_phases
     from app.models_tables import User

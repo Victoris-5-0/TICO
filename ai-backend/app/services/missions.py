@@ -62,6 +62,38 @@ class UnknownLesson(LookupError):
     that does not exist, which is not the same as generation failing."""
 
 
+class GenerationDisabled(NoMissionAvailable):
+    """`LIVE_MISSION_GENERATION` is off, so nothing here may call a model.
+
+    A subclass of `NoMissionAvailable` on purpose: every caller already turns that into a
+    503 with a fallback behind it, and "we will not generate" and "we could not generate"
+    are the same event as far as a student is concerned. The message differs so an
+    operator reading a log can tell a configuration choice from an outage.
+    """
+
+
+def require_generation(*, because: str) -> None:
+    """Refuse unless generation has been deliberately switched on.
+
+    Called immediately before every `mission_gen.generate` in this module — there are two,
+    and between them they cover `/v1/missions/next`, `/v1/missions/by-lesson`,
+    `/v1/missions/generate` and `/v1/challenges/next`.
+
+    The gate lives here rather than in the routers because the routers are not the only
+    way in: `scripts/pregenerate_missions.py` and the eval suite call the service
+    directly, and a guard at the edge would have let both past while the endpoints looked
+    protected.
+    """
+    if settings.live_mission_generation:
+        return
+    log.info("refusing to generate (%s): LIVE_MISSION_GENERATION is off", because)
+    raise GenerationDisabled(
+        "Mission generation is switched off on this service "
+        "(LIVE_MISSION_GENERATION is not set). Missions are served from the prepared set "
+        "and the validated pool only."
+    )
+
+
 # --------------------------------------------------------------------- what to teach
 
 
@@ -375,7 +407,11 @@ def next_mission(
     # Serve a pre-generated one if there is a suitable one going spare. Twenty-five
     # seconds and a model call saved, and no 503 if the model is having a bad afternoon —
     # which is the entire reason `scripts/pregenerate_missions.py` exists.
-    if not force_regenerate:
+    #
+    # `force_regenerate` skips that, but only where generating is actually permitted.
+    # Honouring it with the gate shut would turn a request that had a perfectly good
+    # mission waiting for it into a 503, which is the opposite of what the flag is for.
+    if not (force_regenerate and settings.live_mission_generation):
         existing = find_reusable(
             db, user_id=user_id, world_id=world.id,
             concept_id=concept.id, repetition=repetition,
@@ -383,6 +419,10 @@ def next_mission(
         if existing is not None:
             row, mission = existing
             return row, mission, world
+
+    # Nothing below this line is free. Checked before the scene is picked so a refusal
+    # costs one branch rather than a half-built request.
+    require_generation(because=f"/missions/next for {concept.slug}")
 
     # The scene the mission is set in. Any scene the world has; generation dresses it.
     scene_id = world.scenes[0].id
@@ -620,7 +660,15 @@ def for_lesson(
         db, track_id=lesson.track_id, concept_id=concept.id, lesson_id=lesson.id
     )
 
-    live = bool(settings.live_mission_generation or force_regenerate)
+    # `force_regenerate` asks to skip reuse; it does not grant permission to call a model.
+    # It used to be OR'd into this, which meant any client could spend a Gemini call on a
+    # service configured not to make them — the gate was a suggestion.
+    live = bool(settings.live_mission_generation)
+    if force_regenerate and not live:
+        log.info(
+            "ignoring forceRegenerate for %s/%s: LIVE_MISSION_GENERATION is off",
+            world_slug, lesson.slug,
+        )
 
     def described(row: GeneratedMission, mission: "P.PhasedMissionOut", delivery: str):
         return row, mission, {
@@ -957,6 +1005,10 @@ def _compose(
     already_taught: list[str] | None = None,
 ) -> tuple[GeneratedMission, "P.PhasedMissionOut"]:
     """Generate, log, persist. The half of `next_mission` after the decision is made."""
+    # The shared door. `for_lesson`, `generate_explicit` and `next_challenge` all arrive
+    # here, so one check covers three endpoints.
+    require_generation(because=f"composing {concept.slug} in {world.id}")
+
     scene_id = world.scenes[0].id
     for mech in world.mechanics_for(concept.slug):
         if mech.scenes:
