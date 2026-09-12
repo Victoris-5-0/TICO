@@ -324,3 +324,17 @@ html:has([data-landing-page])::-webkit-scrollbar-thumb { background: #C69C85; bo
    toggles the class by name — a hashed module name would not survive that. */
 .tourLit { position: relative; z-index: 45; background: var(--paper); box-shadow: 0 0 0 3px var(--coral), 0 24px 60px rgba(31,24,32,.4) !important; transition: box-shadow .2s ease; }
 @media (prefers-reduced-motion: reduce) { .tourLit { transition: none; } }
+
+/* Full website blur when TICO mission loading overlay is active */
+body.tico-overlay-open > *:not(#tico-loading-portal) {
+  filter: blur(12px) brightness(0.92);
+  pointer-events: none;
+  user-select: none;
+  transition: filter 0.25s ease;
+}
+@media (prefers-reduced-motion: reduce) {
+  body.tico-overlay-open > *:not(#tico-loading-portal) {
+    transition: none;
+  }
+}
+

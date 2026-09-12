@@ -27,6 +27,7 @@ export function ChallengeMapView({
   pending,
   banners = true,
   bannerTitle,
+  onSelectLesson,
 }: {
   locale: Locale;
   stages: readonly MapStage[];
@@ -38,6 +39,8 @@ export function ChallengeMapView({
   banners?: boolean;
   /** What the painted banner says, when the world's own name would only repeat the page. */
   bannerTitle?: string;
+  /** Optional handler to trigger in-place lesson selection / loading overlay */
+  onSelectLesson?: (lessonSlug: string) => void;
 }) {
   const ar = locale === "ar-EG";
   const router = useRouter();
@@ -62,6 +65,10 @@ export function ChallengeMapView({
     const mapStage = stages.find((s) => s.id === stage.id);
     const slug = mapStage?.slugs[node.id];
     if (!mapStage || !slug) return;
+    if (onSelectLesson) {
+      onSelectLesson(slug);
+      return;
+    }
     setBusy(node.id);
     // Straight into the lesson: `/play/` claims the student's mission and redirects.
     router.push(`/${locale}/worlds/${mapStage.worldSlug}/play/${slug}`);

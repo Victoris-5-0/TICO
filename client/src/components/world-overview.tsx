@@ -1,10 +1,13 @@
 "use client";
 
+import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { motion, useReducedMotion } from "motion/react";
 
 import { ChallengeMapView, type MapStage } from "@/components/mission-ui/challenge-map-view";
+import { LessonLoadingOverlay } from "@/components/mission-generating/lesson-loading-overlay";
 import type { World } from "@/content/worlds";
 import type { Locale } from "@/i18n/config";
 
@@ -30,6 +33,7 @@ export function WorldOverview({
   map,
   unlocked,
   error,
+  initialLoadingLesson,
 }: {
   locale: Locale;
   world: World;
@@ -37,7 +41,12 @@ export function WorldOverview({
   map?: MapStage | null;
   unlocked?: { nodeId: string; label: string } | null;
   error?: string;
+  initialLoadingLesson?: WorldLesson | null;
 }) {
+  const router = useRouter();
+  const [loadingLesson, setLoadingLesson] = useState<WorldLesson | null>(
+    initialLoadingLesson ?? null,
+  );
   const isArabic = locale === "ar-EG";
   const isBakery = world.slug === "el-forn";
   const reduced = useReducedMotion();
@@ -103,6 +112,10 @@ export function WorldOverview({
                 <Link
                   className={styles.primaryBtn}
                   href={`/${locale}/worlds/${world.slug}/play/${nextLesson.slug}`}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setLoadingLesson(nextLesson);
+                  }}
                 >
                   {allCompleted
                     ? isArabic
@@ -168,6 +181,15 @@ export function WorldOverview({
                 stages={[map]}
                 unlocked={unlocked}
                 bannerTitle={isArabic ? "خريطة التحديات" : "Challenge Map"}
+                onSelectLesson={(slug) => {
+                  const lesson = lessons.find((l) => l.slug === slug) ?? {
+                    id: slug,
+                    slug,
+                    title: slug,
+                    completed: false,
+                  };
+                  setLoadingLesson(lesson);
+                }}
               />
             </div>
           </section>
@@ -219,6 +241,10 @@ export function WorldOverview({
                       className={styles.missionActionIcon}
                       href={`/${locale}/worlds/${world.slug}/play/${lesson.slug}`}
                       aria-label={`${isArabic ? "ابدأ" : "Start"} ${lesson.title}`}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setLoadingLesson(lesson);
+                      }}
                     >
                       {lesson.completed ? "↻" : "▶"}
                     </Link>
@@ -283,6 +309,22 @@ export function WorldOverview({
           </div>
         </aside>
       </main>
+
+      {loadingLesson && (
+        <LessonLoadingOverlay
+          locale={locale}
+          worldSlug={world.slug}
+          worldTitle={world.title[locale]}
+          lessonSlug={loadingLesson.slug}
+          lessonTitle={loadingLesson.title}
+          onCancel={() => {
+            setLoadingLesson(null);
+            if (typeof window !== "undefined" && window.location.pathname.includes("/play/")) {
+              router.push(`/${locale}/worlds/${world.slug}`);
+            }
+          }}
+        />
+      )}
     </div>
   );
 }

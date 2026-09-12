@@ -21,3 +21,49 @@ export async function getNextMissionAction(data: { lessonId: string; forceRegene
     return { success: false, error: 'Failed to get next mission' };
   }
 }
+
+export async function startLessonMissionAction(data: {
+  worldSlug: string;
+  lessonSlug: string;
+}) {
+  try {
+    const { getCurrentUser, getAuthToken } = await import('@/lib/auth');
+    const user = await getCurrentUser();
+    if (!user) {
+      return { success: false, error: 'unauthenticated' };
+    }
+    const { db } = await import('@/lib/db');
+    const lesson = await db.lesson.findFirst({
+      where: { slug: data.lessonSlug, track: { slug: data.worldSlug } },
+      select: { id: true },
+    });
+    if (!lesson) {
+      return { success: false, error: 'unknown-lesson' };
+    }
+
+    let token = '';
+    try {
+      token = await getAuthToken();
+    } catch {
+      // A missing token only costs the AI-service path; the pre-generated pool still works.
+    }
+
+    const missionId = await missionService.startForLesson({
+      userId: user.id,
+      worldSlug: data.worldSlug,
+      lessonSlug: data.lessonSlug,
+      lessonId: lesson.id,
+      token,
+    });
+
+    if (!missionId) {
+      return { success: false, error: 'no-mission' };
+    }
+
+    return { success: true, missionId };
+  } catch (error: unknown) {
+    console.error('Failed to start lesson mission:', error);
+    return { success: false, error: error instanceof Error ? error.message : 'failed' };
+  }
+}
+
