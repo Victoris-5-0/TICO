@@ -5,7 +5,7 @@ import { MarketingHeader, MarketingFooter } from "@/components/marketing-chrome"
 import { Reveal } from "@/components/motion/reveal";
 import { ScrollProgress } from "@/components/motion/scroll-progress";
 import { FaqAccordion } from "@/components/motion/faq-accordion";
-import { CompassRotate, ArrowShift } from "@/components/motion/interactive";
+import { CompassRotate } from "@/components/motion/interactive";
 import {
   HeroArtMotion,
   HeroTextMotion,
@@ -14,10 +14,11 @@ import {
   KineticWords,
   KineticParagraph,
   HeroFloatingCardMotion,
-  LiveBadgeMotion,
   CardMotion,
   StepNumberMotion,
 } from "@/components/motion/hero-motion";
+import { BakeryWorldDemo } from "@/components/bakery-world-demo";
+import { WorldsMap, type MapWorld } from "@/components/mission-ui/worlds-map";
 import { worlds } from "@/content/worlds";
 import { type Locale } from "@/i18n/config";
 import { getDictionary } from "@/i18n/dictionaries";
@@ -33,15 +34,48 @@ const stepImages = ["step-start", "step-solve", "step-help", "step-progress"];
 export function LandingPage({
   locale,
   user,
+  mapWorlds,
 }: {
   locale: Locale;
   user?: HeaderUser | null;
+  mapWorlds?: readonly MapWorld[];
 }) {
   const dict = getDictionary(locale);
   const copy = landingCopy[locale];
   const learnHref = `/${locale}/learn`;
   const arrow = locale === "en" ? "→" : "←";
   const isRtl = locale === "ar-EG";
+
+  const fallbackWorlds: readonly MapWorld[] = [
+    {
+      slot: 1,
+      slug: worlds[0].slug,
+      title: worlds[0].title[locale],
+      status: "current",
+      after: null,
+      missionsDone: 0,
+      missionsTotal: worlds[0].missions.length,
+    },
+    {
+      slot: 2,
+      slug: worlds[1].slug,
+      title: worlds[1].title[locale],
+      status: "locked",
+      after: worlds[0].title[locale],
+      missionsDone: 0,
+      missionsTotal: worlds[1].missions.length,
+    },
+    {
+      slot: 3,
+      slug: worlds[2].slug,
+      title: worlds[2].title[locale],
+      status: "locked",
+      after: worlds[1].title[locale],
+      missionsDone: 0,
+      missionsTotal: worlds[2].missions.length,
+    },
+  ];
+  const resolvedWorlds = mapWorlds && mapWorlds.length > 0 ? mapWorlds : fallbackWorlds;
 
   return (
     <div data-landing-page className={`${styles.page} ${inter.variable} ${outfit.variable}`}>
@@ -105,47 +139,26 @@ export function LandingPage({
           <KineticWords as="h2" id="preview-title" className={styles.sectionTitle} text={copy.previewTitle} />
           <KineticParagraph className={styles.intro} text={copy.previewBody} delay={0.08} />
           <Reveal delay={0.12}>
-            <CardMotion hoverY={-6}>
-              <Link className={styles.previewLink} href={`/${locale}/worlds/el-forn/missions/opening-message`}>
-                <LiveBadgeMotion label={isRtl ? "معاينة المهمة الأولى" : "Live Mission Preview"} />
-                <Image src="/assets/worlds/bakery/establishing-v1.webp" alt={worlds[0].imageAlt[locale]} fill sizes="(max-width: 1280px) 90vw, 1240px" />
-                <span className={styles.previewCaption}>
-                  {copy.previewAction}
-                  <ArrowShift isRtl={isRtl}>{arrow}</ArrowShift>
-                </span>
-              </Link>
-            </CardMotion>
+            <BakeryWorldDemo locale={locale} autoPlay loop />
           </Reveal>
           <KineticParagraph className={styles.deviceNote} text={copy.deviceNote} delay={0.16} />
+          <div className={styles.previewActionWrap}>
+            <KineticButton delay={0.2} hoverY={-2} hoverScale={1.03} tapScale={0.96}>
+              <Link className={styles.primary} href={`/${locale}/worlds/el-forn/missions/opening-message`}>
+                {copy.previewAction} {arrow}
+              </Link>
+            </KineticButton>
+          </div>
         </section>
 
         <section id="worlds" className={`${styles.section} ${styles.worlds}`} aria-labelledby="worlds-title">
           <KineticWords as="h2" id="worlds-title" className={`${styles.sectionTitle} ${styles.accentTitle}`} text={copy.worldsTitle} accentWord="Challenges" />
           <KineticParagraph className={styles.intro} text={dict.worlds.body} delay={0.08} />
-          <div className={styles.worldGrid}>
-            {worlds.map((world, index) => (
-              <Reveal key={world.slug} delay={index * 0.08}>
-                <CardMotion hoverY={-8}>
-                  <Link className={styles.worldCard} href={`/${locale}/worlds/${world.slug}`}>
-                    <div className={styles.worldArt}>
-                      <Image src={world.image.replace(".webp", "-card.webp")} alt={world.imageAlt[locale]} fill sizes="(max-width: 900px) 90vw, 400px" />
-                      <span className={styles.worldBadge}>{`${copy.world} ${world.number}`}</span>
-                      <span className={styles.missionBadge}>{`${new Intl.NumberFormat(locale).format(world.missions.length)} ${dict.worlds.missions}`}</span>
-                    </div>
-                    <div className={styles.worldBody}>
-                      <KineticWords as="p" className={styles.kicker} text={world.kicker[locale]} delay={0.04} />
-                      <KineticWords as="h3" text={world.title[locale]} delay={0.08} />
-                      <KineticParagraph text={world.description[locale]} delay={0.12} />
-                      <span className={styles.worldAction}>
-                        {dict.worlds.enter}
-                        <ArrowShift isRtl={isRtl}>{arrow}</ArrowShift>
-                      </span>
-                    </div>
-                  </Link>
-                </CardMotion>
-              </Reveal>
-            ))}
-          </div>
+          <Reveal delay={0.12}>
+            <div className={styles.mapWrapper}>
+              <WorldsMap locale={locale} worlds={resolvedWorlds} />
+            </div>
+          </Reveal>
         </section>
 
         <section className={`${styles.section} ${styles.cta}`} aria-labelledby="cta-title">

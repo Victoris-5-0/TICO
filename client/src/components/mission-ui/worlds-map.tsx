@@ -158,7 +158,15 @@ const copy = {
 
 const percent = (value: number, of: number) => `${(value / of) * 100}%`;
 
-export function WorldsMap({ locale, worlds }: { locale: Locale; worlds: readonly MapWorld[] }) {
+export function WorldsMap({
+  locale,
+  worlds,
+  priority = false,
+}: {
+  locale: Locale;
+  worlds: readonly MapWorld[];
+  priority?: boolean;
+}) {
   const reduced = useReducedMotion();
   const words = copy[locale];
   /** TICO stands on the world to play, answering "what do I do next?" immediately. */
@@ -173,7 +181,7 @@ export function WorldsMap({ locale, worlds }: { locale: Locale; worlds: readonly
         src="/assets/worlds-map/new_bg.png"
         alt=""
         fill
-        priority
+        priority={priority}
         sizes="(max-width: 1200px) 100vw, 1200px"
       />
 

@@ -42,7 +42,7 @@ export default async function Page({ params }: { params: Promise<{ locale: strin
         {/* Figma puts nothing between the header and the map, and the islands carry their
             own names. The page still needs a heading for anyone not looking at it. */}
         <h1 className="sr-only">{dict.roadmap.title}</h1>
-        <WorldsMap locale={locale} worlds={worlds} />
+        <WorldsMap locale={locale} worlds={worlds} priority />
       </main>
     </div>
   );

@@ -112,7 +112,9 @@
 .previewCaption { position: absolute; inset-inline: 24px; inset-block-end: 24px; display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 18px 24px; border-radius: 12px; background: var(--paper); font-size: 20px; font-weight: 700; transition: background .2s ease, transform .2s ease; }
 .previewLink:hover .previewCaption { background: var(--landing-white); transform: translateY(-2px); }
 .deviceNote { margin: 16px 0 0; text-align: center; font-size: 14px; line-height: 1.6; color: var(--muted); }
+.previewActionWrap { display: flex; justify-content: center; margin-block-start: 24px; }
 .accentTitle { color: var(--landing-orange-text); }
+.mapWrapper { margin-block-start: 36px; position: relative; inline-size: 100%; }
 .worldGrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 32px; }
 .worldCard { display: block; block-size: 100%; overflow: hidden; background: var(--landing-white); border-radius: 16px; box-shadow: 0 4px 0 var(--landing-teal); transition: transform .28s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow .28s ease; }
 .worldCard:hover { transform: translateY(-8px); }
