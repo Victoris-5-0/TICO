@@ -1,82 +1,306 @@
-.map { max-width: 1440px; margin-inline: auto; background: #f8f9fb; }
-.stage { width: 100%; }
-.banner { width: 100%; position: relative; aspect-ratio: 1440/447; display: grid; place-items: center; text-align: center; color: #5f2512; }
-.banner > img { object-fit: fill; }
-.banner > div { position: relative; width: 100%; padding-inline: 24px; }
-.banner p { font-size: clamp(16px,2.78vw,40px); margin: 0; line-height: 1.2; }
-.banner h2 { font-family: var(--font-map-title),cursive; font-size: clamp(36px,8.89vw,128px); font-weight: 700; margin: 0; line-height: 1.2; }
-.banner:dir(rtl) h2 { font-family: var(--font-arabic),sans-serif; font-size: clamp(26px,6vw,80px); line-height: 1.6; }
-.trafficBanner { color: #fff; }
-.scene { position: relative; width: 100%; aspect-ratio: 1440/1929; }
-.sceneArt { object-fit: fill; }
-/* The road between stops. Painted under the discs, in the same 1440x1929 units the
-   nodes are placed in — and stretched with them, so the dots stay on the road when the
-   scene is squeezed into a phone's taller frame. */
-.road { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 1; }
-/* A pale rim so the dots hold their shape over both the cream road and the darker
-   ground either side of it. */
-.road circle { fill: #6B4636; opacity: .45; stroke: #FFF8EE; stroke-width: 2.5; stroke-opacity: .5; }
-.road g[data-walked] circle { fill: #C9642F; opacity: .95; stroke-opacity: .85; }
-.road g[data-opens] circle { fill: #2F7EE8; opacity: .95; stroke-opacity: .9; }
+.map {
+  width: 100%;
+  max-width: 680px;
+  margin-inline: auto;
+  background: #fffdf9;
+  border-radius: 24px;
+  overflow: hidden;
+  box-shadow: 0 16px 40px rgba(31, 24, 32, 0.08);
+  border: 1.5px solid #e5ddd5;
+}
 
-.nodes { list-style: none; margin: 0; padding: 0; }
-.nodePosition { position: absolute; width: 12.8%; z-index: 2; }
-.node { display: block; position: relative; width: 100%; min-width: 44px; min-height: 44px; padding: 0; border: 0; background: transparent; cursor: pointer; border-radius: 50%; }
-.node > img { display: block; width: 100%; height: auto; }
-.nodeNumber { position: absolute; inset: 0; display: grid; place-items: center; padding-bottom: 14%; color: #fff; font-size: clamp(18px,2.3vw,32px); font-weight: 700; text-shadow: 0 1px 4px #1f1820; }
-.nodeLabel { position: absolute; top: 100%; left: 50%; transform: translateX(-50%); background: #fffdf9; color: var(--ink); border: 2px solid var(--coral); border-radius: 12px; padding: 8px 12px; width: max-content; max-width: min(220px,46vw); font-size: 16px; line-height: 1.4; opacity: 0; pointer-events: none; box-shadow: 0 4px 16px #1f182022; }
-.node:hover .nodeLabel,.node:focus-visible .nodeLabel { opacity: 1; }
-.node:focus-visible { outline: 4px solid #fff; outline-offset: 4px; box-shadow: 0 0 0 8px var(--focus, #267977); }
-.node[data-status="locked"] { filter: grayscale(1); cursor: not-allowed; }
+.stage {
+  width: 100%;
+}
 
-/*
- * Three states, three colours: terracotta and ticked is done, grey is shut, blue is the
- * one that is open. A child scanning the map should not have to read a label to find
- * where they are.
- *
- * The discs are painted terracotta, so blue is a hue rotation of the artwork itself
- * rather than a flat patch laid over it — the shading, the rim light and the drop shadow
- * all survive.
- */
-.node[data-status="current"] > img { filter: hue-rotate(178deg) saturate(1.15) brightness(1.04); }
-.node[data-status="current"] .nodeNumber { text-shadow: 0 1px 4px #0b2a52; }
+.banner {
+  width: 100%;
+  position: relative;
+  aspect-ratio: 1440 / 447;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  color: #5f2512;
+}
+
+.banner > img {
+  object-fit: cover;
+}
+
+.banner > div {
+  position: relative;
+  width: 100%;
+  padding-inline: 20px;
+}
+
+.banner p {
+  font-size: clamp(12px, 1.8vw, 20px);
+  font-weight: 700;
+  margin: 0;
+  line-height: 1.2;
+}
+
+.banner h2 {
+  font-family: var(--font-map-title), cursive;
+  font-size: clamp(24px, 4.2vw, 54px);
+  font-weight: 700;
+  margin: 0;
+  line-height: 1.2;
+}
+
+.banner:dir(rtl) h2 {
+  font-family: var(--font-arabic), sans-serif;
+  font-size: clamp(20px, 3.5vw, 42px);
+  line-height: 1.4;
+}
+
+.trafficBanner {
+  color: #fff;
+}
+
+.scene {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1440 / 1929;
+}
+
+.sceneArt {
+  object-fit: cover;
+}
+
+/* The road between stops. */
+.road {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+}
+
+.road circle {
+  fill: #6b4636;
+  opacity: 0.45;
+  stroke: #fff8ee;
+  stroke-width: 2.5;
+  stroke-opacity: 0.5;
+}
+
+.road g[data-walked] circle {
+  fill: #c9642f;
+  opacity: 0.95;
+  stroke-opacity: 0.85;
+}
+
+.road g[data-opens] circle {
+  fill: #2f7ee8;
+  opacity: 0.95;
+  stroke-opacity: 0.9;
+}
+
+.nodes {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.nodePosition {
+  position: absolute;
+  width: 12.8%;
+  z-index: 2;
+}
+
+.node {
+  display: block;
+  position: relative;
+  width: 100%;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  border-radius: 50%;
+}
+
+.node > img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.nodeNumber {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding-bottom: 14%;
+  color: #fff;
+  font-size: clamp(14px, 2.1vw, 26px);
+  font-weight: 700;
+  text-shadow: 0 1px 4px #1f1820;
+}
+
+.nodeLabel {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #fffdf9;
+  color: #1f1820;
+  border: 2px solid var(--coral, #db5b31);
+  border-radius: 12px;
+  padding: 6px 10px;
+  width: max-content;
+  max-width: min(200px, 46vw);
+  font-size: 13px;
+  line-height: 1.35;
+  font-weight: 700;
+  opacity: 0;
+  pointer-events: none;
+  box-shadow: 0 4px 16px rgba(31, 24, 32, 0.14);
+  z-index: 10;
+}
+
+.node:hover .nodeLabel,
+.node:focus-visible .nodeLabel {
+  opacity: 1;
+}
+
+.node:focus-visible {
+  outline: 3px solid #3daba9;
+  outline-offset: 3px;
+}
+
+.node[data-status="locked"] {
+  filter: grayscale(1);
+  cursor: not-allowed;
+}
+
+.node[data-status="current"] > img {
+  filter: hue-rotate(178deg) saturate(1.15) brightness(1.04);
+}
+
+.node[data-status="current"] .nodeNumber {
+  text-shadow: 0 1px 4px #0b2a52;
+}
+
 .node[data-status="current"]::after {
   content: "";
   position: absolute;
   inset: -7% -4%;
   border-radius: 50%;
-  box-shadow: 0 0 0 3px #2F7EE8;
+  box-shadow: 0 0 0 3px #2f7ee8;
   pointer-events: none;
 }
 
-/* And a glow on top of that for the one that opened a moment ago, which is also the
-   only node that moves — see the finite pulse in `challenge-map.tsx`. */
-.node[data-unlocked]::after { box-shadow: 0 0 0 3px #2F7EE8, 0 0 30px 8px rgba(47, 126, 232, 0.55); }
-.companion { position: absolute; width: 21.16%; pointer-events: none; z-index: 3; }
-.companion > img { width: 100%; height: auto; }
-.companion[data-face="left"] > img { transform: scaleX(-1); }
-.speech { position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%); margin: 0 0 12px; padding: 18px 25px; border: 3px solid var(--coral); background: white; color: #0f172a; border-radius: 28px; font-size: clamp(14px,1.79vw,26px); font-weight: 700; width: max-content; max-width: 32vw; box-shadow: 0 24px 50px #0002; }
-.empty { padding: 48px 24px; text-align: center; }
-.page { background: #f8f9fb; color: var(--ink); font-family: var(--font-mission),var(--font-latin),sans-serif; }
-.page:dir(rtl) { font-family: var(--font-arabic),sans-serif; }
-/* A title strip, not a second site header: the page wears the site's own bar. */
-.mapIntro { max-width: 1440px; margin: auto; padding: 14px 24px; font-size: 14px; background: #fffdf9; border-bottom: 1px solid var(--line); display: flex; align-items: baseline; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
-.mapIntro h1 { font-size: 18px; margin: 0; }
-.mapIntro p { margin: 0; margin-inline-end: auto; color: var(--muted); }
-.mapIntro a { font-weight: 700; color: var(--coral-dark); }
-@media(max-width: 700px) {
- .banner { min-height: 160px; }
- .scene { aspect-ratio: 1440/2500; }
- .nodePosition { width: 16%; margin-left: -1.6%; }
- .nodeNumber { font-size: 20px; }
- .speech { font-size: 12px; padding: 8px 10px; border-width: 2px; border-radius: 14px; max-width: 46vw; margin-bottom: 4px; }
- .mapIntro { padding: 12px 16px; }
+.node[data-unlocked]::after {
+  box-shadow: 0 0 0 3px #2f7ee8, 0 0 24px 6px rgba(47, 126, 232, 0.5);
 }
 
-/* ------------------------------------------------- real map: unlock and launch */
+.companion {
+  position: absolute;
+  width: 21.16%;
+  pointer-events: none;
+  z-index: 3;
+}
 
-/* Announced once, above the map. docs/design.md section 11: the unlock resolves quietly —
-   no explosive effect, no looping pulse. */
+.companion > img {
+  width: 100%;
+  height: auto;
+}
+
+.companion[data-face="left"] > img {
+  transform: scaleX(-1);
+}
+
+.speech {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin: 0 0 8px;
+  padding: 8px 14px;
+  border: 2px solid var(--coral, #db5b31);
+  background: #fffdf9;
+  color: #1f1820;
+  border-radius: 999px;
+  font-size: clamp(11px, 1.2vw, 15px);
+  font-weight: 800;
+  width: max-content;
+  max-width: 260px;
+  box-shadow: 0 8px 24px rgba(31, 24, 32, 0.12);
+  white-space: nowrap;
+}
+
+.empty {
+  padding: 48px 24px;
+  text-align: center;
+  color: #716a72;
+}
+
+.page {
+  background: #fbf8f3;
+  color: var(--brand-ink, #1f1820);
+  font-family: var(--font-mission), var(--font-latin), sans-serif;
+}
+
+.page:dir(rtl) {
+  font-family: var(--font-arabic), sans-serif;
+}
+
+.mapIntro {
+  max-width: 1200px;
+  margin: auto;
+  padding: 14px 24px;
+  font-size: 14px;
+  background: #fffdf9;
+  border-bottom: 1px solid #e5ddd5;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.mapIntro h1 {
+  font-size: 18px;
+  margin: 0;
+}
+
+.mapIntro p {
+  margin: 0;
+  margin-inline-end: auto;
+  color: #716a72;
+}
+
+.mapIntro a {
+  font-weight: 700;
+  color: #a64022;
+}
+
+@media (max-width: 700px) {
+  .map {
+    border-radius: 16px;
+  }
+  .banner {
+    min-height: 120px;
+  }
+  .nodePosition {
+    width: 15%;
+  }
+  .nodeNumber {
+    font-size: 16px;
+  }
+  .speech {
+    font-size: 11px;
+    padding: 6px 10px;
+  }
+  .mapIntro {
+    padding: 12px 16px;
+  }
+}
+
+/* Unlock and launch banners */
 .unlockBanner {
   display: flex;
   align-items: center;
@@ -93,7 +317,8 @@
   text-align: center;
 }
 
-.launching, .pendingWorld {
+.launching,
+.pendingWorld {
   margin: 18px auto 0;
   max-inline-size: min(560px, calc(100% - 32px));
   text-align: center;
@@ -101,9 +326,15 @@
   font-weight: 700;
 }
 
-.launching { color: var(--coral-dark); }
-.pendingWorld { color: var(--muted); font-weight: 600; }
+.launching {
+  color: #a64022;
+}
 
-/* The node that just opened. A ring rather than motion, so it survives reduced-motion
-   and does not compete with the current-step marker. */
-.node[data-status="current"] { position: relative; }
+.pendingWorld {
+  color: #716a72;
+  font-weight: 600;
+}
+
+.node[data-status="current"] {
+  position: relative;
+}
