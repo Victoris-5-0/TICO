@@ -1,0 +1,16 @@
+{
+  "note": "World map background and floating island assets. Compressed via LIBIMAGEQUANT 256 colors at full native resolution. Preserves all other map components (Tico, stepping stones, locks, sources).",
+  "background": { "file": "new_bg.png", "dimensions": [1104, 1425] },
+  "assets": [
+    { "file": "world1.png", "title": "El Forn (Baladi Bakery)", "dimensions": [694, 538] },
+    { "file": "world2.png", "title": "Isharet Cairo (Traffic Intersection)", "dimensions": [701, 535] },
+    { "file": "world3.png", "title": "El Mahatta / Workshop (Industrial Hub)", "dimensions": [654, 442] },
+    { "file": "world-1.png", "aliasFor": "world1.png" },
+    { "file": "world-2.png", "aliasFor": "world2.png" },
+    { "file": "world-3.png", "aliasFor": "world3.png" },
+    { "file": "step-open.png", "dimensions": [441, 343] },
+    { "file": "step-locked.png", "dimensions": [441, 343] },
+    { "file": "tico.png", "dimensions": [650, 701] },
+    { "file": "lock.svg" }
+  ]
+}
