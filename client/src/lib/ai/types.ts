@@ -277,6 +277,60 @@ languages is worth more than matching the lowercase style of the enums below. */
 export type LastResult = "PASSED" | "FAILED" | "ERROR" | "TIMEOUT";
 
 /**
+ * One lesson's mission, plus how it got here.
+ *
+ * The extra fields exist so a caller — and a judge watching the network tab — can tell
+ * a mission that was waiting in the database from one Gemini wrote a moment ago. The
+ * mission itself is identical either way: both went through the same validator.
+ */
+export interface LessonMissionOut {
+  id: string;
+  worldId: string;
+  sceneId: string;
+  targetConceptId: string;
+  carriedConceptIds?: Array<string>;
+  titleAr: string;
+  /** "model" when Gemini wrote it, "template" on fallback. */
+  source: string;
+  validated: boolean;
+  phases: MissionPhases;
+  scaffold?: Record<string, string>;
+  difficultyBand?: number;
+  /** The lesson this mission belongs to. */
+  lessonId: string;
+  lessonSlug: string;
+  /** Its position along the world, as the map draws it. */
+  lessonNumber: number;
+  /** `tracks.slug`, not the manifest's `worldId`. */
+  worldSlug: string;
+  /** Which of the target concept's stops this lesson is. A concept is taught over several lessons and each gets its own scenario, so this is what distinguishes them. */
+  stop: number;
+  /** How it was served: "prebuilt" (the prepared set), "reused" (an unplayed row from the pool) or "generated" (composed on this request). */
+  delivery: string;
+  /** Whether generation was live for this call — `LIVE_MISSION_GENERATION` or `forceRegenerate`. True with `delivery: generated` means the student is playing something that did not exist before they asked. */
+  live: boolean;
+}
+
+/**
+ * Address a mission the way the map does: a world, and which stop along it.
+ *
+ * `/missions/next` asks "what should this student play now" and answers from mastery.
+ * This asks "what is behind stop 3 of the bakery", which is the question a student
+ * clicking a node on the painted map is actually asking — and the one the client used
+ * to answer for itself by reading `generated_missions` directly.
+ */
+export interface LessonMissionRequest {
+  /** The world's `tracks.slug`, e.g. 'el-forn'. */
+  worldSlug: string;
+  /** Which stop along the world, 1-based, counting the way the map draws them. **Position, not `lessons.order`** — el-forn's orders run 1, 2, 4, 5, and the map shows four stops, so stop 4 is the lesson whose order is 5. Omit only when sending `lessonSlug`. */
+  lessonNumber?: number | null;
+  /** The lesson's own slug, e.g. 'count-the-trays'. Wins over `lessonNumber` when both are sent, which is how a client that already knows the lesson avoids depending on the count. */
+  lessonSlug?: string | null;
+  /** Compose a fresh mission for this one call, whatever `LIVE_MISSION_GENERATION` says. Costs a model call and 20-30 seconds. */
+  forceRegenerate?: boolean;
+}
+
+/**
  * One row of the student's personal path. The concept order never changes; which
  * lessons are in the path does.
  */

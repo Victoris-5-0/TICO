@@ -73,6 +73,21 @@ class Settings(BaseSettings):
 
     # --- app ----------------------------------------------------------------
     environment: str = "development"
+
+    #: Does `/v1/missions/by-lesson` compose a fresh mission, or serve the prepared one?
+    #:
+    #: False — the default, and the demo setting — serves the validated pre-generated
+    #: mission for that lesson: one query, no model call, and the narration recorded for
+    #: it still matches what is on screen. True sends every request through the real
+    #: generation pipeline instead: Gemini writes a new scenario, the Python validator
+    #: runs its code, and the student plays something that did not exist a minute ago.
+    #: Twenty to thirty seconds, and a 503 when generation cannot produce something
+    #: playable — which is why it is not the default in front of a judge.
+    #:
+    #: `forceRegenerate` on the request does the same thing for one call, so the live
+    #: path can be shown without restarting the service.
+    live_mission_generation: bool = False
+
     allow_demo_auth: bool = False
     log_level: str = "INFO"
     daily_model_call_cap: int = 200

@@ -1,6 +1,6 @@
 import { db } from '@/lib/db';
 import { aiClient } from '@/lib/ai/client';
-import { PhasedMissionOut, GenerateMissionRequest, GenerateMissionResponse } from '@/lib/ai/types';
+import { PhasedMissionOut, GenerateMissionRequest, GenerateMissionResponse, LessonMissionOut } from '@/lib/ai/types';
 
 /**
  * The account the pre-generation script writes missions under. Its rows are a pool for
@@ -199,22 +199,43 @@ export class MissionService {
    * One stored mission, with all six phases intact.
    *
    * The counterpart to `getNextMission`, which flattens a mission down to what a code
-   * editor can show. The player renders the whole loop, so it needs `content` as the
-   * Python service wrote it — that column is the mission, not a cache of one.
+   * editor can show. The player renders the whole loop, so it needs every phase as the
+   * Python service wrote it.
    *
-   * Reads the database directly rather than calling the AI service: the row is already
-   * here, and a student re-entering a mission they are halfway through must not depend
-   * on the AI service being up. Returns null rather than throwing so the route can
+   * **The phases come from `GET /v1/missions/{id}` when a token is available**, so the
+   * mission a student plays is the one the AI service serves rather than one this layer
+   * assembles from a JSON column. The world around it — which track, its title, its
+   * difficulty band — still comes from the database, because that is Prisma's to own and
+   * the service reports the manifest's `worldId` (`el_forn`) rather than the track slug.
+   *
+   * The database row remains the fallback for the phases too. A student re-entering a
+   * mission they are halfway through must not depend on the AI service being up, and
+   * `content` is already sitting here. Returns null rather than throwing so the route can
    * answer 404 without unwrapping an error message.
    */
-  async getPhasedMission(missionId: string): Promise<StoredMission | null> {
+  async getPhasedMission(missionId: string, token?: string): Promise<StoredMission | null> {
     const row = await db.generatedMission.findUnique({
       where: { id: missionId },
       include: { template: { include: { track: true } } },
     });
     if (!row) return null;
 
-    const mission = row.content as unknown as PhasedMissionOut | null;
+    let mission = row.content as unknown as PhasedMissionOut | null;
+
+    if (token) {
+      try {
+        mission = await aiClient.getMissionById(token, missionId);
+      } catch (err) {
+        // Includes the service's own 404s — an unvalidated mission, or one belonging to
+        // another student. Falling back to `content` is right for a reload during an
+        // outage and wrong for those, so the checks below still run against whatever we
+        // ended up with rather than being skipped on the service's say-so.
+        console.warn(
+          'mission read: AI service unavailable, rendering the stored row:',
+          err instanceof Error ? err.message : err,
+        );
+      }
+    }
 
     // A row whose `content` lost its phases is the failure the long comment in
     // `getNextMission` describes. Treat it as missing rather than rendering a player
@@ -260,6 +281,68 @@ export class MissionService {
     req: GenerateMissionRequest
   ): Promise<GenerateMissionResponse> {
     return aiClient.generateMission(token, req);
+  }
+
+  /**
+   * The mission behind one stop on the map, asked for by world and lesson.
+   *
+   * **This is the path a student takes now.** The AI service is asked first, with the
+   * world slug and the lesson, and it decides what to serve: the prepared mission for
+   * that stop, or — when `LIVE_MISSION_GENERATION` is on over there — one Gemini composes
+   * on the request. Either way it comes back validated, and `delivery`/`live` say which
+   * happened, so nothing here has to guess.
+   *
+   * That decision used to live in this file. `pinnedForLesson` read `generated_missions`
+   * directly and picked the prepared row by counting lessons, which meant the client held
+   * an opinion about content the AI service owns — and there was no way to turn live
+   * generation on without changing client code.
+   *
+   * `startForStudent` is still the fallback, unchanged, for when the service is
+   * unreachable: `client/AGENTS.md` requires a mission to stay startable with the AI
+   * service switched off entirely, and the prepared rows are already in the database.
+   *
+   * Returns the mission id to send the student to, or null when every source failed.
+   */
+  async startForLesson(params: {
+    userId: string;
+    worldSlug: string;
+    lessonSlug: string;
+    lessonId: string;
+    token: string;
+    forceRegenerate?: boolean;
+  }): Promise<string | null> {
+    const { userId, worldSlug, lessonSlug, lessonId, token, forceRegenerate } = params;
+
+    if (token) {
+      try {
+        const served: LessonMissionOut = await aiClient.getMissionForLesson(token, {
+          worldSlug,
+          lessonSlug,
+          forceRegenerate: forceRegenerate ?? false,
+        });
+
+        console.info(
+          `mission for ${worldSlug}/${lessonSlug}: ${served.id} (${served.delivery}, live=${served.live}, stop ${served.stop})`,
+        );
+
+        // A prepared mission is shared by every student and must not be claimed —
+        // `user_id` is what makes a mission somebody's, and claiming a shared row takes
+        // it out of the set for everyone else. Anything the service generated or pulled
+        // from the pool is this student's, so record the lesson it was opened from.
+        if (served.delivery !== 'prebuilt') {
+          await this.claim(served.id, userId, lessonId);
+        }
+
+        return served.id;
+      } catch (err) {
+        console.warn(
+          'mission by lesson: AI service unavailable, falling back to the local pool:',
+          err instanceof Error ? err.message : err,
+        );
+      }
+    }
+
+    return this.startForStudent(userId, lessonId, token);
   }
 
   /**

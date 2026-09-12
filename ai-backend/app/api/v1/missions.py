@@ -26,6 +26,8 @@ from app.schemas.missions import (
     GeneratedMissionOut,
     GenerateMissionRequest,
     GenerateMissionResponse,
+    LessonMissionOut,
+    LessonMissionRequest,
     NextMissionRequest,
 )
 
@@ -75,6 +77,89 @@ def next_mission(
 
     db.commit()
     return mission
+
+
+@router.post(
+    "/missions/by-lesson",
+    response_model=LessonMissionOut,
+    responses={**RESPONSES, 404: {"model": ErrorResponse}, 503: {"model": ErrorResponse}},
+    summary="Get the mission behind one stop on the map",
+    description=(
+        "**Address a mission the way the map does**: a world, and which stop along it. "
+        "`/missions/next` answers \"what should this student play now\" from mastery; "
+        "this answers \"what is behind stop 3 of the bakery\", which is what a student "
+        "clicking a node is actually asking.\n\n"
+        "Send `worldSlug` with either `lessonNumber` — the stop's **position**, 1-based, "
+        "counting the way the map draws them — or `lessonSlug`, which wins when both are "
+        "sent. Position is not `lessons.order`: el-forn's orders run 1, 2, 4, 5 and the "
+        "map shows four stops, so stop 4 is the lesson whose order is 5.\n\n"
+        "Where the mission comes from is one setting:\n\n"
+        "| `LIVE_MISSION_GENERATION` | what happens | how long |\n"
+        "|---|---|---|\n"
+        "| off (default) | the prepared mission for this stop | ~1s, no model call |\n"
+        "| off, nothing prepared | an unplayed row from the pool, else generation | 1s or 20-30s |\n"
+        "| on, or `forceRegenerate` | Gemini composes a new one, validator runs its code | 20-30s |\n\n"
+        "`delivery` and `live` in the response say which of those happened, so a caller "
+        "never has to guess whether it is looking at prepared content or something that "
+        "did not exist a minute ago. The mission is identical in shape either way — both "
+        "went through the same validator.\n\n"
+        "Returns **404** for an unknown world or a stop that world does not have, and "
+        "**503** when generation was the only option left and could not produce "
+        "something playable."
+    ),
+)
+def mission_for_lesson(
+    body: LessonMissionRequest,
+    user: CurrentUser = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> LessonMissionOut:
+    try:
+        _, mission, how = missions_service.for_lesson(
+            db,
+            user_id=user.id,
+            world_slug=body.world_slug,
+            lesson_number=body.lesson_number,
+            lesson_slug=body.lesson_slug,
+            force_regenerate=body.force_regenerate,
+        )
+    except missions_service.UnknownLesson as exc:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    except missions_service.NoMissionAvailable as exc:
+        # Say so rather than returning a broken mission — a child cannot tell the
+        # difference and will blame themselves.
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=f"Could not build a mission right now. {exc}",
+        ) from exc
+
+    db.commit()
+    return LessonMissionOut(**mission.model_dump(), **how)
+
+
+@router.get(
+    "/missions/{mission_id}",
+    response_model=PhasedMissionOut,
+    responses={**RESPONSES, 404: {"model": ErrorResponse}},
+    summary="Read one stored mission",
+    description=(
+        "All six phases of a mission the caller already has the id of — a student "
+        "reloading the player, or returning tomorrow to the mission in their address "
+        "bar. No model call and no generation: this only reads.\n\n"
+        "**404** covers everything a student should not be looking at, without "
+        "distinguishing between them: no such row, a mission the validator never passed, "
+        "and a mission claimed by a different student. Prepared missions are shared "
+        "content and stay readable by everyone."
+    ),
+)
+def mission_by_id(
+    mission_id: str,
+    user: CurrentUser = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> PhasedMissionOut:
+    try:
+        return missions_service.by_id(db, user_id=user.id, mission_id=mission_id)
+    except missions_service.MissionNotFound as exc:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
 
 
 @router.post(

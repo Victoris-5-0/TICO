@@ -47,9 +47,19 @@ log = logging.getLogger(__name__)
 
 ENGINE_VERSION = "gen/v2-phases"
 
+#: `params.prebuilt` marks the prepared set: one validated mission per concept stop,
+#: shared by every student rather than claimed, because the narration recorded for each
+#: one has to match what is on screen for everybody.
+PREBUILT = "prebuilt"
+
 
 class NoMissionAvailable(RuntimeError):
     """Nothing could be generated. The caller turns this into a 503, not an empty body."""
+
+
+class UnknownLesson(LookupError):
+    """No such world, or no such stop along it. A 404 — the caller asked for a lesson
+    that does not exist, which is not the same as generation failing."""
 
 
 # --------------------------------------------------------------------- what to teach
@@ -289,6 +299,13 @@ def find_reusable(
 
     Anything unvalidated is ignored. A mission is only reusable if the validator ran the
     code and passed it.
+
+    **The prepared set is not part of this pool.** Those rows are shared content
+    addressed by stop — see `find_prebuilt` — and they were being handed out here as
+    spares as well, which had two consequences. A prebuilt mission got claimed by
+    whichever student asked first, so the mission behind a map node changed under the
+    narration recorded for it; and `next_mission` stopped generating at all once the set
+    existed, because there was always a "spare" to reuse.
     """
     played = set(
         db.execute(
@@ -309,6 +326,8 @@ def find_reusable(
     for row in rows:
         if row.id in played or not row.content:
             continue
+        if (row.params or {}).get(PREBUILT):
+            continue  # shared content, served by stop — see the docstring
         if row.content.get("worldId") != world_id:
             continue
         if row.content.get("targetConceptId") != concept_id:
@@ -419,6 +438,286 @@ def next_mission(
         row.id, user_id, concept.slug, world.id, outcome.attempts, outcome.latency_ms,
     )
     return row, mission, world
+
+
+# ========================================================================= by the map
+
+def lessons_in_world(db: Session, world_slug: str) -> list[Lesson]:
+    """A world's lessons, in the order the map draws them.
+
+    Raises `UnknownLesson` for a world that does not exist, so a typo in a slug is a 404
+    naming the slug rather than an empty list that reads as "this world has no content".
+    """
+    track = db.execute(select(Track).where(Track.slug == world_slug)).scalar_one_or_none()
+    if track is None:
+        raise UnknownLesson(f"no world with slug '{world_slug}'")
+
+    return list(
+        db.execute(
+            select(Lesson).where(Lesson.track_id == track.id).order_by(Lesson.order)
+        ).scalars()
+    )
+
+
+def resolve_lesson(
+    db: Session,
+    *,
+    world_slug: str,
+    lesson_number: int | None = None,
+    lesson_slug: str | None = None,
+) -> tuple[Lesson, int]:
+    """`(lesson, its position along the world)` from a slug or a stop number.
+
+    **The number is a position, not `lessons.order`.** El-forn's orders run 1, 2, 4, 5 —
+    lesson 3 was never written — and the map draws four stops, so a student counting
+    nodes and the database disagree by one from the third stop on. The map is what the
+    student can see, so the map wins and `order` stays an internal sort key.
+
+    A slug outranks a number: a caller that already knows which lesson it wants should
+    not have to depend on the count staying stable when a world gains a lesson.
+    """
+    lessons = lessons_in_world(db, world_slug)
+    if not lessons:
+        raise UnknownLesson(f"world '{world_slug}' has no lessons")
+
+    if lesson_slug:
+        for position, lesson in enumerate(lessons, start=1):
+            if lesson.slug == lesson_slug:
+                return lesson, position
+        raise UnknownLesson(f"world '{world_slug}' has no lesson '{lesson_slug}'")
+
+    if lesson_number is None:
+        raise UnknownLesson("send either lessonNumber or lessonSlug")
+
+    if not 1 <= lesson_number <= len(lessons):
+        raise UnknownLesson(
+            f"world '{world_slug}' has {len(lessons)} lessons; there is no stop {lesson_number}"
+        )
+    return lessons[lesson_number - 1], lesson_number
+
+
+def stop_for_lesson(db: Session, *, track_id: str, concept_id: str, lesson_id: str) -> int:
+    """Which of its concept's stops this lesson is, 1-based.
+
+    A concept is taught over several lessons in a world — `opening-message` and
+    `count-the-trays` both teach `variables` — and each deserves its own scenario. Keying
+    the prepared set on the concept alone gave both lessons the identical mission, which
+    makes the second stop a re-run of the first.
+
+    Position among the *concept's* lessons, in curriculum order: its first lesson gets
+    stop 1, its second gets stop 2. A lesson whose concept could not be resolved is
+    stop 1.
+    """
+    # `order` is in the select list because Postgres requires it there under SELECT
+    # DISTINCT, and a lesson with several exercises on the same concept would otherwise
+    # appear more than once and shift every later stop.
+    rows = db.execute(
+        select(Lesson.id, Lesson.order)
+        .join(Exercise, Exercise.lesson_id == Lesson.id)
+        .join(ExerciseConcept, ExerciseConcept.exercise_id == Exercise.id)
+        .where(
+            Lesson.track_id == track_id,
+            ExerciseConcept.concept_id == concept_id,
+            ExerciseConcept.is_primary.is_(True),
+        )
+        .order_by(Lesson.order)
+        .distinct()
+    ).all()
+
+    seen: list[str] = []
+    for sibling_id, _ in rows:
+        if sibling_id not in seen:
+            seen.append(sibling_id)
+
+    for index, sibling_id in enumerate(seen, start=1):
+        if sibling_id == lesson_id:
+            return index
+    return 1
+
+
+def find_prebuilt(
+    db: Session, *, world_id: str, concept_id: str, stop: int
+) -> tuple[GeneratedMission, "P.PhasedMissionOut"] | None:
+    """The prepared mission for one concept stop, if the set covers it.
+
+    Distinct from `find_reusable` in two ways that matter. It matches on the **stop**
+    rather than on how many times this student has practised the concept, so the mission
+    behind a given node on the map is the same one every time it is opened — which is
+    what lets narration be recorded for it. And it does not skip rows other students have
+    played, because the prepared set is shared content, not a pool of one-use scenarios.
+
+    Returns None when the set has nothing for this stop, and the caller generates.
+    """
+    rows = db.execute(
+        select(GeneratedMission)
+        .where(GeneratedMission.validated.is_(True))
+        .order_by(GeneratedMission.created_at)
+    ).scalars()
+
+    for row in rows:
+        params = row.params or {}
+        if not params.get(PREBUILT):
+            continue
+        if not row.content:
+            continue
+        if row.content.get("worldId") != world_id:
+            continue
+        if row.content.get("targetConceptId") != concept_id:
+            continue
+        if int(params.get("repetition") or 1) != stop:
+            continue
+        try:
+            mission = P.PhasedMissionOut.model_validate(row.content)
+        except Exception:  # noqa: BLE001 - a row written by an older shape is not playable
+            continue
+        # The row's id is the identity. Pre-generation wrote `content.id` as "", and
+        # everything downstream keys off it — the narration URL, the session, the hint
+        # call. Stamping the real one here fixes all of them at once.
+        mission.id = row.id
+        log.info("serving prebuilt mission %s (%s stop %d)", row.id, concept_id, stop)
+        return row, mission
+    return None
+
+
+def for_lesson(
+    db: Session,
+    *,
+    user_id: str,
+    world_slug: str,
+    lesson_number: int | None = None,
+    lesson_slug: str | None = None,
+    force_regenerate: bool = False,
+) -> tuple[GeneratedMission, "P.PhasedMissionOut", dict]:
+    """One lesson's mission, addressed the way the map addresses it.
+
+    Returns `(row, mission, how)` where `how` carries the lesson it resolved to and how
+    the mission was served — the client puts that in front of a judge, and it is also
+    what makes the two paths debuggable when they disagree.
+
+    Three sources, and which one runs depends on one setting:
+
+      * `LIVE_MISSION_GENERATION` off (the default) — the prepared mission for this stop,
+        one query and no model call. This is the demo path: the same scenario every time,
+        so the recorded narration still matches the screen.
+      * nothing prepared for this stop — an unplayed row from the pool, then generation,
+        both via `next_mission`, so an unprepared world still plays.
+      * `LIVE_MISSION_GENERATION` on, or `forceRegenerate` — straight to generation.
+        Gemini writes a scenario, the validator runs its code, and the student plays
+        something that did not exist when they clicked.
+
+    Raises `UnknownLesson` for a bad world or stop, and `NoMissionAvailable` when
+    generation was the only option left and could not produce something playable.
+    """
+    users.ensure(db, user_id)
+
+    lesson, position = resolve_lesson(
+        db, world_slug=world_slug, lesson_number=lesson_number, lesson_slug=lesson_slug
+    )
+
+    concept = concept_for_lesson(db, lesson.id) or next_concept(db, user_id)
+    world = world_for(db, concept.slug, lesson.id)
+    stop = stop_for_lesson(
+        db, track_id=lesson.track_id, concept_id=concept.id, lesson_id=lesson.id
+    )
+
+    live = bool(settings.live_mission_generation or force_regenerate)
+
+    def described(row: GeneratedMission, mission: "P.PhasedMissionOut", delivery: str):
+        return row, mission, {
+            "lesson_id": lesson.id,
+            "lesson_slug": lesson.slug,
+            "lesson_number": position,
+            "world_slug": world_slug,
+            "stop": stop,
+            "delivery": delivery,
+            "live": live,
+        }
+
+    if not live:
+        prepared = find_prebuilt(db, world_id=world.id, concept_id=concept.id, stop=stop)
+        if prepared is not None:
+            return described(*prepared, "prebuilt")
+        log.info(
+            "no prebuilt mission for %s stop %d in %s; falling through to the pipeline",
+            concept.slug, stop, world.id,
+        )
+
+    # The same two steps `next_mission` takes, run here rather than delegated, because
+    # this endpoint has to *report* which one happened. Asking `next_mission` afterwards
+    # would mean guessing from the row, and a guess is exactly what `delivery` is for
+    # replacing.
+    repetition, already_taught = _repetition_context(db, user_id, concept.id)
+
+    if not live:
+        spare = find_reusable(
+            db,
+            user_id=user_id,
+            world_id=world.id,
+            concept_id=concept.id,
+            repetition=repetition,
+        )
+        if spare is not None:
+            return described(*spare, "reused")
+
+    scaffold = scaffold_plan(db, user_id, world, concept.slug, lesson_id=lesson.id)
+    row, mission = _compose(
+        db,
+        user_id=user_id,
+        world=world,
+        concept=concept,
+        carried=sorted(scaffold),
+        scaffold=scaffold,
+        repetition=repetition,
+        already_taught=already_taught,
+    )
+    return described(row, mission, "generated")
+
+
+class MissionNotFound(LookupError):
+    """No such mission, or not one this student may open. A 404 either way — telling an
+    attacker apart from a typo is not worth confirming that a row exists."""
+
+
+#: The account `scripts/pregenerate_missions.py` writes under. Its rows are prepared
+#: content, not anybody's play, so they are readable by everyone.
+CONTENT_PREP_USER = "system-content-prep"
+
+
+def by_id(db: Session, *, user_id: str, mission_id: str) -> "P.PhasedMissionOut":
+    """One stored mission, all six phases, as the player renders it.
+
+    The counterpart to `for_lesson`: that decides *which* mission, this returns one the
+    caller already has the id of — a student reloading the page, or coming back tomorrow
+    to the mission in their address bar.
+
+    Three things are refused, all as `MissionNotFound`, because none of them is something
+    a student should be looking at:
+
+      * no such row;
+      * `validated` false — an unvalidated mission may be unsolvable, and an unsolvable
+        mission in front of a child who is already unsure is the worst thing here;
+      * a row claimed by a different student. Prepared and unclaimed rows are shared and
+        stay readable.
+    """
+    row = db.get(GeneratedMission, mission_id)
+    if row is None or not row.content:
+        raise MissionNotFound(f"no mission '{mission_id}'")
+
+    if not row.validated:
+        raise MissionNotFound(f"mission '{mission_id}' has not been validated")
+
+    if row.user_id not in (None, user_id, CONTENT_PREP_USER):
+        raise MissionNotFound(f"no mission '{mission_id}'")
+
+    try:
+        mission = P.PhasedMissionOut.model_validate(row.content)
+    except Exception as exc:  # noqa: BLE001
+        # A row whose `content` lost its phases renders as six empty panels. Treat it as
+        # missing rather than showing it.
+        raise MissionNotFound(f"mission '{mission_id}' is not playable") from exc
+
+    mission.id = row.id
+    return mission
 
 
 # =============================================================================== explicit

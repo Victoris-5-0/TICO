@@ -44,7 +44,16 @@ export async function GET(
     // A missing token only costs the AI-service path; the pre-generated pool still works.
   }
 
-  const missionId = await missionService.startForStudent(user.id, lesson.id, token);
+  // The AI service decides what is behind this stop — its prepared mission, or one it
+  // generates on the spot when live generation is on. `startForLesson` falls back to the
+  // local pool when the service cannot answer.
+  const missionId = await missionService.startForLesson({
+    userId: user.id,
+    worldSlug,
+    lessonSlug,
+    lessonId: lesson.id,
+    token,
+  });
 
   // No mission anywhere: the service is down and the pool is empty. Say so on the world
   // page rather than dropping them into a player with nothing in it.

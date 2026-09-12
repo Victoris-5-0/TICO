@@ -8,7 +8,7 @@ this file is a bug.
 
 ---
 
-## All thirteen endpoints are real
+## All fifteen endpoints are real
 
 No stubs. `meta.stub` is `false` everywhere, and `docs/endpoint-examples.md` has a captured
 request and response for each — captured against the live database, not hand-written.
@@ -24,6 +24,8 @@ request and response for each — captured against the live database, not hand-w
 | `POST /v1/submissions/analyze` | open tag vocabulary, read and written per call |
 | `POST /v1/tico/messages` | SSE, no envelope |
 | `POST /v1/missions/next` | 20–30s, Gemini + validator |
+| `POST /v1/missions/by-lesson` | ~1s by default; 20–30s when `LIVE_MISSION_GENERATION` is on |
+| `GET /v1/missions/{id}` | read-only, no model call |
 | `POST /v1/missions/generate` | 20–30s, exercise-shaped and lossy |
 | `POST /v1/challenges/next` | 20–30s, 409 when too few concepts mastered |
 | `POST /v1/students/{id}/refresh` | rule proposes, model reviews conflicts only |

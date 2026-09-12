@@ -17,7 +17,7 @@ import { CharacterBust } from "./character-bust";
 import { MissionDebrief } from "./mission-debrief";
 import { NarrationControls, NarrationProvider } from "./narration";
 import { MissionScene } from "./mission-scene";
-import { DiscoverPhase, EncounterPhase, ExplorePhase, GuidedPhase, RemixPhase, UnderstandPhase } from "./phases";
+import { DiscoverPhase, EncounterPhase, ExplorePhase, GuidedPhase, RemixPhase, UnderstandPhase, type RequestHint } from "./phases";
 import styles from "./mission-player.module.css";
 
 /** The six phases, in the fixed order the AI backend composes them in. */
@@ -152,14 +152,17 @@ export function MissionPlayer({ locale, mission, worldSlug, worldTitle, lessonId
    * asks. When the service is unreachable the mission's own authored hint stands in, so
    * a student is never left with nothing.
    */
-  const requestHint = useCallback(
-    async (code: string, lastResult: telemetry.LastResult) => {
+  const requestHint = useCallback<RequestHint>(
+    async (code, lastResult, where) => {
       const hint = await telemetry.requestHint({
         sessionId: sessionId.current,
         missionId: mission.id,
         codeExcerpt: code,
         lastResult,
         locale,
+        // Passed through from the phase that asked: the ladder is rationed by phase and
+        // the hint is aimed at one guided step.
+        ...where,
       });
       if (hint) return hint;
       const authored = phases.guided.steps.find((s) => s.hintAr)?.hintAr;

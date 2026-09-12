@@ -19,7 +19,7 @@
     "db:studio": "prisma studio",
     "db:seed": "tsx prisma/seed.ts",
     "test:runner": "tsx --test src/lib/runner/*.test.ts",
-    "test": "tsx --test src/lib/bakery/*.test.ts src/lib/runner/*.test.ts",
+    "test": "tsx --test \"src/**/*.test.ts\"",
     "mission:pin": "tsx scripts/pin-prebuilt-missions.ts",
     "audio:missions": "tsx scripts/generate-mission-audio.ts",
     "shot": "tsx scripts/shot.ts"

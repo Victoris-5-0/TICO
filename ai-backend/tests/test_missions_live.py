@@ -266,10 +266,15 @@ def test_the_mission_matches_the_concept_the_student_needs(db, student, stub_mod
 
 
 def test_every_generated_mission_is_logged(db, student, stub_model):
-    """`ai_interactions` is how a fallback is noticed. A silent one looks like success."""
+    """`ai_interactions` is how a fallback is noticed. A silent one looks like success.
+
+    `force_regenerate` because reuse is not logged and should not be: it makes no model
+    call, so there is nothing to record. Without it this test passed only while the pool
+    happened to be empty, and started failing the day pre-generation filled it.
+    """
     from app.models_tables import AiInteraction
 
-    svc.next_mission(db, user_id=student.id)
+    svc.next_mission(db, user_id=student.id, force_regenerate=True)
 
     row = db.execute(
         select(AiInteraction)
@@ -281,9 +286,15 @@ def test_every_generated_mission_is_logged(db, student, stub_model):
 
 
 def test_two_calls_give_two_missions(db, student, stub_model):
-    """Each call is a fresh row, so a student's history is real rather than reconstructed."""
-    a, _, _ = svc.next_mission(db, user_id=student.id)
-    b, _, _ = svc.next_mission(db, user_id=student.id)
+    """Each *generation* is a fresh row, so a student's history is real rather than
+    reconstructed.
+
+    Not each call: reuse deliberately hands back an existing row, which is what makes
+    pre-generation worth anything. `force_regenerate` is what distinguishes the two, and
+    is the thing this test is actually about.
+    """
+    a, _, _ = svc.next_mission(db, user_id=student.id, force_regenerate=True)
+    b, _, _ = svc.next_mission(db, user_id=student.id, force_regenerate=True)
     assert a.id != b.id
 
 
@@ -375,3 +386,191 @@ def test_an_unlinked_lesson_falls_back_to_mastery(db, student, stub_model):
     assert svc.concept_for_lesson(db, "no-such-lesson") is None
     _, mission, _ = svc.next_mission(db, user_id=student.id, lesson_id="no-such-lesson")
     assert mission.validated
+
+
+# --------------------------------------------------------------- addressed by the map
+#
+# `/v1/missions/by-lesson` is how the client asks for a mission now: a world and which
+# stop along it, rather than a lesson cuid it had to look up first. These cover the two
+# things that can quietly go wrong — a stop number resolving to the wrong lesson, and the
+# prepared set being bypassed when it should not be.
+
+
+def test_a_stop_number_is_a_position_not_an_order_column(db):
+    """El-forn's `order` values run 1, 2, 4, 5 and the map draws four stops.
+
+    Reading the number as `lessons.order` would make stop 3 a 404 and stop 4 the wrong
+    lesson, which is the bug this indirection exists to prevent.
+    """
+    lessons = svc.lessons_in_world(db, "el-forn")
+    if [l.slug for l in lessons] != ["opening-message", "count-the-trays", "fair-share", "morning-batches"]:
+        pytest.skip("el-forn is not seeded as expected")
+
+    assert svc.resolve_lesson(db, world_slug="el-forn", lesson_number=3)[0].slug == "fair-share"
+    assert svc.resolve_lesson(db, world_slug="el-forn", lesson_number=4)[0].slug == "morning-batches"
+    # And the order column really does skip 3, so the two readings differ.
+    assert [l.order for l in lessons] == [1, 2, 4, 5]
+
+
+def test_a_slug_outranks_a_number(db):
+    """A caller that already knows its lesson should not depend on the count."""
+    lesson, position = svc.resolve_lesson(
+        db, world_slug="el-forn", lesson_number=1, lesson_slug="morning-batches"
+    )
+    assert lesson.slug == "morning-batches"
+    assert position == 4
+
+
+def test_an_unknown_world_or_stop_is_a_lookup_failure_not_a_generation_one(db):
+    """Both are 404s. Raising `NoMissionAvailable` would make a typo look like an outage."""
+    with pytest.raises(svc.UnknownLesson):
+        svc.resolve_lesson(db, world_slug="no-such-world", lesson_number=1)
+    with pytest.raises(svc.UnknownLesson):
+        svc.resolve_lesson(db, world_slug="el-forn", lesson_number=99)
+    with pytest.raises(svc.UnknownLesson):
+        svc.resolve_lesson(db, world_slug="el-forn", lesson_slug="no-such-lesson")
+    with pytest.raises(svc.UnknownLesson):
+        svc.resolve_lesson(db, world_slug="el-forn")
+
+
+def test_two_lessons_teaching_one_concept_are_different_stops(db):
+    """`opening-message` and `count-the-trays` both teach `variables`.
+
+    Keying the prepared set on the concept alone gave both the identical mission, which
+    makes the second lesson a re-run of the first.
+    """
+    from app.models_tables import Lesson, Track
+
+    track = db.execute(select(Track).where(Track.slug == "el-forn")).scalar_one_or_none()
+    if track is None:
+        pytest.skip("el-forn is not seeded")
+
+    first = db.execute(select(Lesson).where(Lesson.slug == "opening-message")).scalar_one_or_none()
+    second = db.execute(select(Lesson).where(Lesson.slug == "count-the-trays")).scalar_one_or_none()
+    if first is None or second is None:
+        pytest.skip("the two variables lessons are not seeded")
+
+    stops = {
+        lesson.slug: svc.stop_for_lesson(
+            db, track_id=track.id, concept_id="variables", lesson_id=lesson.id
+        )
+        for lesson in (first, second)
+    }
+    assert stops == {"opening-message": 1, "count-the-trays": 2}
+
+
+def test_the_prepared_set_is_served_without_a_model_call(db, student, monkeypatch):
+    """The demo path. A prepared mission for this stop means no generation at all.
+
+    The model is replaced with something that raises: if this test passes, nothing on the
+    path reached for it — which is the claim, not just the speed.
+    """
+    monkeypatch.setattr(
+        svc.mission_gen,
+        "generate",
+        lambda *a, **k: pytest.fail("the prepared set must not call the model"),
+    )
+    monkeypatch.setattr(svc.settings, "live_mission_generation", False)
+
+    prepared = svc.find_prebuilt(db, world_id="el_forn", concept_id="variables", stop=1)
+    if prepared is None:
+        pytest.skip("no prepared mission for el_forn/variables stop 1")
+
+    _, mission, how = svc.for_lesson(
+        db, user_id=student.id, world_slug="el-forn", lesson_number=1
+    )
+    assert how["delivery"] == "prebuilt"
+    assert how["live"] is False
+    assert how["stop"] == 1
+    assert how["lesson_slug"] == "opening-message"
+    assert mission.id == prepared[0].id
+    assert mission.validated
+
+
+def test_the_prepared_set_is_shared_rather_than_claimed(db, student):
+    """Two students opening the same stop get the same mission.
+
+    The opposite of `find_reusable`, which hands each student their own row. Narration is
+    recorded once per prepared mission, so it has to be the same one for everybody.
+    """
+    from app.models_tables import User
+
+    other = User(email="pytest-other@tico.invalid", name="pytest other")
+    db.add(other)
+    db.flush()
+
+    if svc.find_prebuilt(db, world_id="el_forn", concept_id="variables", stop=1) is None:
+        pytest.skip("no prepared mission for el_forn/variables stop 1")
+
+    mine = svc.for_lesson(db, user_id=student.id, world_slug="el-forn", lesson_number=1)[1]
+    theirs = svc.for_lesson(db, user_id=other.id, world_slug="el-forn", lesson_number=1)[1]
+    assert mine.id == theirs.id
+
+
+def test_the_live_flag_bypasses_the_prepared_set(db, student, stub_model):
+    """With generation live, a stop that *has* a prepared mission still composes a new one.
+
+    That is the whole point of the flag: the same click, and the student plays something
+    that did not exist when they made it.
+    """
+    prepared = svc.find_prebuilt(db, world_id="el_forn", concept_id="variables", stop=1)
+    if prepared is None:
+        pytest.skip("no prepared mission for el_forn/variables stop 1")
+
+    _, mission, how = svc.for_lesson(
+        db, user_id=student.id, world_slug="el-forn", lesson_number=1, force_regenerate=True
+    )
+    assert how["delivery"] == "generated"
+    assert how["live"] is True
+    assert mission.id != prepared[0].id
+
+
+def test_reading_a_mission_by_id_refuses_what_a_student_should_not_see(db, student, stub_model):
+    """Missing, unvalidated and someone else's are all the same 404.
+
+    Distinguishing them would confirm that a row exists, and a student has no use for
+    any of the three.
+    """
+    from app.models_tables import User
+
+    with pytest.raises(svc.MissionNotFound):
+        svc.by_id(db, user_id=student.id, mission_id="no-such-mission")
+
+    # Claimed explicitly rather than taken as it comes: `next_mission` may legitimately
+    # hand back a *shared* prepared row, and a shared row is readable by everyone, so
+    # the ownership rule would look broken when it was simply not being exercised.
+    row, _, _ = svc.next_mission(db, user_id=student.id)
+    row.user_id = student.id
+    db.flush()
+
+    assert svc.by_id(db, user_id=student.id, mission_id=row.id).id == row.id
+
+    other = User(email="pytest-thief@tico.invalid", name="pytest thief")
+    db.add(other)
+    db.flush()
+    with pytest.raises(svc.MissionNotFound):
+        svc.by_id(db, user_id=other.id, mission_id=row.id)
+
+    row.validated = False
+    db.flush()
+    with pytest.raises(svc.MissionNotFound):
+        svc.by_id(db, user_id=student.id, mission_id=row.id)
+
+
+def test_a_shared_prepared_mission_stays_readable_by_anyone(db, student):
+    """The other half of the ownership rule.
+
+    Prepared missions have no owner on purpose — every student plays the same one — so
+    refusing an unclaimed row would make the whole prepared set unopenable.
+    """
+    from app.models_tables import User
+
+    prepared = svc.find_prebuilt(db, world_id="el_forn", concept_id="variables", stop=1)
+    if prepared is None:
+        pytest.skip("no prepared mission for el_forn/variables stop 1")
+
+    other = User(email="pytest-reader@tico.invalid", name="pytest reader")
+    db.add(other)
+    db.flush()
+
+    assert svc.by_id(db, user_id=other.id, mission_id=prepared[0].id).id == prepared[0].id
