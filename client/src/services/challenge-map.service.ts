@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 
 import type { ChallengeNode } from "@/components/mission-ui/challenge-map";
+import { ROAD_WAYPOINTS, catmullRomSpline, pointAlongCurve } from "@/components/mission-ui/challenge-map-paths";
 import type { MapStage } from "@/components/mission-ui/challenge-map-view";
 
 /**
@@ -55,8 +56,18 @@ function place(x: number, y: number, face: "left" | "right") {
  * the road, standing between the stop they beat and the one that just opened, facing the
  * way they are going — so the map answers "what now?" before anything is read.
  */
-function standBeside(node: { x: number; y: number }) {
-  // Nothing finished yet: beside the first stop, turned towards it.
+function standBeside(
+  node: { x: number; y: number },
+  theme?: "bakery" | "traffic",
+  isFirstNode?: boolean,
+) {
+  if (theme === "bakery" && isFirstNode) {
+    return place(670, 180, "left");
+  }
+  if (theme === "traffic" && isFirstNode) {
+    return place(580, 170, "right");
+  }
+  // Beside the stop, turned towards it.
   const toTheRight = node.x < SCENE.width / 2;
   const from = centre(node);
   return toTheRight
@@ -67,10 +78,26 @@ function standBeside(node: { x: number; y: number }) {
 /**
  * Walking the road between two stops.
  *
- * A little past halfway rather than exactly on it: at the midpoint TICO reads as
- * loitering between two equals, and past it as heading somewhere.
+ * Follows the curved road spline rather than cutting across sidewalks, placing TICO
+ * past halfway along the winding cobblestone path facing the direction of travel.
  */
-function walkBetween(from: { x: number; y: number }, to: { x: number; y: number }) {
+function walkBetween(
+  from: { x: number; y: number },
+  to: { x: number; y: number },
+  theme?: "bakery" | "traffic",
+  segmentIndex?: number,
+) {
+  if (theme && segmentIndex !== undefined) {
+    const waypoints = ROAD_WAYPOINTS[theme]?.[segmentIndex];
+    if (waypoints && waypoints.length >= 2) {
+      const a = centre(from);
+      const b = centre(to);
+      const customWaypoints = [a, ...waypoints.slice(1, -1), b];
+      const curve = catmullRomSpline(customWaypoints, 24);
+      const pt = pointAlongCurve(curve, 0.52);
+      return place(pt.x, pt.y, pt.face);
+    }
+  }
   const a = centre(from);
   const b = centre(to);
   const at = 0.55;
@@ -163,7 +190,9 @@ export async function buildChallengeMap({
       theme,
       nodes,
       slugs: Object.fromEntries(track.lessons.map((lesson) => [`${track.slug}-${lesson.slug}`, lesson.slug])),
-      companion: previous ? walkBetween(previous, here) : standBeside(here),
+      companion: previous
+        ? walkBetween(previous, here, theme, currentNode - 1)
+        : standBeside(here, theme, currentNode === 0),
     });
     standing.push(here);
   }

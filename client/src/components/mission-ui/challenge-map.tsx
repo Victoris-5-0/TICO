@@ -4,6 +4,7 @@ import Image from "next/image";
 import { useId } from "react";
 import { motion, useReducedMotion } from "motion/react";
 import type { Locale } from "@/i18n/config";
+import { getRoadDots } from "./challenge-map-paths";
 import styles from "./challenge-map.module.css";
 
 export type ChallengeNode = {
@@ -28,30 +29,6 @@ const statusLabels = {
   "ar-EG": { available: "متاحة", current: "المهمة الحالية", completed: "مكتملة", locked: "مقفولة" },
 };
 
-/**
- * The road between two stops, as dots.
- *
- * A map of discs on painted ground does not say which order they come in; a line of
- * footsteps does. Spaced in scene units so the gaps stay even whatever the map is scaled
- * to, and stopping clear of both discs so the dots read as a path between them rather
- * than as decoration stuck to the edge.
- */
-const NODE_RADIUS = 78;
-const DOT_GAP = 46;
-
-function roadDots(from: ChallengeNode, to: ChallengeNode) {
-  const ax = from.x + 92, ay = from.y + 72;
-  const bx = to.x + 92, by = to.y + 72;
-  const span = Math.hypot(bx - ax, by - ay);
-  const usable = span - NODE_RADIUS * 2;
-  if (usable <= 0) return [];
-  const count = Math.max(1, Math.round(usable / DOT_GAP));
-  return Array.from({ length: count }, (_, i) => {
-    const at = (NODE_RADIUS + (usable * (i + 0.5)) / count) / span;
-    return { x: ax + (bx - ax) * at, y: ay + (by - ay) * at };
-  });
-}
-
 /** Presentation only: the caller owns mission availability, progress, and navigation. */
 export function ChallengeMap({ locale, stages, onSelect, emptyMessage, bannerTitle, unlockedId }: { locale: Locale; stages: readonly ChallengeStage[]; onSelect: (node: ChallengeNode, stage: ChallengeStage) => void; emptyMessage?: string; /** What the painted banner says, when the world's own name would only repeat the page. */ bannerTitle?: string; /** The node that opened a moment ago, marked out until it is played. */ unlockedId?: string | null }) {
   const reduced = useReducedMotion();
@@ -72,7 +49,7 @@ export function ChallengeMap({ locale, stages, onSelect, emptyMessage, bannerTit
             // on, faint beyond it.
             const walked = previous.status === "completed";
             return <g key={node.id} data-walked={walked || undefined} data-opens={node.id === unlockedId || undefined}>
-              {roadDots(previous, node).map((dot, i) => <circle key={i} cx={dot.x} cy={dot.y} r={12} />)}
+              {getRoadDots(previous, node, stage.theme, index).map((dot, i) => <circle key={i} cx={dot.x} cy={dot.y} r={12} />)}
             </g>;
           })}
         </svg>
