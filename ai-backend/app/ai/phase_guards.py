@@ -61,6 +61,65 @@ def _check_animation(change, world: World, where: str, report: ValidationReport)
             f"{where}: animation '{change.animate}' is not in the {world.id} manifest "
             f"(have: {world.visual.animations})"
         )
+    _check_actions(change, world, where, report)
+
+
+
+def _check_actions(change, world: World, where: str, report: ValidationReport) -> None:
+    """An action the client cannot perform is a dead beat in the middle of a mission.
+
+    Same failure as an unknown animation, one step worse: an animation that does not exist
+    leaves the scene still, but an action that does not exist leaves the *story* broken —
+    the mission says Amina is handed bread and she is not, and the next phase talks as
+    though she was.
+
+    Three things are checked, and the third is the one that matters:
+
+      the verb exists in this world's manifest
+      the target is one the verb accepts
+      a `from_code` action names where its value comes from, and a fixed one does not
+
+    That last check is what keeps `write` and `bind` honest. Their whole point is that the
+    value comes from running the student's code; one with a hardcoded value is a mission
+    pretending to react while showing a constant.
+    """
+    for action in getattr(change, "actions", None) or []:
+        spec = world.visual.action(action.do)
+        if spec is None:
+            report.fail(
+                f"{where}: action '{action.do}' is not one this world can perform "
+                f"(have: {[a.id for a in world.visual.actions]})"
+            )
+            continue
+
+        if spec.targets:
+            if not action.target:
+                report.fail(f"{where}: action '{action.do}' needs a target ({spec.targets})")
+            elif action.target not in spec.targets:
+                report.fail(
+                    f"{where}: '{action.do}' cannot be aimed at '{action.target}' "
+                    f"(accepts: {spec.targets})"
+                )
+        elif action.target:
+            report.fail(f"{where}: action '{action.do}' takes no target, got '{action.target}'")
+
+        if spec.from_code:
+            if not action.from_variable:
+                report.fail(
+                    f"{where}: '{action.do}' must say which variable or return value "
+                    "supplies it — that is the point of it"
+                )
+            if action.value is not None:
+                report.fail(
+                    f"{where}: '{action.do}' carries a fixed value '{action.value}'. Its "
+                    "value comes from the student's code, or the world is only pretending "
+                    "to react."
+                )
+        elif action.from_variable:
+            report.fail(
+                f"{where}: '{action.do}' is not driven by the student's code, so "
+                f"from_variable='{action.from_variable}' would be ignored"
+            )
 
 
 def _check_props(props: dict | None, world: World, where: str, report: ValidationReport) -> None:

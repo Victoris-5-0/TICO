@@ -22,8 +22,8 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
 /**
  * A world, and the missions a student can actually start inside it.
  *
- * The art, copy and cast come from `content/worlds`.
  * Entering a world lands on its challenge path and mission checklist.
+ * The art, copy and cast come from `content/worlds`.
  */
 export default async function Page({ params, searchParams }: { params: Params; searchParams: Search }) {
   const { locale, worldSlug } = await params;
@@ -41,6 +41,7 @@ export default async function Page({ params, searchParams }: { params: Params; s
     select: { id: true, slug: true, title: true },
   });
 
+  // One query for the whole list rather than one per lesson.
   const completed = user
     ? new Set(
         (

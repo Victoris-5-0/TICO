@@ -25,6 +25,7 @@ export function ChallengeMapView({
   stages,
   unlocked,
   pending,
+  banners = true,
   bannerTitle,
 }: {
   locale: Locale;
@@ -33,6 +34,8 @@ export function ChallengeMapView({
   unlocked?: { nodeId: string; label: string } | null;
   /** A world that has no map artwork yet, named rather than quietly dropped. */
   pending?: string | null;
+  /** Painted stage banners. A world page has already named the world in its hero. */
+  banners?: boolean;
   /** What the painted banner says, when the world's own name would only repeat the page. */
   bannerTitle?: string;
 }) {
@@ -83,6 +86,7 @@ export function ChallengeMapView({
         locale={locale}
         stages={stages}
         onSelect={select}
+        banners={banners}
         bannerTitle={bannerTitle}
         unlockedId={unlocked?.nodeId}
         emptyMessage={ar ? "مفيش مهام لسه." : "No missions yet."}

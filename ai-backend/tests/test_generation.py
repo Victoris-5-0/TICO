@@ -558,3 +558,117 @@ def test_the_committed_example_mission_still_validates():
 
     report = validate_phases(_example_mission(), manifests.get("el_forn"))
     assert report.ok, report.failures
+
+
+# ------------------------------------------------------- the actions vocabulary
+
+
+def _with_action(action: dict):
+    """The committed example mission, carrying one action on its guided phase."""
+    import json
+    import pathlib
+
+    from app.schemas import phases as P
+
+    example = pathlib.Path(__file__).resolve().parents[1] / "docs" / "example-mission-response.json"
+    mission = P.PhasedMissionOut.model_validate(json.loads(example.read_text(encoding="utf-8"))["data"])
+    mission.phases.guided.on_run.actions = [P.WorldAction.model_validate(action)]
+    return mission
+
+
+def _guided_failures(mission):
+    from app import manifests
+    from app.ai.phase_guards import validate_phases
+
+    return [f for f in validate_phases(mission, manifests.get("el_forn")).failures if "guided.on_run" in f]
+
+
+def test_the_world_declares_what_a_mission_may_do_to_it():
+    """The third fence. `sprites` says what can be drawn, `animations` what can move, and
+    `actions` what a mission may act upon — the piece that was missing, and the reason a
+    mission could not say "put two loaves in Amina's hands"."""
+    from app import manifests
+
+    visual = manifests.get("el_forn").visual
+    assert {a.id for a in visual.actions} == {"bind", "write", "give", "face", "set", "focus"}
+    assert visual.can_act("give")
+    assert not visual.can_act("teleport")
+
+
+def test_a_world_with_no_interactive_client_declares_none():
+    """Only el_forn has a scene that can act. The other two must keep loading."""
+    from app import manifests
+
+    for world_id in ("el_mahatta", "isharet_cairo"):
+        assert manifests.get(world_id).visual.actions == []
+
+
+@pytest.mark.parametrize(
+    ("label", "action", "expect"),
+    [
+        ("invented verb", {"do": "teleport", "target": "loaf"}, "is not one this world can perform"),
+        ("bad target", {"do": "give", "target": "ambulance"}, "cannot be aimed at"),
+        ("missing target", {"do": "give"}, "needs a target"),
+        ("target on a targetless verb", {"do": "focus", "target": "loaf"}, "takes no target"),
+    ],
+)
+def test_an_action_the_client_cannot_perform_is_rejected(label, action, expect):
+    """Worse than an unknown animation. A missing animation leaves the scene still; a
+    missing action leaves the *story* broken — the mission says Amina was handed bread,
+    she was not, and the next phase talks as though she was."""
+    failures = _guided_failures(_with_action(action))
+    assert failures, label
+    assert expect in failures[0], failures[0]
+
+
+def test_a_code_driven_action_must_say_where_its_value_comes_from():
+    """`bind` and `write` exist so the world reacts to what the code *produced* rather
+    than to whether it passed. One carrying a hardcoded value is a mission pretending to
+    react while showing a constant."""
+    assert any("must say which variable" in f for f in _guided_failures({"do": "bind", "target": "loaf"} and _with_action({"do": "bind", "target": "loaf"})))
+
+    fixed = _guided_failures(_with_action({"do": "bind", "target": "loaf", "value": 8, "from_variable": "x"}))
+    assert any("carries a fixed value" in f for f in fixed)
+
+
+def test_a_fixed_action_may_not_claim_to_read_the_students_code():
+    """The reverse mistake: `face` is not driven by their code, so a `from_variable` on it
+    would silently do nothing."""
+    failures = _guided_failures(_with_action({"do": "face", "target": "amina", "from_variable": "mood"}))
+    assert any("would be ignored" in f for f in failures)
+
+
+@pytest.mark.parametrize(
+    "action",
+    [
+        {"do": "bind", "target": "loaf", "from_variable": "loaves_per_tray"},
+        {"do": "write", "target": "shop_sign", "from_variable": "return"},
+        {"do": "give", "target": "amina"},
+        {"do": "set", "target": "oven", "value": "lit"},
+        {"do": "face", "target": "youssef", "value": "puzzled"},
+        {"do": "focus"},
+    ],
+)
+def test_a_well_formed_action_is_accepted(action):
+    assert not _guided_failures(_with_action(action))
+
+
+def test_the_model_is_told_which_actions_it_may_use():
+    """A guard that only rejects is worse than a prompt that prevents. The targets are
+    spelled out because the failure worth avoiding is not an invented verb — the validator
+    catches that — but a real verb aimed at something it does not accept."""
+    from app import manifests
+    from app.ai.prompts import mission_gen as prompt
+
+    _, task = prompt.build(
+        manifests.get("el_forn"), target_concept="variables", carried_concepts=[],
+        scene_id="bakery_gameplay", scaffold={},
+    )
+    assert "ACTIONS —" in task
+    assert "bind" in task and "aim it at: loaf" in task
+    # And nothing is offered to a world that cannot act on anything.
+    _, other = prompt.build(
+        manifests.get("el_mahatta"), target_concept="variables", carried_concepts=[],
+        scene_id=manifests.get("el_mahatta").scenes[0].id, scaffold={},
+    )
+    assert "ACTIONS —" not in other
