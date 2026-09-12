@@ -62,7 +62,7 @@ export function ChallengeMap({ locale, stages, onSelect, emptyMessage, banners =
               transition={{ duration: 1.5, delay: 0.35, ease: "easeInOut" }}>
               <Image src={`/assets/challenge-map/${stage.theme}-node.png`} alt="" width={184} height={144} sizes="(max-width: 700px) 64px, 13vw" />
               <span className={styles.nodeNumber} aria-hidden="true">{node.status === "locked" ? "⌑" : node.status === "completed" ? "✓" : index + 1}</span>
-              <span className={styles.nodeLabel}>{node.label}{node.status === "locked" && ` · ${statusLabels[locale].locked}`}</span>
+              <span className={styles.nodeLabel} dir="rtl">{node.label}</span>
             </motion.button>
           </li>)}
         </ol>

@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { worlds } from "@/content/worlds";
 
 import type { ChallengeNode } from "@/components/mission-ui/challenge-map";
 import { ROAD_WAYPOINTS, catmullRomSpline, pointAlongCurve } from "@/components/mission-ui/challenge-map-paths";
@@ -155,13 +156,16 @@ export async function buildChallengeMap({
     const currentIndex = track.lessons.findIndex((lesson) => !completed.has(lesson.id));
     const positions = POSITIONS[theme];
 
+    const authoredWorld = worlds.find((w) => w.slug === track.slug);
     const nodes: ChallengeNode[] = track.lessons.slice(0, positions.length).map((lesson, index) => {
       const [x, y] = positions[index];
       const status: ChallengeNode["status"] =
         completed.has(lesson.id) ? "completed"
         : index === currentIndex ? "current"
         : "locked";
-      return { id: `${track.slug}-${lesson.slug}`, label: lesson.title, x, y, status };
+      const arabicFromWorld = authoredWorld?.missions[index]?.["ar-EG"];
+      const label = arabicFromWorld || lesson.title.replace(/\s*\([^)]*\)/g, "").trim();
+      return { id: `${track.slug}-${lesson.slug}`, label, x, y, status };
     });
 
     // Arriving from a finished mission: the lesson after it is what just opened up.
@@ -173,7 +177,11 @@ export async function buildChallengeMap({
       const finished = track.lessons.findIndex((lesson) => lesson.slug === done);
       const next = finished >= 0 ? track.lessons[finished + 1] : undefined;
       const reachable = next && nodes.find((node) => node.id === `${track.slug}-${next.slug}`)?.status === "current";
-      if (next && reachable) unlocked = { nodeId: `${track.slug}-${next.slug}`, label: next.title };
+      if (next && reachable) {
+        const nextIndex = track.lessons.findIndex((l) => l.id === next.id);
+        const nextLabel = authoredWorld?.missions[nextIndex]?.["ar-EG"] || next.title.replace(/\s*\([^)]*\)/g, "").trim();
+        unlocked = { nodeId: `${track.slug}-${next.slug}`, label: nextLabel };
+      }
     }
 
     // TICO is on the road to the mission they are about to play, or standing on the last
