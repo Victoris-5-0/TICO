@@ -103,4 +103,7 @@ def _stamp(db: Session, submission_id: str, result: AnalyzeResponse) -> None:
         return
     row.error_family = result.error_family
     row.error_tag = result.error_tag
+    # The sentence, not only the label. It used to be returned to the caller and dropped,
+    # so a teacher could see that a mistake repeated but never why the child made it.
+    row.misconception = result.misconception
     db.flush()

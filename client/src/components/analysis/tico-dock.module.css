@@ -7,7 +7,7 @@
  */
 
 /* =============================================================== shared bits */
-.avatar { flex: 0 0 auto; width: clamp(74px, 11vw, 108px); }
+.avatar { flex: 0 0 auto; width: clamp(96px, 14vw, 150px); }
 .avatar img { width: 100%; height: auto; filter: drop-shadow(0 8px 18px rgba(65,38,28,.28)); }
 
 .walking { animation: hop .5s ease-in-out; }
@@ -65,7 +65,7 @@
   animation: rise .3s ease-out;
 }
 .dock img {
-  width: clamp(92px, 11vw, 124px); height: auto;
+  width: clamp(112px, 13vw, 152px); height: auto;
   filter: drop-shadow(0 8px 20px rgba(65,38,28,.3));
   transition: transform .2s ease;
 }
@@ -135,11 +135,11 @@
 .input:disabled { opacity: .6; }
 
 @media (max-width: 560px) {
-  .avatar { width: 62px; }
+  .avatar { width: 78px; }
   .bubble { padding: 13px 14px 11px; }
   .line { font-size: .88rem; }
   .dockLabel { display: none; }
-  .dock img { width: 80px; }
+  .dock img { width: 96px; }
   .chat { inset-inline: 16px; width: auto; }
 }
 
@@ -150,3 +150,19 @@
   .primary, .dock img { transition: none; }
   .primary:hover:not(:disabled), .dock:hover img { transform: none; }
 }
+
+/* ================================================================= spotlight */
+/* While he is explaining, everything but the panel he is on is dimmed and blurred.
+ *
+ * Fixed, not a filter on the page: blurring an ancestor would blur the panel too, and
+ * `filter` on a parent creates a containing block that breaks the fixed positioning of the
+ * guide itself. A veil above the page and below him is the only version that holds.
+ */
+.veil {
+  position: fixed; inset: 0; z-index: 40;
+  background: rgba(31, 24, 32, .34);
+  backdrop-filter: blur(3px);
+  animation: fade .22s ease-out;
+}
+@keyframes fade { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .veil { animation: none; } }

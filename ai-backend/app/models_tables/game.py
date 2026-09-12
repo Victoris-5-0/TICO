@@ -184,6 +184,9 @@ class Submission(Base):
     hints_used_before: Mapped[int] = mapped_column("hints_used_before", Integer, default=0)
     error_family: Mapped[ErrorFamily | None] = mapped_column("error_family", ERROR_FAMILY)
     error_tag: Mapped[str | None] = mapped_column("error_tag", Text)
+    #: One sentence on what the student believed that was wrong. The label says what
+    #: went wrong; this says why, and it is the only field here a teacher can read.
+    misconception: Mapped[str | None] = mapped_column("misconception", Text)
 
     user: Mapped[User] = relationship(back_populates="submissions")
     exercise: Mapped[Exercise] = relationship(back_populates="submissions")

@@ -11,11 +11,10 @@
  * SQL), never generated, because a wrong number in front of a learner is worse than no
  * number.
  *
- * NOT AVAILABLE, and worth knowing: `misconception` — the sentence diagnosing what the
- * student believed that was wrong — is produced by `POST /v1/submissions/analyze` and
- * returned to the caller, but there is no column for it on `submissions`. It is the single
- * most explanatory thing the pipeline produces and it is currently thrown away. Adding it
- * is a Prisma migration; until then this dashboard can show the *tag* but not the sentence.
+ * `misconception` is the reason this page is worth reading rather than skimming. A tag says
+ * *what* went wrong; the sentence says *why the student thought it was right*, which is the
+ * only thing on here a teacher can act on. It was returned by the analyze endpoint and
+ * dropped for want of a column until 2026-09-12.
  */
 
 import { db } from "@/lib/db";
@@ -45,6 +44,8 @@ export type TagRow = {
   tag: string;
   family: string | null;
   total: number;
+  /** What the student believed that was wrong, the last time this tag was seen. */
+  misconception: string | null;
   /** Appeared, then stopped. The thing a learner can be proud of. */
   overcome: boolean;
   lastSeenAt: Date;
@@ -125,7 +126,7 @@ export async function getAnalysis(userId: string): Promise<Analysis> {
       where: { userId },
       select: {
         id: true, status: true, errorFamily: true, errorTag: true,
-        attemptNumber: true, createdAt: true, sessionId: true,
+        misconception: true, attemptNumber: true, createdAt: true, sessionId: true,
       },
       orderBy: { createdAt: "asc" },
     }),
@@ -176,15 +177,23 @@ export async function getAnalysis(userId: string): Promise<Analysis> {
   const tagged = submissions.filter((s) => s.errorTag);
 
 
-  const byTag = new Map<string, { family: string | null; total: number; last: Date }>();
+  const byTag = new Map<
+    string,
+    { family: string | null; total: number; last: Date; misconception: string | null }
+  >();
   for (const s of tagged) {
     const key = s.errorTag as string;
     const seen = byTag.get(key);
     if (seen) {
       seen.total += 1;
       seen.last = s.createdAt;
+      // Submissions are read oldest-first, so the last one wins — the most recent wording
+      // of a misconception is the one that still describes how they are thinking.
+      if (s.misconception) seen.misconception = s.misconception;
     } else {
-      byTag.set(key, { family: s.errorFamily, total: 1, last: s.createdAt });
+      byTag.set(key, {
+        family: s.errorFamily, total: 1, last: s.createdAt, misconception: s.misconception,
+      });
     }
   }
 
@@ -195,6 +204,7 @@ export async function getAnalysis(userId: string): Promise<Analysis> {
         tag,
         family: v.family,
         total: v.total,
+        misconception: v.misconception,
         // Two clean submissions after the last sighting. One could be luck.
         overcome: submittedSince >= 2,
         lastSeenAt: v.last,

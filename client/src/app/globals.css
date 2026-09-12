@@ -322,5 +322,5 @@ html:has([data-landing-page])::-webkit-scrollbar-thumb { background: #C69C85; bo
 /* The panel TICO is currently explaining, on the progress page. A global rather than a
    CSS-module class because the guide finds panels with `document.querySelector` and
    toggles the class by name — a hashed module name would not survive that. */
-.tourLit { position: relative; z-index: 2; box-shadow: 0 0 0 3px var(--coral), var(--shadow) !important; transition: box-shadow .2s ease; }
+.tourLit { position: relative; z-index: 45; background: var(--paper); box-shadow: 0 0 0 3px var(--coral), 0 24px 60px rgba(31,24,32,.4) !important; transition: box-shadow .2s ease; }
 @media (prefers-reduced-motion: reduce) { .tourLit { transition: none; } }

@@ -173,3 +173,8 @@
 
 /* The key is a key, not more calendar. */
 .legend .cell { inline-size: 13px; block-size: 13px; aspect-ratio: auto; border-radius: 3px; flex: none; }
+
+/* The misconception sentence, under the tag it explains. Quieter than the tag and set in
+   the reading face rather than mono — the tag is an identifier, this is prose. */
+.tagItem { display: grid; gap: 5px; }
+.misconception { margin: 0 0 4px; padding-inline-start: 11px; border-inline-start: 2px solid var(--sand); font-size: .8rem; line-height: 1.5; color: var(--muted); }

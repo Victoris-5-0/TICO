@@ -236,7 +236,11 @@ export function TicoDock({ locale, sessionId }: { locale: string; sessionId: str
   if (mode === "tour") {
     const last = step === TOUR.length - 1;
     return (
-      <div className={styles.guide} role="region" aria-live="polite">
+      <>
+        {/* Dim everything else. The lit panel is raised above this by `.tourLit`, so it
+            stays sharp while the rest of the page recedes. */}
+        <div className={styles.veil} onClick={endTour} aria-hidden="true" />
+        <div className={styles.guide} role="region" aria-live="polite">
         <div className={`${styles.avatar} ${walking ? styles.walking : ""}`}>
           <Image src={POSE[stop.pose]} alt="TICO" width={128} height={128} priority />
         </div>
@@ -260,7 +264,8 @@ export function TicoDock({ locale, sessionId }: { locale: string; sessionId: str
             </button>
           </div>
         </div>
-      </div>
+        </div>
+      </>
     );
   }
 

@@ -60,7 +60,7 @@ const AR: Copy = {
   },
   tags: {
     heading: "الغلطات اللي بتتكرر",
-    hint: "الأخضر معناه إن الغلطة دي ظهرت وبعدين وقفت. دي أحلى حاجة في الصفحة دي.",
+    hint: "تحت كل غلطة، السبب اللي خلاك تفتكرها صح. والأخضر معناه إنها ظهرت وبعدين وقفت — دي أحلى حاجة هنا.",
     overcome: "اتصلحت",
     empty: "لسه مفيش غلطات متسجّلة.",
   },
@@ -118,7 +118,7 @@ const EN: Copy = {
   },
   tags: {
     heading: "Mistakes that repeat",
-    hint: "Green means the mistake appeared and then stopped. That is the best thing on this page.",
+    hint: "Under each one, what made you think it was right. Green means it appeared and then stopped — the best thing on this page.",
     overcome: "fixed",
     empty: "No classified mistakes yet.",
   },
@@ -297,16 +297,23 @@ export function AnalysisDashboard({
           ) : (
             <div className={styles.tagList}>
               {tags.slice(0, 8).map((x: TagRow) => (
-                <div key={x.tag} className={styles.tagRow}>
-                  <span className={styles.tagName}>{x.tag}</span>
-                  {x.overcome && <span className={styles.overcome}>{t.tags.overcome}</span>}
-                  <span className={styles.tagBar}>
-                    <span
-                      className={`${styles.tagBarFill} ${x.overcome ? styles["tagBarFill--overcome"] : ""}`}
-                      style={{ width: `${(x.total / maxTag) * 100}%` }}
-                    />
-                  </span>
-                  <span className={styles.tagCount}>{x.total}</span>
+                <div key={x.tag} className={styles.tagItem}>
+                  <div className={styles.tagRow}>
+                    <span className={styles.tagName}>{x.tag}</span>
+                    {x.overcome && <span className={styles.overcome}>{t.tags.overcome}</span>}
+                    <span className={styles.tagBar}>
+                      <span
+                        className={`${styles.tagBarFill} ${x.overcome ? styles["tagBarFill--overcome"] : ""}`}
+                        style={{ width: `${(x.total / maxTag) * 100}%` }}
+                      />
+                    </span>
+                    <span className={styles.tagCount}>{x.total}</span>
+                  </div>
+                  {/* The tag says what went wrong. This says why they thought it was
+                      right, which is the only line on the page a teacher can act on. */}
+                  {x.misconception && (
+                    <p className={styles.misconception}>{x.misconception}</p>
+                  )}
                 </div>
               ))}
             </div>
