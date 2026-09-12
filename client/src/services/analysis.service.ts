@@ -11,11 +11,10 @@
  * SQL), never generated, because a wrong number in front of a learner is worse than no
  * number.
  *
- * NOT AVAILABLE, and worth knowing: `misconception` — the sentence diagnosing what the
- * student believed that was wrong — is produced by `POST /v1/submissions/analyze` and
- * returned to the caller, but there is no column for it on `submissions`. It is the single
- * most explanatory thing the pipeline produces and it is currently thrown away. Adding it
- * is a Prisma migration; until then this dashboard can show the *tag* but not the sentence.
+ * `misconception` is the reason this page is worth reading rather than skimming. A tag says
+ * *what* went wrong; the sentence says *why the student thought it was right*, which is the
+ * only thing on here a teacher can act on. It was returned by the analyze endpoint and
+ * dropped for want of a column until 2026-09-12.
  */
 
 import { db } from "@/lib/db";
@@ -45,6 +44,8 @@ export type TagRow = {
   tag: string;
   family: string | null;
   total: number;
+  /** What the student believed that was wrong, the last time this tag was seen. */
+  misconception: string | null;
   /** Appeared, then stopped. The thing a learner can be proud of. */
   overcome: boolean;
   lastSeenAt: Date;
@@ -63,6 +64,12 @@ export type SessionRow = {
 
 export type Analysis = {
   profile: {
+    name: string | null;
+    avatarUrl: string | null;
+    ageBand: string | null;
+    learnerPreference: string | null;
+    gender: string | null;
+    onboardingCompletedAt: Date | null;
     skillBand: string | null;
     /** 0 = fights the language, 1 = fights the thinking. Null until there is evidence. */
     syntaxVsLogic: number | null;
@@ -86,6 +93,13 @@ export type Analysis = {
   hintLadder: { rung: number; count: number }[];
   /** Per calendar day, so a streak is visible without inventing one. */
   activity: { day: string; submissions: number; passed: number }[];
+  /** A contribution grid: every day of the last year, including the empty ones. */
+  streak: {
+    days: { day: string; count: number; passed: number }[];
+    current: number;
+    longest: number;
+    activeDays: number;
+  };
 };
 
 function requiredStops(mastery: number, completed: number): number {
@@ -103,15 +117,16 @@ function isComplete(mastery: number, completed: number): boolean {
 const dayKey = (d: Date) => d.toISOString().slice(0, 10);
 
 export async function getAnalysis(userId: string): Promise<Analysis> {
-  const [profile, concepts, mastery, submissions, hintEvents, sessions] = await Promise.all([
+  const [profile, account, concepts, mastery, submissions, hintEvents, sessions] = await Promise.all([
     db.studentProfile.findUnique({ where: { userId } }),
+    db.user.findUnique({ where: { id: userId }, select: { name: true, avatarUrl: true } }),
     db.concept.findMany({ orderBy: { sequenceOrder: "asc" } }),
     db.conceptMastery.findMany({ where: { userId } }),
     db.submission.findMany({
       where: { userId },
       select: {
         id: true, status: true, errorFamily: true, errorTag: true,
-        attemptNumber: true, createdAt: true, sessionId: true,
+        misconception: true, attemptNumber: true, createdAt: true, sessionId: true,
       },
       orderBy: { createdAt: "asc" },
     }),
@@ -162,15 +177,23 @@ export async function getAnalysis(userId: string): Promise<Analysis> {
   const tagged = submissions.filter((s) => s.errorTag);
 
 
-  const byTag = new Map<string, { family: string | null; total: number; last: Date }>();
+  const byTag = new Map<
+    string,
+    { family: string | null; total: number; last: Date; misconception: string | null }
+  >();
   for (const s of tagged) {
     const key = s.errorTag as string;
     const seen = byTag.get(key);
     if (seen) {
       seen.total += 1;
       seen.last = s.createdAt;
+      // Submissions are read oldest-first, so the last one wins — the most recent wording
+      // of a misconception is the one that still describes how they are thinking.
+      if (s.misconception) seen.misconception = s.misconception;
     } else {
-      byTag.set(key, { family: s.errorFamily, total: 1, last: s.createdAt });
+      byTag.set(key, {
+        family: s.errorFamily, total: 1, last: s.createdAt, misconception: s.misconception,
+      });
     }
   }
 
@@ -181,6 +204,7 @@ export async function getAnalysis(userId: string): Promise<Analysis> {
         tag,
         family: v.family,
         total: v.total,
+        misconception: v.misconception,
         // Two clean submissions after the last sighting. One could be luck.
         overcome: submittedSince >= 2,
         lastSeenAt: v.last,
@@ -223,6 +247,42 @@ export async function getAnalysis(userId: string): Promise<Analysis> {
     };
   });
 
+  // ------------------------------------------------------------------- streak
+  //
+  // Every day in the window, not only the days with work — a grid with the gaps missing
+  // is not a grid, and the gaps are the honest part.
+  const WEEKS = 53;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  // Start on the Saturday on or before the window opens. Saturday is the first day of the
+  // week in Egypt, and a grid that starts on Sunday would put the weekend in the middle.
+  const start = new Date(today);
+  start.setDate(start.getDate() - (WEEKS * 7 - 1));
+  start.setDate(start.getDate() - ((start.getDay() + 1) % 7));
+
+  const streakDays: { day: string; count: number; passed: number }[] = [];
+  for (let d = new Date(start); d <= today; d.setDate(d.getDate() + 1)) {
+    const key = dayKey(d);
+    const found = byDay.get(key);
+    streakDays.push({ day: key, count: found?.submissions ?? 0, passed: found?.passed ?? 0 });
+  }
+
+  // Counted backwards from today. Today being empty does not break a streak until the day
+  // is over, so an afternoon with no work yet still shows yesterday's run.
+  let current = 0;
+  for (let i = streakDays.length - 1; i >= 0; i -= 1) {
+    if (streakDays[i].count > 0) current += 1;
+    else if (i < streakDays.length - 1) break;
+  }
+
+  let longest = 0;
+  let run = 0;
+  for (const d of streakDays) {
+    run = d.count > 0 ? run + 1 : 0;
+    if (run > longest) longest = run;
+  }
+
   const passed = submissions.filter((s) => s.status === "PASSED").length;
   const minutes = Math.round(
     sessions.reduce((total, s) => total + (s.timeSpentMs ?? 0), 0) / 60000,
@@ -230,6 +290,13 @@ export async function getAnalysis(userId: string): Promise<Analysis> {
 
   return {
     profile: {
+      name: account?.name ?? null,
+      // The onboarding avatar is one of the cast — TICO, Tika, or a bakery customer.
+      avatarUrl: account?.avatarUrl ?? null,
+      ageBand: profile?.ageBand ?? null,
+      learnerPreference: profile?.learnerPreference ?? null,
+      gender: profile?.gender ?? null,
+      onboardingCompletedAt: profile?.onboardingCompletedAt ?? null,
       skillBand: profile?.skillBand ?? null,
       syntaxVsLogic: profile?.syntaxVsLogic ?? null,
       hintDependency: profile?.hintDependency ?? null,
@@ -249,6 +316,12 @@ export async function getAnalysis(userId: string): Promise<Analysis> {
     },
     hintLadder: ladder,
     activity,
+    streak: {
+      days: streakDays,
+      current,
+      longest,
+      activeDays: streakDays.filter((d) => d.count > 0).length,
+    },
   };
 }
 

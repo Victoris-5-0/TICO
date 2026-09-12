@@ -88,7 +88,7 @@ SPRITES the client can draw (props you may show):
 
 ANIMATIONS the client can play — you may ONLY name one of these:
 {animations}
-{simulation}
+{simulation}{actions_block}
 {repetition_note}
 {scaffold_note}
 
@@ -125,7 +125,9 @@ Return exactly this JSON:
     "intro_ar": "كده بالظبط بنكتبها في بايثون",
     "code": "def name(a: int) -> int:\\n    return ...",
     "annotations": [{{ "line": 1, "text_ar": "السطر ده بيعمل كذا", "points_at": "<sprite>" }}],
-    "on_run": {{ "animate": "<animation>", "props": {{ "<sprite>": "<after>" }}, "caption_ar": "..." }}
+    "on_run": {{ "animate": "<animation>", "props": {{ "<sprite>": "<after>" }},
+              "actions": [{{ "do": "<action>", "target": "<target>", "from_variable": "<name or null>" }}],
+              "caption_ar": "..." }}
   }},
 
   "guided": {{
@@ -324,6 +326,37 @@ def _speaker_note(world: World, speaker: str | None) -> str:
     )
 
 
+
+def _actions_block(world: World) -> str:
+    """The verbs a mission may use, and what each may be aimed at.
+
+    Spelled out with targets, because the failure worth preventing is not an invented verb
+    — the validator catches that — but a real verb aimed at something it does not accept.
+    That reads as a near miss and costs a retry.
+    """
+    if not world.visual.actions:
+        return ""
+
+    lines = ["", "ACTIONS — what you may DO to the world. Each `on_run` may carry up to 3:"]
+    for a in world.visual.actions:
+        lines.append(f"  {a.id} — {' '.join((a.description or '').split())}")
+        if a.targets:
+            lines.append(f"      aim it at: {', '.join(a.targets)}")
+        if a.from_code:
+            lines.append(
+                "      its value comes from the STUDENT'S CODE: give `from_variable` "
+                "(a variable name, or the word return), and no `value`."
+            )
+    lines.append("")
+    lines.append(
+        "Use them. A mission that only sets counts is a picture; one that puts bread in "
+        "Amina's hands, writes on the sign, or ties a variable to what is drawn is a world "
+        "that answers the student. Prefer `bind` in a variables mission, and `face` "
+        "wherever the student can be wrong."
+    )
+    return "\n".join(lines) + "\n"
+
+
 def build(
     world: World,
     *,
@@ -364,6 +397,7 @@ def build(
         sprites=_sprites_block(world),
         animations="  " + ", ".join(world.visual.animations),
         simulation=_simulation_block(world),
+        actions_block=_actions_block(world),
         repetition_note=_repetition_note(target_concept, repetition, already_taught or []),
         discover_slot=_DISCOVER_SLOT.get(min(max(repetition, 1), 3), _DISCOVER_SLOT[3]),
         speaker_note=_speaker_note(world, speaker),

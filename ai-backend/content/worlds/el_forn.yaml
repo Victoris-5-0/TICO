@@ -307,6 +307,61 @@ visual:
     - steam               # continuous, above the oven and above the counter
 
 
+  # ---------------------------------------------------------------------------
+  # ACTIONS — what a mission may DO to the world, and to what.
+  #
+  # The third fence. `sprites` says what can be drawn, `animations` what can move, and
+  # this says what a mission may act upon — the piece that was missing.
+  #
+  # `props: { loaf: 2 }` means "show two loaves". It could never mean "put two loaves in
+  # Amina's hands", even though her receiving hand socket is right there in the inventory
+  # at (-73, -151). A count has no target. These do.
+  #
+  # `from_code: true` marks the two that matter most. Their value is not fixed by the
+  # mission — it is whatever the student's code produced. That is the difference between a
+  # world that reacts to *whether* the code was right and one that reacts to *what it did*.
+  actions:
+    - id: bind
+      description: >
+        Tie a variable in the student's code to how many of a sprite the scene draws, live,
+        as they type. Writing `loaves_per_tray = 8` puts eight loaves on the tray; changing
+        it to 12 puts twelve there. This is what a variable IS, shown rather than described.
+      targets: [loaf, dough, tray, bag]
+      from_code: true
+
+    - id: write
+      description: >
+        Put a string the student's code returned onto a text surface in the scene. The shop
+        sign is vector text in both locales, so their words really do appear above the
+        bakery.
+      targets: [shop_sign, greeting_sign]
+      from_code: true
+
+    - id: give
+      description: >
+        Place a prop into a named character's hands, using that character's hand socket.
+        Serving Amina is different from serving whoever happens to be first.
+      targets: [hassan, salma, mariam, nour, amina, omar, dina, youssef, hoda, farid]
+
+    - id: face
+      description: >
+        Change a character's expression. Use `puzzled` when the student's answer does not
+        work and `pleased` when it does — never anger. A customer angry at a child for a
+        first attempt is a telling-off, and this service does not tell children off.
+      targets: [hassan, salma, mariam, nour, amina, omar, dina, youssef, hoda, farid]
+
+    - id: set
+      description: >
+        Put a prop into one of its declared states — `oven: lit`, `oven: cold`. A boolean
+        with a picture.
+      targets: [oven]
+
+    - id: focus
+      description: >
+        Move the camera between the full scene and the counter close-up. Pull in while the
+        code runs, out while the world reacts.
+      targets: []
+
 # -----------------------------------------------------------------------------
 # SIMULATION — the scene's own arithmetic, and the verbs it offers.
 #
@@ -341,6 +396,7 @@ simulation:
     - A bake is refused while the tray still holds bread.
     - A serve is refused below two loaves.
     - Two full batches clear the queue exactly. Sixteen loaves, eight customers.
+
 
 # -----------------------------------------------------------------------------
 # CONCEPT NOTES — what phase 3 says on the SECOND and THIRD mission of a concept.

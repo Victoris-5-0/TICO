@@ -250,6 +250,13 @@ model Submission {
   hintsUsedBefore Int              @default(0) @map("hints_used_before")
   errorFamily     ErrorFamily?     @map("error_family")
   errorTag        String?          @map("error_tag")
+  /// One sentence diagnosing what the student believed that was wrong — "thinks a single
+  /// `=` compares two values". Written by `POST /v1/submissions/analyze`.
+  ///
+  /// It is the most explanatory thing the pipeline produces and it had nowhere to go: the
+  /// endpoint returned it to the caller and the row kept only the family and the tag, so
+  /// a teacher could see *that* a mistake repeated but never *why* the child made it.
+  misconception   String?          @map("misconception") @db.Text
   output          String?          @db.Text
   executionTimeMs Int?
   createdAt       DateTime         @default(now())
