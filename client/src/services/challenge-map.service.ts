@@ -35,20 +35,46 @@ const NODE = { width: 184, height: 144 };
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 
+/** The middle of a node's disc, which is what the path and the companion aim at. */
+const centre = (node: { x: number; y: number }) => ({ x: node.x + NODE.width / 2, y: node.y + NODE.height / 2 });
+
+/** Both sprite and node are placed by their top-left corner; keep them on the artwork. */
+function place(x: number, y: number, face: "left" | "right") {
+  return {
+    x: clamp(x - TICO.width / 2, 8, SCENE.width - TICO.width - 8),
+    y: clamp(y - TICO.height + 40, 8, SCENE.height - TICO.height - 8),
+    face,
+  };
+}
+
 /**
  * Stand TICO next to a mission rather than parked at the bottom of the map.
  *
  * The companion is how a student finds their place on a map of five identical-looking
- * stops, so it belongs beside the one they are on. It goes on whichever side has room
- * and is kept inside the scene, since both sprite and node are positioned from their
- * top-left corner and a node near an edge would otherwise push TICO off the artwork.
+ * stops. Once they have finished something it says more than "you are here": TICO walks
+ * the road, standing between the stop they beat and the one that just opened, facing the
+ * way they are going — so the map answers "what now?" before anything is read.
  */
 function standBeside(node: { x: number; y: number }) {
+  // Nothing finished yet: beside the first stop, turned towards it.
   const toTheRight = node.x < SCENE.width / 2;
-  return {
-    x: clamp(toTheRight ? node.x + NODE.width - 24 : node.x - TICO.width + 24, 8, SCENE.width - TICO.width - 8),
-    y: clamp(node.y + NODE.height - 64, 8, SCENE.height - TICO.height - 8),
-  };
+  const from = centre(node);
+  return toTheRight
+    ? place(from.x + NODE.width, from.y + NODE.height / 2, "left")
+    : place(from.x - NODE.width, from.y + NODE.height / 2, "right");
+}
+
+/**
+ * Walking the road between two stops.
+ *
+ * A little past halfway rather than exactly on it: at the midpoint TICO reads as
+ * loitering between two equals, and past it as heading somewhere.
+ */
+function walkBetween(from: { x: number; y: number }, to: { x: number; y: number }) {
+  const a = centre(from);
+  const b = centre(to);
+  const at = 0.55;
+  return place(a.x + (b.x - a.x) * at, a.y + (b.y - a.y) * at, b.x >= a.x ? "right" : "left");
 }
 
 export type ChallengeMapData = {
@@ -123,9 +149,11 @@ export async function buildChallengeMap({
       if (next && reachable) unlocked = { nodeId: `${track.slug}-${next.slug}`, label: next.title };
     }
 
-    // TICO waits on the mission they are about to play, or on the last one they beat
-    // when the world is finished.
-    const here = nodes.find((node) => node.status === "current") ?? nodes[nodes.length - 1];
+    // TICO is on the road to the mission they are about to play, or standing on the last
+    // one they beat when the world is finished.
+    const currentNode = nodes.findIndex((node) => node.status === "current");
+    const here = currentNode >= 0 ? nodes[currentNode] : nodes[nodes.length - 1];
+    const previous = currentNode > 0 ? nodes[currentNode - 1] : null;
 
     stages.push({
       id: track.slug,
@@ -135,7 +163,7 @@ export async function buildChallengeMap({
       theme,
       nodes,
       slugs: Object.fromEntries(track.lessons.map((lesson) => [`${track.slug}-${lesson.slug}`, lesson.slug])),
-      companion: standBeside(here),
+      companion: previous ? walkBetween(previous, here) : standBeside(here),
     });
     standing.push(here);
   }

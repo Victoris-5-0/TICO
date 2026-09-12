@@ -2,6 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useSyncExternalStore, type ReactNode } from "react";
 
+import { muteStore } from "@/lib/mission/mute-store";
 import { narrationDir } from "@/lib/mission/narration";
 import type { Locale } from "@/i18n/config";
 
@@ -26,49 +27,6 @@ import styles from "./mission-player.module.css";
  * One `Audio` element for the whole player, so a phase change cuts the previous line off
  * rather than talking over it.
  */
-
-const MUTE_KEY = "tico.narration.muted";
-
-/**
- * The mute flag, as an external store.
- *
- * It lives outside React because it is read during playback (which happens in audio event
- * callbacks, not renders) and written from a button, and because it has to survive both
- * server rendering and a reload. `useSyncExternalStore` gives the server `false` and the
- * client the remembered value without a state write in an effect, which React 19 rejects.
- */
-const muteStore = {
-  listeners: new Set<() => void>(),
-  value: false,
-  loaded: false,
-
-  read(): boolean {
-    if (!this.loaded) {
-      this.loaded = true;
-      try {
-        this.value = window.localStorage.getItem(MUTE_KEY) === "1";
-      } catch {
-        // Private windows and blocked site data both throw. Unmuted is the right default.
-      }
-    }
-    return this.value;
-  },
-
-  set(next: boolean) {
-    this.value = next;
-    try {
-      window.localStorage.setItem(MUTE_KEY, next ? "1" : "0");
-    } catch {
-      // Not remembering the choice is survivable; ignoring the choice is not.
-    }
-    this.listeners.forEach((listener) => listener());
-  },
-
-  subscribe(listener: () => void) {
-    muteStore.listeners.add(listener);
-    return () => { muteStore.listeners.delete(listener); };
-  },
-};
 
 /** Server and first client render agree on "not muted"; the stored value applies after. */
 const useMuted = () =>

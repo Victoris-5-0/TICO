@@ -44,7 +44,20 @@
    * `BakeryScene` now paints extra wall to the left of the artwork and the panel sits on
    * that. Nothing is cropped and nothing is hidden.
    */
-  --panel-w: clamp(330px, 30vw, 460px);
+  --panel-w: clamp(340px, 38vw, 560px);
+  /*
+   * The letterbox band above and below the scene, in one expression.
+   *
+   * The artwork plus its painted wall is 2300 x 900 and the screen is not that shape, so
+   * the scene sits in the middle of the viewport with a strip of page either side of it.
+   * Widening the frame to cover would crop the queue, which `docs/design.md` section 12
+   * forbids — so the band is structural, and the layout is told its exact height instead
+   * of pretending it is not there: the header sits in the top one, the caption in the
+   * bottom one, and the panel stops at the scene's edge rather than hanging into it.
+   *
+   * Keep the divisor in step with `extendLeft` in `mission-player.tsx`: (1600 + ext) / 900.
+   */
+  --scene-band: max(0px, calc((100svh - (100vw / 2.5556)) / 2));
   /* Everything inside the panel reads against dark glass. */
   --on-glass: #F6F1EA;
   --on-glass-muted: #B9B0AC;
@@ -87,7 +100,9 @@
 /* A caption belongs to the world, so it sits on the world, not in the panel. */
 .sceneCaption {
   position: fixed;
-  inset-block-end: 74px;
+  /* Centred in the bottom band, so it labels the scene from outside it instead of
+     covering the pavement. Falls back to sitting on the scene when there is no band. */
+  inset-block-end: max(12px, calc(var(--scene-band) / 2 - 26px));
   right: clamp(16px, 2.5vw, 30px);
   z-index: 2;
   max-inline-size: min(38ch, 40vw);
@@ -219,8 +234,9 @@ html[lang="ar-EG"] .world { letter-spacing: 0; }
   position: absolute;
   /* Anchored to the bottom and sized by its content: a full-height slab left most of the
      glass empty during the story phases, which hid the bakery for no reason. */
-  inset-block: auto clamp(12px, 1.6vw, 22px);
-  max-block-size: calc(100% - clamp(12px, 1.6vw, 22px));
+  /* Rests on the scene's own bottom edge, not the screen's. */
+  inset-block: auto calc(var(--scene-band) + clamp(12px, 1.6vw, 22px));
+  max-block-size: calc(100% - var(--scene-band) - clamp(12px, 1.6vw, 22px));
   left: clamp(10px, 1.2vw, 18px);
   inline-size: var(--panel-w);
   pointer-events: auto;
@@ -228,13 +244,16 @@ html[lang="ar-EG"] .world { letter-spacing: 0; }
 }
 
 /*
- * Wider while they are writing code.
+ * One width, every phase.
  *
- * At story width a `def` line wrapped mid-token — `int) -` then `> int:` on the next row
- * — which is a confusing thing to show someone learning what `->` means. The scene
- * matters least during the coding phases, so the panel takes the room it needs.
+ * The panel used to grow for the coding phases so a `def` line would not wrap mid-token
+ * — `int) -` then `> int:` on the next row, which is a confusing thing to show someone
+ * learning what `->` means. But it grew past the painted wall and onto the shopfront, and
+ * the whole overlay jumping wider mid-mission is worse than either problem: the student
+ * is mid-sentence and the furniture moves. So the width is fixed at one that holds a
+ * 45-character signature at the editor's size, and long lines scroll inside the editor.
  */
-.panelDockWide { inline-size: clamp(380px, 44vw, 680px); }
+.panelDockWide { inline-size: var(--panel-w); }
 
 @media (prefers-reduced-motion: reduce) { .panelDock { transition: none; } }
 
@@ -260,6 +279,10 @@ html[lang="ar-EG"] .world { letter-spacing: 0; }
 .panelBody {
   flex: 1;
   min-block-size: 0;
+  /* The panel's width is fixed now, so its contents must live within it rather than
+     push it wider: a flex child defaults to min-content width and a long line of code or
+     a long test call would have overhung the glass. */
+  min-inline-size: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
   padding-block-end: 6px;
@@ -267,6 +290,18 @@ html[lang="ar-EG"] .world { letter-spacing: 0; }
 
 .panelBody::-webkit-scrollbar { width: 8px; }
 .panelBody::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.16); border-radius: 8px; }
+
+/* Thrown across the whole screen, not just the card.
+   `fixed` inside a <dialog> still paints in the top layer, so this sits over the backdrop
+   and the debrief both — and catches nothing, so the buttons under it stay live. */
+.confetti {
+  position: fixed;
+  inset: 0;
+  z-index: 4;
+  inline-size: 100%;
+  block-size: 100%;
+  pointer-events: none;
+}
 
 /* ---------------------------------------------------------------------- bust */
 
@@ -765,7 +800,8 @@ html[lang="ar-EG"] .testsTitle { letter-spacing: 0; }
    * The coding phases never reach this layout; they show the wider-screen notice, so
    * this only has to hold story content.
    */
-  .page { overflow: visible; }
+  /* Stacked, with the scene in a band of its own: no letterbox to dodge. */
+  .page { overflow: visible; --scene-band: 0px; }
   .stage { position: absolute; inset: 0 0 auto; block-size: 40svh; }
   .sceneStage { block-size: 40svh; }
   .main { block-size: auto; padding-block-start: 40svh; }

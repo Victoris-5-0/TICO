@@ -9,6 +9,16 @@
 .trafficBanner { color: #fff; }
 .scene { position: relative; width: 100%; aspect-ratio: 1440/1929; }
 .sceneArt { object-fit: fill; }
+/* The road between stops. Painted under the discs, in the same 1440x1929 units the
+   nodes are placed in — and stretched with them, so the dots stay on the road when the
+   scene is squeezed into a phone's taller frame. */
+.road { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 1; }
+/* A pale rim so the dots hold their shape over both the cream road and the darker
+   ground either side of it. */
+.road circle { fill: #6B4636; opacity: .45; stroke: #FFF8EE; stroke-width: 2.5; stroke-opacity: .5; }
+.road g[data-walked] circle { fill: #C9642F; opacity: .95; stroke-opacity: .85; }
+.road g[data-opens] circle { fill: #2F7EE8; opacity: .95; stroke-opacity: .9; }
+
 .nodes { list-style: none; margin: 0; padding: 0; }
 .nodePosition { position: absolute; width: 12.8%; z-index: 2; }
 .node { display: block; position: relative; width: 100%; min-width: 44px; min-height: 44px; padding: 0; border: 0; background: transparent; cursor: pointer; border-radius: 50%; }
@@ -17,10 +27,34 @@
 .nodeLabel { position: absolute; top: 100%; left: 50%; transform: translateX(-50%); background: #fffdf9; color: var(--ink); border: 2px solid var(--coral); border-radius: 12px; padding: 8px 12px; width: max-content; max-width: min(220px,46vw); font-size: 16px; line-height: 1.4; opacity: 0; pointer-events: none; box-shadow: 0 4px 16px #1f182022; }
 .node:hover .nodeLabel,.node:focus-visible .nodeLabel { opacity: 1; }
 .node:focus-visible { outline: 4px solid #fff; outline-offset: 4px; box-shadow: 0 0 0 8px var(--focus, #267977); }
-.node[data-status="current"] { outline: 3px solid #fff; outline-offset: 3px; }
 .node[data-status="locked"] { filter: grayscale(1); cursor: not-allowed; }
+
+/*
+ * Three states, three colours: terracotta and ticked is done, grey is shut, blue is the
+ * one that is open. A child scanning the map should not have to read a label to find
+ * where they are.
+ *
+ * The discs are painted terracotta, so blue is a hue rotation of the artwork itself
+ * rather than a flat patch laid over it — the shading, the rim light and the drop shadow
+ * all survive.
+ */
+.node[data-status="current"] > img { filter: hue-rotate(178deg) saturate(1.15) brightness(1.04); }
+.node[data-status="current"] .nodeNumber { text-shadow: 0 1px 4px #0b2a52; }
+.node[data-status="current"]::after {
+  content: "";
+  position: absolute;
+  inset: -7% -4%;
+  border-radius: 50%;
+  box-shadow: 0 0 0 3px #2F7EE8;
+  pointer-events: none;
+}
+
+/* And a glow on top of that for the one that opened a moment ago, which is also the
+   only node that moves — see the finite pulse in `challenge-map.tsx`. */
+.node[data-unlocked]::after { box-shadow: 0 0 0 3px #2F7EE8, 0 0 30px 8px rgba(47, 126, 232, 0.55); }
 .companion { position: absolute; width: 21.16%; pointer-events: none; z-index: 3; }
-.companion > img { width: 100%; height: auto; transform: scaleX(-1); }
+.companion > img { width: 100%; height: auto; }
+.companion[data-face="left"] > img { transform: scaleX(-1); }
 .speech { position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%); margin: 0 0 12px; padding: 18px 25px; border: 3px solid var(--coral); background: white; color: #0f172a; border-radius: 28px; font-size: clamp(14px,1.79vw,26px); font-weight: 700; width: max-content; max-width: 32vw; box-shadow: 0 24px 50px #0002; }
 .empty { padding: 48px 24px; text-align: center; }
 .page { background: #f8f9fb; color: var(--ink); font-family: var(--font-mission),var(--font-latin),sans-serif; }

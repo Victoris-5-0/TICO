@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, useReducedMotion } from "motion/react";
 
+import { playCue } from "@/lib/sound/cues";
 import type { Locale } from "@/i18n/config";
 
 import { ChallengeMap, type ChallengeNode, type ChallengeStage } from "./challenge-map";
@@ -41,14 +42,17 @@ export function ChallengeMapView({
   const [busy, setBusy] = useState<string | null>(null);
   const announced = useRef(false);
 
-  // Bring the new node into view once. `docs/design.md` section 11 asks for a restrained
-  // unlock — the state resolves and the label updates, with no looping pulse — so this
-  // scrolls and steps aside.
+  // Bring the new node into view once, and say so — a two-note chime and two beats of
+  // movement on the stop itself, then still. `docs/design.md` section 11 rules out a
+  // looping pulse, not the moment of arrival.
   useEffect(() => {
     if (!unlocked || announced.current) return;
     announced.current = true;
     const node = document.querySelector(`[data-node="${unlocked.nodeId}"]`);
     node?.scrollIntoView({ behavior: reduced ? "auto" : "smooth", block: "center" });
+    // After the scroll has begun, so the sound belongs to the stop being looked at.
+    const id = window.setTimeout(() => playCue("unlock"), reduced ? 0 : 260);
+    return () => window.clearTimeout(id);
   }, [unlocked, reduced]);
 
   function select(node: ChallengeNode, stage: ChallengeStage) {
@@ -80,6 +84,7 @@ export function ChallengeMapView({
         stages={stages}
         onSelect={select}
         bannerTitle={bannerTitle}
+        unlockedId={unlocked?.nodeId}
         emptyMessage={ar ? "مفيش مهام لسه." : "No missions yet."}
       />
 

@@ -233,7 +233,7 @@ export function MissionPlayer({ locale, mission, worldSlug, worldTitle, lessonId
               playToken={playToken}
               caption={change?.captionAr}
               highlight={highlight}
-              extendLeft={narrow ? 0 : 600}
+              extendLeft={narrow ? 0 : 700}
               label={sceneLabel}
             />
             {extras.length > 0 && (

@@ -2,11 +2,13 @@
 
 import Image from "next/image";
 import { motion, useReducedMotion } from "motion/react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
+import { playCue } from "@/lib/sound/cues";
 import type { MissionDebrief as Debrief } from "@/lib/mission/telemetry";
 import type { Locale } from "@/i18n/config";
 
+import { Confetti } from "./confetti";
 import styles from "./mission-player.module.css";
 
 /**
@@ -72,6 +74,16 @@ export function MissionDebrief({
     return () => window.clearInterval(id);
   }, [xp, reduced]);
 
+  // The sound of finishing, once. The debrief only ever appears off the back of a button
+  // press, so the browser allows it; the guard is for React's development double-mount,
+  // which would otherwise chime twice.
+  const chimed = useRef(false);
+  useEffect(() => {
+    if (chimed.current) return;
+    chimed.current = true;
+    playCue("success");
+  }, []);
+
   const stars = debrief?.starsEarned ?? 0;
   const rise = (delay: number) =>
     reduced
@@ -80,6 +92,7 @@ export function MissionDebrief({
 
   return (
     <section className={styles.debrief} dir={ar ? "rtl" : "ltr"}>
+      <Confetti />
       <Image
         className={styles.debriefMascot}
         src="/assets/characters/tico/tico-celebrating.webp"
