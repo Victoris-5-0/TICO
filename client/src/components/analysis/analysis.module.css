@@ -117,3 +117,59 @@
   .concept { grid-template-columns: 1fr; }
   .stops { justify-content: flex-start; }
 }
+
+/* ------------------------------------------------------------------- identity */
+/* The avatar the learner picked at onboarding, brought back so the page reads as theirs
+   rather than as a report about them. Sits above the stats, below the title. */
+.identity { display: flex; align-items: center; gap: 18px; background: linear-gradient(212deg, #fdf1ec 9%, var(--paper) 52%, #fdf1ec 96%); border: 1px solid var(--line); border-radius: var(--radius-md); padding: 18px 22px; box-shadow: var(--shadow-small); }
+.identityAvatar { width: clamp(64px, 8vw, 92px); height: auto; flex: none; border-radius: 50%; background: var(--sand); box-shadow: 0 6px 16px rgba(65,38,28,.16); }
+.identityBody { flex: 1 1 auto; min-width: 0; }
+.identityName { margin: 0 0 8px; font-size: clamp(1.15rem, 2.2vw, 1.5rem); font-weight: 800; letter-spacing: -.02em; }
+.identityLine { margin: 10px 0 0; color: var(--muted); font-size: .88rem; }
+
+.chips { display: flex; flex-wrap: wrap; gap: 7px; }
+.chip { font-size: .74rem; font-weight: 700; padding: 5px 11px; border-radius: 99px; background: var(--paper); border: 1px solid var(--line); color: var(--muted); white-space: nowrap; }
+.chipBand { background: var(--teal); border-color: var(--teal); color: #05302f; font-weight: 800; }
+
+@media (max-width: 520px) {
+  .identity { flex-direction: column; text-align: center; gap: 12px; }
+  .chips { justify-content: center; }
+}
+
+/* --------------------------------------------------------------------- streak */
+/* A coral ramp rather than a green one. Teal already means "passed" everywhere else on
+   this page, so reusing it for volume would make a busy day look like a successful one. */
+.streakHead { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; flex-wrap: wrap; }
+.streakNumbers { display: flex; gap: 30px; }
+.streakStat { text-align: center; }
+.streakValue { display: block; font-size: clamp(2.4rem, 5vw, 3.4rem); font-weight: 800; line-height: 1; letter-spacing: -.03em; color: var(--coral); font-variant-numeric: tabular-nums; }
+.streakLabel { display: block; margin-top: 2px; font-size: .76rem; font-weight: 700; color: var(--muted); white-space: nowrap; }
+
+/* The weeks share the card width rather than hugging one edge.
+   `inline-grid` with `min-content` left a large gap beside the calendar — on the right in
+   English, on the left in Arabic, because that is where a shrink-to-fit box lands. Each
+   week is now a flex column that grows, and a cell is a square of whatever width it gets,
+   capped so eighteen weeks on an ultrawide screen do not become tiles. */
+.gridScroll { padding-block: 6px 2px; }
+.gridInner { display: grid; gap: 8px; }
+
+.months { display: flex; gap: 3px; }
+.month { flex: 1 1 0; min-inline-size: 0; max-inline-size: 15px; font-size: .58rem; color: var(--muted); white-space: nowrap; }
+
+.grid7 { display: flex; gap: 3px; align-items: start; }
+.week { flex: 1 1 0; min-inline-size: 0; max-inline-size: 15px; display: grid; grid-template-rows: repeat(7, auto); gap: 3px; }
+
+.cell { inline-size: 100%; aspect-ratio: 1; border-radius: 3px; background: var(--sand); }
+.cellVoid { inline-size: 100%; aspect-ratio: 1; }
+
+.lv0 { background: #f2ebe0; }
+.lv1 { background: #f6c9b4; }
+.lv2 { background: #ee9a76; }
+.lv3 { background: var(--coral); }
+.lv4 { background: var(--coral-dark); }
+
+.legend { display: flex; align-items: center; gap: 5px; justify-content: flex-end; margin-top: 2px; }
+.legendText { font-size: .72rem; color: var(--muted); margin-inline: 4px; }
+
+/* The key is a key, not more calendar. */
+.legend .cell { inline-size: 13px; block-size: 13px; aspect-ratio: auto; border-radius: 3px; flex: none; }

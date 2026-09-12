@@ -318,3 +318,9 @@ html:has([data-landing-page]) { scrollbar-width: thin; scrollbar-color: #C69C85 
 html:has([data-landing-page])::-webkit-scrollbar { width: 8px; }
 html:has([data-landing-page])::-webkit-scrollbar-track { background: #FDF1EC; }
 html:has([data-landing-page])::-webkit-scrollbar-thumb { background: #C69C85; border: 2px solid #FDF1EC; border-radius: 999px; }
+
+/* The panel TICO is currently explaining, on the progress page. A global rather than a
+   CSS-module class because the guide finds panels with `document.querySelector` and
+   toggles the class by name — a hashed module name would not survive that. */
+.tourLit { position: relative; z-index: 2; box-shadow: 0 0 0 3px var(--coral), var(--shadow) !important; transition: box-shadow .2s ease; }
+@media (prefers-reduced-motion: reduce) { .tourLit { transition: none; } }

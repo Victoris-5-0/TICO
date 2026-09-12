@@ -12,6 +12,9 @@
 
 import Image from "next/image";
 
+import { StreakGrid } from "@/components/analysis/streak-grid";
+import { LearnerIdentity } from "@/components/analysis/learner-identity";
+import { TicoDock } from "@/components/analysis/tico-dock";
 import type { Analysis, TagRow } from "@/services/analysis.service";
 import { syntaxVsLogicFromTags } from "@/services/analysis.service";
 
@@ -180,7 +183,7 @@ export function AnalysisDashboard({
 }) {
   const ar = locale.startsWith("ar");
   const t = ar ? AR : EN;
-  const { totals, concepts, tags, hintLadder, activity, sessions } = analysis;
+  const { totals, concepts, tags, hintLadder, sessions } = analysis;
 
   const nothingYet = totals.submissions === 0 && sessions.length === 0;
 
@@ -204,7 +207,6 @@ export function AnalysisDashboard({
   const splitTotal = split.syntax + split.logic;
   const maxTag = Math.max(1, ...tags.map((x) => x.total));
   const maxRung = Math.max(1, ...hintLadder.map((r) => r.count));
-  const maxDay = Math.max(1, ...activity.map((d) => d.submissions));
 
   return (
     <div className={styles.page}>
@@ -214,22 +216,14 @@ export function AnalysisDashboard({
           <h1 className={styles.title}>{t.title}</h1>
           <p className={styles.subtitle}>{t.subtitle}</p>
         </div>
-        {/* Celebrating when a concept is finished, thinking while still working. */}
-        <Image
-          className={styles.tico}
-          src={
-            totals.conceptsComplete > 0
-              ? "/assets/characters/tico/tico-celebrating.webp"
-              : "/assets/characters/tico/tico-determined.webp"
-          }
-          alt=""
-          width={148}
-          height={148}
-          priority
-        />
+        {/* He used to be a portrait here. A dashboard is the screen a learner is most
+            likely to misread, so he walks it and says what each number means instead. */}
+        <TicoDock locale={locale} sessionId={sessions[0]?.id ?? null} />
       </header>
 
-      <div className={styles.stats}>
+      <LearnerIdentity profile={analysis.profile} totals={totals} locale={locale} />
+
+      <div className={styles.stats} data-tour="stats">
         <div className={`${styles.stat} ${styles["stat--coral"]}`}>
           <div className={styles.statValue}>{totals.submissions}</div>
           <div className={styles.statLabel}>{t.stats.missions}</div>
@@ -252,8 +246,10 @@ export function AnalysisDashboard({
         </div>
       </div>
 
+      <StreakGrid streak={analysis.streak} locale={locale} />
+
       {/* ---------------------------------------------------------- concepts */}
-      <section className={styles.card}>
+      <section className={styles.card} data-tour="concepts">
         <h2>{t.concepts.heading}</h2>
         <p className={styles.hint}>{t.concepts.hint}</p>
 
@@ -292,7 +288,7 @@ export function AnalysisDashboard({
 
       <div className={`${styles.grid} ${styles.grid2}`}>
         {/* ------------------------------------------------------------ tags */}
-        <section className={styles.card}>
+        <section className={styles.card} data-tour="tags">
           <h2>{t.tags.heading}</h2>
           <p className={styles.hint}>{t.tags.hint}</p>
 
@@ -318,7 +314,7 @@ export function AnalysisDashboard({
         </section>
 
         {/* --------------------------------------------------- syntax / logic */}
-        <section className={styles.card}>
+        <section className={styles.card} data-tour="split">
           <h2>{t.split.heading}</h2>
           <p className={styles.hint}>{t.split.hint}</p>
 
@@ -359,7 +355,7 @@ export function AnalysisDashboard({
         </section>
 
         {/* ------------------------------------------------------ hint ladder */}
-        <section className={styles.card}>
+        <section className={styles.card} data-tour="hints">
           <h2>{t.hints.heading}</h2>
           <p className={styles.hint}>{t.hints.hint}</p>
 
@@ -382,37 +378,11 @@ export function AnalysisDashboard({
             </div>
           )}
         </section>
-
-        {/* --------------------------------------------------------- activity */}
-        <section className={styles.card}>
-          <h2>{t.activity.heading}</h2>
-          <p className={styles.hint}>{t.activity.hint}</p>
-
-          <div className={styles.days}>
-            {activity.map((d) => (
-              <div key={d.day} className={styles.day} title={`${d.day}: ${d.submissions}`}>
-                <span
-                  className={styles.dayBar}
-                  style={{ height: `${((d.submissions - d.passed) / maxDay) * 100}%` }}
-                />
-                <span
-                  className={styles.dayBarPassed}
-                  style={{ height: `${(d.passed / maxDay) * 100}%` }}
-                />
-              </div>
-            ))}
-          </div>
-          <div className={styles.dayLabels}>
-            {activity.map((d) => (
-              <span key={d.day} className={styles.dayLabel}>{d.day.slice(8)}</span>
-            ))}
-          </div>
-        </section>
       </div>
 
       {/* ---------------------------------------------------------- sessions */}
       {sessions.length > 0 && (
-        <section className={styles.card}>
+        <section className={styles.card} data-tour="sessions">
           <h2>{t.sessions.heading}</h2>
           <div className={styles.scroll}>
             <table className={styles.table}>

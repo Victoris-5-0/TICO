@@ -587,6 +587,28 @@ export interface TicoMessageRequest {
 }
 
 /**
+ * One thing a mission does to the world, aimed at something.
+ *
+ * The difference from `props`, which only sets counts: this names a **target**. "Two
+ * loaves" is a count; "two loaves into Amina's hands" is an action, and the second is
+ * what makes the world feel addressed rather than decorated.
+ *
+ * `from_code` actions — `write` and `bind` — carry no literal value. Their value is
+ * whatever the student's function returned or assigned, which is what makes the world
+ * react to what the code *produced* rather than to whether it passed.
+ */
+export interface WorldAction {
+  /** One of the world manifest's actions: "give", "write", "bind", "set", "face", "focus". */
+  do: string;
+  /** What it is aimed at — a character id, a sprite, or a text surface. Omitted only for actions that take none, like `focus`. */
+  target?: string | null;
+  /** A fixed value, for actions that take one. Leave null on `write` and `bind`, whose value comes from running the student's code. */
+  value?: string | number | null;
+  /** For `bind` and `write`: the name in the student's code to read, or "return" for the function's result. */
+  fromVariable?: string | null;
+}
+
+/**
  * What happens to the scene when the student's code runs.
  *
  * `animate` names one motion from the world manifest's closed list. If the client has
@@ -596,6 +618,8 @@ export interface TicoMessageRequest {
 export interface WorldChange {
   /** One of the world manifest's animations, e.g. "baking" or "handover" in el_forn. Closed set — the validator rejects anything else, so a client may switch on it exhaustively. */
   animate?: string | null;
+  /** What the mission does to the world, beyond setting counts. Each is checked against the manifest's closed list, so a client may switch on `do` exhaustively and never meet an unknown verb. */
+  actions?: Array<WorldAction>;
   /** The scene after running. Values may reference a variable from the student's code as "= total". */
   props?: Record<string, number | string>;
   /** Optional floating label, e.g. '١٠٠ رغيف'. */

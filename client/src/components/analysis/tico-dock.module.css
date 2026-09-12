@@ -1,0 +1,152 @@
+/* TICO on the progress page: tour, then docked, then chat.
+ *
+ * All three sit in the same corner so he never appears to jump between places. Positioned
+ * with logical properties throughout — the page runs RTL in Arabic, and the earlier
+ * version used `inset-inline-start: 50%` with a `translate: -50%`, which resolve in
+ * opposite directions and pushed the bubble off the edge.
+ */
+
+/* =============================================================== shared bits */
+.avatar { flex: 0 0 auto; width: clamp(74px, 11vw, 108px); }
+.avatar img { width: 100%; height: auto; filter: drop-shadow(0 8px 18px rgba(65,38,28,.28)); }
+
+.walking { animation: hop .5s ease-in-out; }
+@keyframes hop {
+  0%   { transform: translateY(0)     scaleX(1); }
+  30%  { transform: translateY(-11px) scaleX(.96); }
+  60%  { transform: translateY(0)     scaleX(1.03); }
+  100% { transform: translateY(0)     scaleX(1); }
+}
+
+.primary {
+  border: 0; border-radius: 99px; background: var(--coral); color: var(--ink);
+  font: inherit; font-size: .82rem; font-weight: 800; cursor: pointer;
+  padding: 9px 20px; box-shadow: 0 4px 0 var(--coral-dark);
+  transition: transform .16s ease, box-shadow .16s ease;
+}
+.primary:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 6px 0 var(--coral-dark); }
+.primary:active:not(:disabled) { transform: translateY(1px); box-shadow: 0 3px 0 var(--coral-dark); }
+.primary:disabled { opacity: .5; cursor: not-allowed; }
+
+.ghost {
+  border: 0; background: transparent; color: var(--muted);
+  font: inherit; font-size: .8rem; font-weight: 700; cursor: pointer; padding: 6px 4px;
+}
+.ghost:hover { color: var(--ink); }
+
+/* ===================================================================== tour */
+.guide {
+  position: fixed; inset-block-end: 20px; inset-inline: 16px; z-index: 60;
+  width: min(620px, calc(100vw - 32px)); margin-inline: auto;
+  display: flex; align-items: flex-end; gap: 12px;
+  animation: rise .28s ease-out;
+}
+@keyframes rise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+
+.bubble {
+  flex: 1 1 auto; min-width: 0; max-width: 100%;
+  background: var(--paper); border: 1px solid var(--line);
+  border-radius: 20px; padding: 16px 18px 13px;
+  box-shadow: 0 16px 40px rgba(65,38,28,.2);
+}
+.line { margin: 0 0 12px; font-size: .95rem; line-height: 1.55; }
+.line:focus-visible { outline: none; }
+
+.controls { display: flex; align-items: center; gap: 10px; }
+.dots { display: flex; gap: 5px; flex: 1 1 auto; }
+.dot, .dotOn { width: 6px; height: 6px; border-radius: 50%; background: var(--line); }
+.dotOn { background: var(--coral); }
+
+/* ===================================================================== dock */
+.dock {
+  position: fixed; inset-block-end: 18px; inset-inline-end: 18px; z-index: 60;
+  display: flex; align-items: center; gap: 10px;
+  border: 0; background: transparent; cursor: pointer; padding: 0;
+  animation: rise .3s ease-out;
+}
+.dock img {
+  width: clamp(92px, 11vw, 124px); height: auto;
+  filter: drop-shadow(0 8px 20px rgba(65,38,28,.3));
+  transition: transform .2s ease;
+}
+.dock:hover img { transform: translateY(-4px) rotate(-3deg); }
+.dock:active img { transform: translateY(0); }
+
+/* The label rides alongside on a wide screen and disappears on a narrow one, where the
+   character alone is unambiguous and the room is not there. */
+.dockLabel {
+  background: var(--paper); border: 1px solid var(--line); border-radius: 99px;
+  padding: 8px 15px; font-size: .8rem; font-weight: 800; color: var(--ink);
+  box-shadow: 0 6px 18px rgba(65,38,28,.16); white-space: nowrap;
+  order: -1;
+}
+.dock:focus-visible { outline: 3px solid var(--teal); outline-offset: 6px; border-radius: 99px; }
+
+/* ===================================================================== chat */
+.chat {
+  position: fixed; inset-block-end: 18px; inset-inline-end: 18px; z-index: 61;
+  width: min(380px, calc(100vw - 32px));
+  max-height: min(560px, calc(100dvh - 36px));
+  display: flex; flex-direction: column;
+  background: var(--paper); border: 1px solid var(--line); border-radius: 24px;
+  box-shadow: 0 24px 60px rgba(65,38,28,.26);
+  overflow: hidden; animation: rise .24s ease-out;
+}
+
+.chatHead {
+  display: flex; align-items: center; gap: 11px;
+  padding: 14px 14px 12px 16px; border-block-end: 1px solid var(--line);
+  background: linear-gradient(180deg, #fdf1ec, var(--paper));
+}
+.chatFace { border-radius: 50%; background: var(--sand); flex: none; }
+.chatTitle { flex: 1 1 auto; min-width: 0; display: grid; }
+.chatTitle strong { font-size: .95rem; font-weight: 800; }
+.chatTitle span { font-size: .74rem; color: var(--muted); }
+
+.close {
+  border: 0; background: transparent; cursor: pointer; flex: none;
+  width: 32px; height: 32px; border-radius: 50%; font-size: 1.5rem; line-height: 1;
+  color: var(--muted);
+}
+.close:hover { background: var(--sand); color: var(--ink); }
+
+.log {
+  flex: 1 1 auto; overflow-y: auto; overscroll-behavior: contain;
+  padding: 14px 16px; display: flex; flex-direction: column; gap: 9px;
+}
+.tico, .you {
+  margin: 0; padding: 10px 13px; border-radius: 15px;
+  font-size: .88rem; line-height: 1.5; max-width: 86%; overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+.tico { background: var(--sand); color: var(--ink); align-self: flex-start; border-start-start-radius: 5px; }
+.you  { background: var(--coral); color: var(--ink); align-self: flex-end; border-start-end-radius: 5px; }
+
+.compose {
+  display: flex; gap: 8px; padding: 12px 14px 14px;
+  border-block-start: 1px solid var(--line);
+}
+.input {
+  flex: 1 1 auto; min-width: 0;
+  border: 1px solid var(--line); border-radius: 99px; background: #fff;
+  padding: 10px 16px; font: inherit; font-size: .86rem; color: var(--ink);
+}
+.input:focus-visible { outline: 2px solid var(--teal); outline-offset: 1px; }
+.input:disabled { opacity: .6; }
+
+@media (max-width: 560px) {
+  .avatar { width: 62px; }
+  .bubble { padding: 13px 14px 11px; }
+  .line { font-size: .88rem; }
+  .dockLabel { display: none; }
+  .dock img { width: 80px; }
+  .chat { inset-inline: 16px; width: auto; }
+}
+
+/* The words are the point; the movement is decoration. */
+@media (prefers-reduced-motion: reduce) {
+  .guide, .dock, .chat { animation: none; }
+  .walking { animation: none; }
+  .primary, .dock img { transition: none; }
+  .primary:hover:not(:disabled), .dock:hover img { transform: none; }
+}

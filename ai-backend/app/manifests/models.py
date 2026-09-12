@@ -118,6 +118,25 @@ class SpriteSpec(ManifestModel):
     states: list[str] = Field(default_factory=list)
 
 
+class ActionSpec(ManifestModel):
+    """One verb a mission may use on the world, and what it may be aimed at.
+
+    `targets` is the closed list of things this verb accepts. `give` takes a character id,
+    `write` takes a vector text surface, `bind` takes a countable sprite. A verb with an
+    empty `targets` takes none — `focus` is about the camera, not about a thing.
+    """
+
+    id: str
+    #: What this does, in one line. Reaches the model in the generation prompt, so it is
+    #: written for a reader who has never seen the client.
+    description: str | None = None
+    targets: list[str] = Field(default_factory=list)
+    #: True when the value comes from running the student's code rather than being fixed
+    #: by the mission. Only `write` and `bind` are like this, and they are the two that
+    #: make the world react to what the code *produced* rather than whether it was right.
+    from_code: bool = False
+
+
 class Visual(ManifestModel):
     """The closed vocabulary the client can draw and move.
 
@@ -132,12 +151,22 @@ class Visual(ManifestModel):
     sprites: dict[str, SpriteSpec] = Field(default_factory=dict)
     states: dict[str, list[str]] = Field(default_factory=dict)
     animations: list[str] = Field(default_factory=list)
+    #: The third fence. `sprites` says what can be drawn and `animations` what can move;
+    #: this says what a mission may *do* — and to what. Empty for a world whose client
+    #: cannot act on anything yet, which is the other two worlds.
+    actions: list[ActionSpec] = Field(default_factory=list)
 
     def can_draw(self, prop: str) -> bool:
         return prop in self.sprites
 
     def can_animate(self, name: str) -> bool:
         return name in self.animations
+
+    def action(self, action_id: str) -> "ActionSpec | None":
+        return next((a for a in self.actions if a.id == action_id), None)
+
+    def can_act(self, action_id: str) -> bool:
+        return self.action(action_id) is not None
 
 
 class Control(ManifestModel):

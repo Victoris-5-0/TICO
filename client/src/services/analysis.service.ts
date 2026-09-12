@@ -63,6 +63,12 @@ export type SessionRow = {
 
 export type Analysis = {
   profile: {
+    name: string | null;
+    avatarUrl: string | null;
+    ageBand: string | null;
+    learnerPreference: string | null;
+    gender: string | null;
+    onboardingCompletedAt: Date | null;
     skillBand: string | null;
     /** 0 = fights the language, 1 = fights the thinking. Null until there is evidence. */
     syntaxVsLogic: number | null;
@@ -86,6 +92,13 @@ export type Analysis = {
   hintLadder: { rung: number; count: number }[];
   /** Per calendar day, so a streak is visible without inventing one. */
   activity: { day: string; submissions: number; passed: number }[];
+  /** A contribution grid: every day of the last year, including the empty ones. */
+  streak: {
+    days: { day: string; count: number; passed: number }[];
+    current: number;
+    longest: number;
+    activeDays: number;
+  };
 };
 
 function requiredStops(mastery: number, completed: number): number {
@@ -103,8 +116,9 @@ function isComplete(mastery: number, completed: number): boolean {
 const dayKey = (d: Date) => d.toISOString().slice(0, 10);
 
 export async function getAnalysis(userId: string): Promise<Analysis> {
-  const [profile, concepts, mastery, submissions, hintEvents, sessions] = await Promise.all([
+  const [profile, account, concepts, mastery, submissions, hintEvents, sessions] = await Promise.all([
     db.studentProfile.findUnique({ where: { userId } }),
+    db.user.findUnique({ where: { id: userId }, select: { name: true, avatarUrl: true } }),
     db.concept.findMany({ orderBy: { sequenceOrder: "asc" } }),
     db.conceptMastery.findMany({ where: { userId } }),
     db.submission.findMany({
@@ -223,6 +237,42 @@ export async function getAnalysis(userId: string): Promise<Analysis> {
     };
   });
 
+  // ------------------------------------------------------------------- streak
+  //
+  // Every day in the window, not only the days with work — a grid with the gaps missing
+  // is not a grid, and the gaps are the honest part.
+  const WEEKS = 53;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  // Start on the Saturday on or before the window opens. Saturday is the first day of the
+  // week in Egypt, and a grid that starts on Sunday would put the weekend in the middle.
+  const start = new Date(today);
+  start.setDate(start.getDate() - (WEEKS * 7 - 1));
+  start.setDate(start.getDate() - ((start.getDay() + 1) % 7));
+
+  const streakDays: { day: string; count: number; passed: number }[] = [];
+  for (let d = new Date(start); d <= today; d.setDate(d.getDate() + 1)) {
+    const key = dayKey(d);
+    const found = byDay.get(key);
+    streakDays.push({ day: key, count: found?.submissions ?? 0, passed: found?.passed ?? 0 });
+  }
+
+  // Counted backwards from today. Today being empty does not break a streak until the day
+  // is over, so an afternoon with no work yet still shows yesterday's run.
+  let current = 0;
+  for (let i = streakDays.length - 1; i >= 0; i -= 1) {
+    if (streakDays[i].count > 0) current += 1;
+    else if (i < streakDays.length - 1) break;
+  }
+
+  let longest = 0;
+  let run = 0;
+  for (const d of streakDays) {
+    run = d.count > 0 ? run + 1 : 0;
+    if (run > longest) longest = run;
+  }
+
   const passed = submissions.filter((s) => s.status === "PASSED").length;
   const minutes = Math.round(
     sessions.reduce((total, s) => total + (s.timeSpentMs ?? 0), 0) / 60000,
@@ -230,6 +280,13 @@ export async function getAnalysis(userId: string): Promise<Analysis> {
 
   return {
     profile: {
+      name: account?.name ?? null,
+      // The onboarding avatar is one of the cast — TICO, Tika, or a bakery customer.
+      avatarUrl: account?.avatarUrl ?? null,
+      ageBand: profile?.ageBand ?? null,
+      learnerPreference: profile?.learnerPreference ?? null,
+      gender: profile?.gender ?? null,
+      onboardingCompletedAt: profile?.onboardingCompletedAt ?? null,
       skillBand: profile?.skillBand ?? null,
       syntaxVsLogic: profile?.syntaxVsLogic ?? null,
       hintDependency: profile?.hintDependency ?? null,
@@ -249,6 +306,12 @@ export async function getAnalysis(userId: string): Promise<Analysis> {
     },
     hintLadder: ladder,
     activity,
+    streak: {
+      days: streakDays,
+      current,
+      longest,
+      activeDays: streakDays.filter((d) => d.count > 0).length,
+    },
   };
 }
 

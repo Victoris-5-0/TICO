@@ -53,6 +53,36 @@ class WorldState(Schema):
     )
 
 
+class WorldAction(Schema):
+    """One thing a mission does to the world, aimed at something.
+
+    The difference from `props`, which only sets counts: this names a **target**. "Two
+    loaves" is a count; "two loaves into Amina's hands" is an action, and the second is
+    what makes the world feel addressed rather than decorated.
+
+    `from_code` actions — `write` and `bind` — carry no literal value. Their value is
+    whatever the student's function returned or assigned, which is what makes the world
+    react to what the code *produced* rather than to whether it passed.
+    """
+
+    do: str = Field(description='One of the world manifest\'s actions: "give", "write", "bind", "set", "face", "focus".')
+    target: str | None = Field(
+        default=None,
+        description="What it is aimed at — a character id, a sprite, or a text surface. "
+        "Omitted only for actions that take none, like `focus`.",
+    )
+    value: str | int | None = Field(
+        default=None,
+        description="A fixed value, for actions that take one. Leave null on `write` and "
+        "`bind`, whose value comes from running the student's code.",
+    )
+    #: Which variable or return value supplies the value, for `write` and `bind`.
+    from_variable: str | None = Field(
+        default=None,
+        description='For `bind` and `write`: the name in the student\'s code to read, or '
+        '"return" for the function\'s result.',
+    )
+
 class WorldChange(Schema):
     """What happens to the scene when the student's code runs.
 
@@ -66,6 +96,13 @@ class WorldChange(Schema):
         description="One of the world manifest's animations, e.g. \"baking\" or "
         "\"handover\" in el_forn. Closed set — the validator rejects anything else, so a "
         "client may switch on it exhaustively.",
+    )
+    actions: list[WorldAction] = Field(
+        default_factory=list,
+        description="What the mission does to the world, beyond setting counts. Each is "
+        "checked against the manifest's closed list, so a client may switch on `do` "
+        "exhaustively and never meet an unknown verb.",
+        max_length=6,
     )
     props: dict[str, int | str] = Field(
         default_factory=dict,
