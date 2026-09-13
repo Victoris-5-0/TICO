@@ -53,6 +53,12 @@ const STEP_LABELS: Record<Locale, Record<PhaseKey, string>> = {
   },
 };
 
+const WORLD_BANNERS: Record<string, string> = {
+  "el-forn": "/assets/challenge-map/bakery-banner.png",
+  "cairo-traffic": "/assets/challenge-map/traffic-banner.png",
+  "isharet-cairo": "/assets/challenge-map/traffic-banner.png",
+};
+
 export type MissionPlayerProps = {
   locale: Locale;
   mission: PhasedMissionOut;
@@ -75,6 +81,7 @@ export function MissionPlayer({ locale, mission, worldSlug, worldTitle, lessonId
   const mapHref = lessonSlug
     ? `/${locale}/challenges?done=${encodeURIComponent(lessonSlug)}`
     : `/${locale}/challenges`;
+  const bannerUrl = WORLD_BANNERS[worldSlug] || "/assets/challenge-map/bakery-banner.png";
 
   const [step, setStep] = useState(0);
   const [exiting, setExiting] = useState(false);
@@ -335,6 +342,12 @@ export function MissionPlayer({ locale, mission, worldSlug, worldTitle, lessonId
             </section>
           </div>
         </main>
+
+        <div
+          className={styles.bottomBanner}
+          style={{ backgroundImage: `url(${bannerUrl})` }}
+          aria-hidden="true"
+        />
 
         <RunnerStatus state={runner.state} error={runner.error} onRetry={runner.restart} locale={locale} />
 

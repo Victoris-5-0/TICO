@@ -110,7 +110,15 @@ export function MissionScene({ locale, props, animate, playToken = 0, caption, h
   return (
     <figure className={styles.scene} data-ready={assets} data-animate={animate ?? "none"}>
       <div className={styles.sceneStage} dir="ltr">
-        <BakeryScene state={state} reducedMotion={reduced} counterView={false} label={label} highlight={highlight} extendLeft={extendLeft} />
+        <BakeryScene
+          state={state}
+          reducedMotion={reduced}
+          counterView={false}
+          label={label}
+          highlight={highlight}
+          extendLeft={extendLeft}
+          locale={locale}
+        />
         {assets !== "ready" && (
           <div className={styles.sceneLoading}>
             {assets === "loading"

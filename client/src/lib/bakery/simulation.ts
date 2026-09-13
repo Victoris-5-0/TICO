@@ -7,6 +7,9 @@ export type Loaf = { id: number; owner: LoafOwner };
 export type BakeryState = {
   phase: Phase;
   elapsed: number;
+  /** Total active playback time; shared by customer patience and scene motion. */
+  playbackElapsed?: number;
+  orderSizes?: Readonly<Record<CustomerId, number>>;
   queue: CustomerId[];
   served: CustomerId[];
   loaves: Loaf[];
@@ -20,6 +23,10 @@ export type BakeryState = {
 export type BakeryAction = { type: "bake" | "serve" | "demo" | "pause" | "reset" } | { type: "tick"; ms: number } | { type: "visibility"; hidden: boolean };
 export const BATCH_SIZE = 8;
 export const ORDER_SIZE = 2;
+export const CUSTOMER_ORDER_SIZES: Readonly<Record<CustomerId, number>> = {
+  mariam: 2, nour: 1, amina: 3, omar: 2, dina: 1, youssef: 3, hoda: 2, farid: 2,
+};
+export const customerOrderSize = (state: BakeryState, id: CustomerId) => state.orderSizes?.[id] ?? ORDER_SIZE;
 export const DURATIONS: Record<Phase, number> = {
   idle: 0, loading: 1800, baking: 2800, retrieving: 1800, stocking: 1400,
   handover: 2000, exiting: 2200, advancing: 1400, complete: 0,
@@ -28,7 +35,7 @@ export const readyLoaves = (state: BakeryState) => state.loaves.filter((loaf) =>
 export const isBusy = (state: BakeryState) => state.phase !== "idle" && state.phase !== "complete";
 export const phaseProgress = (state: BakeryState) => DURATIONS[state.phase] ? Math.min(1, state.elapsed / DURATIONS[state.phase]) : 0;
 export function initialBakeryState(): BakeryState {
-  return { phase: "idle", elapsed: 0, queue: [...CUSTOMER_IDS], served: [], loaves: [], batches: 0, active: null, auto: false, paused: false, hidden: false, notice: "welcome" };
+  return { phase: "idle", elapsed: 0, playbackElapsed: 0, orderSizes: CUSTOMER_ORDER_SIZES, queue: [...CUSTOMER_IDS], served: [], loaves: [], batches: 0, active: null, auto: false, paused: false, hidden: false, notice: "welcome" };
 }
 const moveOwner = (state: BakeryState, from: LoafOwner, to: LoafOwner) => state.loaves.map((loaf) => loaf.owner === from ? { ...loaf, owner: to } : loaf);
 function enter(state: BakeryState, phase: Phase): BakeryState {
@@ -36,21 +43,23 @@ function enter(state: BakeryState, phase: Phase): BakeryState {
 }
 function bake(state: BakeryState): BakeryState {
   if (isBusy(state) || state.paused || state.hidden || !state.queue.length) return state;
-  if (readyLoaves(state).length) return { ...state, notice: "full" };
-  const loaves: Loaf[] = Array.from({ length: BATCH_SIZE }, (_, i) => ({ id: state.loaves.length + i, owner: "dough" }));
+  const stock = readyLoaves(state).length;
+  if (stock >= customerOrderSize(state, state.queue[0])) return { ...state, notice: "full" };
+  const loaves: Loaf[] = Array.from({ length: BATCH_SIZE - stock }, (_, i) => ({ id: state.loaves.length + i, owner: "dough" }));
   return enter({ ...state, batches: state.batches + 1, loaves: [...state.loaves, ...loaves] }, "loading");
 }
 function serve(state: BakeryState): BakeryState {
   if (isBusy(state) || state.paused || state.hidden || !state.queue.length) return state;
   const stock = readyLoaves(state);
-  if (stock.length < ORDER_SIZE) return { ...state, notice: "empty" };
   const active = state.queue[0];
-  const ids = new Set(stock.slice(0, ORDER_SIZE).map((loaf) => loaf.id));
+  const quantity = customerOrderSize(state, active);
+  if (stock.length < quantity) return { ...state, notice: "empty" };
+  const ids = new Set(stock.slice(0, quantity).map((loaf) => loaf.id));
   return enter({ ...state, active, loaves: state.loaves.map((loaf) => ids.has(loaf.id) ? { ...loaf, owner: `handover:${active}` } : loaf) }, "handover");
 }
 function continueDemo(state: BakeryState): BakeryState {
   if (!state.auto || state.phase !== "idle") return state;
-  return readyLoaves(state).length >= ORDER_SIZE ? serve(state) : bake(state);
+  return readyLoaves(state).length >= customerOrderSize(state, state.queue[0]) ? serve(state) : bake(state);
 }
 function finishPhase(state: BakeryState): BakeryState {
   switch (state.phase) {
@@ -79,7 +88,8 @@ export function bakeryReducer(state: BakeryState, action: BakeryAction): BakeryS
     case "tick": {
       if (state.paused || state.hidden || !isBusy(state) || !Number.isFinite(action.ms) || action.ms <= 0) return state;
       // One bounded visual step. Background tabs or a stalled browser never drain a queue in a burst.
-      const next = { ...state, elapsed: state.elapsed + Math.min(action.ms, 1000) };
+      const delta = Math.min(action.ms, 1000);
+      const next = { ...state, elapsed: state.elapsed + delta, playbackElapsed: (state.playbackElapsed ?? 0) + delta };
       return next.elapsed >= DURATIONS[next.phase] ? finishPhase(next) : next;
     }
   }

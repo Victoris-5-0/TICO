@@ -2,7 +2,14 @@
 import { motion } from "motion/react";
 import { asset, bakeryScene as scene, type ActorAsset } from "@/lib/bakery/scene-manifest";
 import { phaseProgress, type BakeryState, type CustomerId, type Loaf } from "@/lib/bakery/simulation";
+import {
+  type CustomerOrderState,
+  getCustomerOrders,
+  customerMoodLabel,
+} from "@/lib/bakery/customer-orders";
 import { NeighborhoodDetails, OvenFire } from "./neighborhood-details";
+
+import { CustomerOrderBubble } from "./customer-order-bubble";
 
 const mix = (a: number, b: number, p: number) => a + (b - a) * p;
 function Sprite({ actor, frame, size = 310, flip = false }: { actor: ActorAsset; frame: number; size?: number; flip?: boolean }) {
@@ -29,7 +36,31 @@ function Prop({ name, x, y, width, height, opacity = 1, loaf, lit }: { name: str
  */
 const WALL_SLICE = { x: 20, width: 90 };
 
-export function BakeryScene({ state, reducedMotion, counterView, label, highlight, extendLeft = 0 }: { state: BakeryState; reducedMotion: boolean; counterView: boolean; label: string; highlight?: readonly string[]; extendLeft?: number }) {
+export function BakeryScene({
+  state,
+  reducedMotion,
+  counterView,
+  label,
+  highlight,
+  extendLeft = 0,
+  customerOrders,
+  locale = "en",
+}: {
+  state: BakeryState;
+  reducedMotion: boolean;
+  counterView: boolean;
+  label: string;
+  highlight?: readonly string[];
+  extendLeft?: number;
+  customerOrders?: Record<CustomerId, CustomerOrderState>;
+  locale?: string;
+}) {
+  const isAr = locale.startsWith("ar");
+  const resolvedOrders = customerOrders ?? getCustomerOrders(state, locale);
+  const orderSummary = state.queue.map((id) => {
+    const order = resolvedOrders[id];
+    return `${order.customerName}: ${order.loaves}, ${customerMoodLabel(order.urgency, locale)}`;
+  }).join("; ");
   const isLit = (name: string) => Boolean(highlight?.includes(name));
   // Extra wall to the left of the artwork, so a panel can sit over bare wall instead of
   // over the shopfront. The viewBox simply starts further left and the gap is filled with
@@ -56,7 +87,7 @@ export function BakeryScene({ state, reducedMotion, counterView, label, highligh
     if (state.active === id && state.phase === "exiting") return { x: mix(scene.queue.first.x, -150, p), y: scene.queue.first.y + Math.sin(Math.min(1, p * 4) * Math.PI / 2) * 65 };
     return { x: scene.queue.first.x + (index + (state.phase === "advancing" ? 1 - p : 0)) * scene.queue.spacing, y: scene.queue.first.y };
   }
-  return <svg className="bakery-scene" viewBox={counterView ? "145 300 690 485" : `${-ext} 0 ${1600 + ext} 900`} role="img" aria-label={label} data-phase={state.phase} data-elapsed={Math.round(state.elapsed)} data-extend={ext || undefined}>
+  return <svg className="bakery-scene" viewBox={counterView ? "145 300 690 485" : `${-ext} 0 ${1600 + ext} 900`} role="img" aria-label={`${label} ${isAr ? "طلبات الزباين" : "Customer loaf orders"}: ${orderSummary}`} data-phase={state.phase} data-elapsed={Math.round(state.elapsed)} data-extend={ext || undefined}>
     {Array.from({ length: tiles }, (_, i) => {
       const x = -ext + i * WALL_SLICE.width;
       const mirrored = i % 2 === 1;
@@ -116,6 +147,12 @@ export function BakeryScene({ state, reducedMotion, counterView, label, highligh
           <Prop name="bag" x={hand.x - 22} y={hand.y - 4} width={52} height={58} />
           {state.loaves.filter((loaf) => loaf.owner === `customer:${id}`).map((loaf, i) => <Prop key={loaf.id} loaf={loaf} name="loaf" x={hand.x - 17 + i * 16} y={hand.y - 5} width={27} height={13} />)}
         </>}
+        <CustomerOrderBubble
+          order={resolvedOrders[id]}
+          isActive={index === 0 && !leaving}
+          reducedMotion={reducedMotion}
+          locale={locale}
+        />
       </motion.g>;
     })}
     {state.active && state.phase === "handover" && state.loaves.filter((loaf) => loaf.owner === `handover:${state.active}`).map((loaf, i) => {
