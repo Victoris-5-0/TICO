@@ -310,7 +310,9 @@ function FlourSacks({ count, lit, onPick, pickLabel }: { count: number; lit?: bo
  * change — that is the whole point of it — and a raster sign would need two files and a
  * translation of each.
  */
-const SIGN = { x: 1150, y: 236, width: 104, height: 58 };
+// Hung clear of the arch's curve and of the radio, so it reads as inside the shop rather
+// than stuck on the outside wall.
+const SIGN = { x: 1100, y: 296, width: 104, height: 58 };
 
 function ShopSign({ open, label, lit, onPick, pickLabel }: { open: boolean; label: string; lit?: boolean; onPick?: () => void; pickLabel?: string }) {
   const cx = SIGN.x + SIGN.width / 2;

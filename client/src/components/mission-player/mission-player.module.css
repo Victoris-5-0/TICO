@@ -850,3 +850,25 @@ html[lang="ar-EG"] .testsTitle { letter-spacing: 0; }
   border: 2px dashed #E9992F; background: #E9992F1f;
   color: #E9992F; font-weight: 700; font-size: 15px; text-align: center;
 }
+
+/* Speech in the scene, over the person saying it — the shape the opening tour uses, so a
+   mission set in the same shop does not start talking from the margin instead. */
+.sceneSpeech {
+  position: absolute; transform: translateX(-50%);
+  inline-size: min(26%, 340px); min-inline-size: 210px; z-index: 3;
+  padding: 12px 14px 10px; border: 2px solid #1F1820; border-radius: 16px;
+  background: #FFFDF9; box-shadow: 0 14px 34px #38282040;
+}
+.sceneSpeech::after {
+  content: ""; position: absolute; inset-block-end: -9px; left: 50%;
+  inline-size: 15px; block-size: 15px; background: #FFFDF9;
+  border-inline-end: 2px solid #1F1820; border-block-end: 2px solid #1F1820;
+  transform: translateX(-50%) rotate(45deg);
+}
+.sceneSpeech > span { display: block; color: #267977; font-size: 12px; font-weight: 750; letter-spacing: .06em; }
+.sceneSpeech > p { margin: 6px 0 0; color: #1F1820; font-size: clamp(13px, 1.05vw, 15px); line-height: 1.7; text-wrap: pretty; }
+
+@media (max-width: 900px) {
+  .sceneSpeech { position: static; inline-size: auto; transform: none; margin: 10px 0 0; }
+  .sceneSpeech::after { display: none; }
+}

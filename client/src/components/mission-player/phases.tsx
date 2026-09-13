@@ -48,13 +48,14 @@ function Speech({ portrait, name, line, ar }: { portrait: string; name: string; 
  * shop itself, lit and waiting. A child who opens the bakery by turning its sign has
  * already changed the world once before they are asked to write anything.
  */
-export function EncounterPhase({ phase, locale, onContinue, awaiting = null }: { phase: PhaseEncounter; locale: Locale; onContinue: () => void; awaiting?: string | null }) {
+export function EncounterPhase({ phase, locale, onContinue, awaiting = null, spokenInScene = false }: { phase: PhaseEncounter; locale: Locale; onContinue: () => void; awaiting?: string | null; spokenInScene?: boolean }) {
   const ar = locale === "ar-EG";
   const portrait = SPEAKER_PORTRAITS[phase.speaker] ?? TICO_PORTRAIT;
 
   return (
     <div className={styles.storyPhase}>
-      <Speech portrait={portrait} name={phase.speakerNameAr} line={phase.lineAr} ar={ar} />
+      {/* When the scene is saying it over his head, the panel would only be an echo. */}
+      {!spokenInScene && <Speech portrait={portrait} name={phase.speakerNameAr} line={phase.lineAr} ar={ar} />}
       {awaiting ? (
         <p className={styles.awaiting} dir={ar ? "rtl" : "ltr"}>
           {ar ? "اضغط على اليافطة المضوّية جوّه المحل." : "Press the highlighted sign inside the shop."}

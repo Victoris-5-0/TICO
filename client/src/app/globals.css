@@ -343,4 +343,9 @@ body.tico-overlay-open > *:not(#tico-loading-portal) {
    line. SVG has no pointer cursor of its own and the default focus ring is drawn round
    the group's tight bbox, so both are set here. */
 .bakery-pick { cursor: pointer; }
+/* Whatever the mission is waiting to be pressed breathes, so it reads as a control rather
+   than as scenery that happens to be lit. */
+.bakery-pick > rect:first-of-type { animation: bakery-press 1.6s ease-in-out infinite; transform-origin: center; transform-box: fill-box; }
+@keyframes bakery-press { 0%, 100% { opacity: .95; } 50% { opacity: .35; } }
+@media (prefers-reduced-motion: reduce) { .bakery-pick > rect:first-of-type { animation: none; } }
 .bakery-pick:focus-visible { outline: 3px solid var(--coral); outline-offset: 4px; border-radius: 10px; }

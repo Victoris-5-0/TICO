@@ -9,6 +9,7 @@ import { MissionDialog, MissionExitPanel } from "@/components/mission-ui/mission
 import { SiteLogo } from "@/components/site-logo";
 import type { MissionTest, PhasedMissionOut, WorldChange } from "@/lib/ai/types";
 import { pressTarget, undrawnProps, type MissionProps } from "@/lib/bakery/mission-scene";
+import { bakeryScene } from "@/lib/bakery/scene-manifest";
 import * as telemetry from "@/lib/mission/telemetry";
 import { usePythonRunner, type RunResult } from "@/lib/runner/use-python-runner";
 import type { Locale } from "@/i18n/config";
@@ -196,6 +197,32 @@ export function MissionPlayer({ locale, mission, worldSlug, worldTitle, lessonId
     return { ...base, sign: "open" };
   }, [change, opening, press, pressed]);
 
+  /**
+   * Where a character's words appear, in the scene's own 1600×900 coordinates.
+   *
+   * The tour puts speech over the speaker's head rather than in a panel beside the
+   * picture, and a mission set in the same shop should not suddenly talk from the margin.
+   * Am Hassan stands at `bakeryScene.baker`; the bubble sits just clear of his head.
+   *
+   * `extendLeft` paints extra wall to the left for the panel to sit on, which widens the
+   * view box — so a world x has to be converted against that wider frame or the bubble
+   * drifts off the person saying the words.
+   */
+  const ext = narrow ? 0 : 700;
+  const speechAt = {
+    left: `${((bakeryScene.baker.x + ext) / (1600 + ext)) * 100}%`,
+    bottom: `${((900 - 424) / 900) * 100}%`,
+  };
+
+  /**
+   * What is said out loud in the scene, as opposed to what the panel is for.
+   *
+   * The opening line belongs to whoever has the problem; every later phase speaks through
+   * the caption its Run produced. The panel keeps the questions, the editor and the
+   * buttons — the things you act on rather than listen to.
+   */
+  const sceneLine = phaseKey === "encounter" ? phases.encounter.lineAr : change?.captionAr || null;
+
   const sceneLabel = ar
     ? "فرن الحارة: حسن بيخبز والزباين مستنيين في الطابور."
     : "Forn El Hara: Hassan at the oven and neighbours waiting in the queue.";
@@ -254,9 +281,15 @@ export function MissionPlayer({ locale, mission, worldSlug, worldTitle, lessonId
               pickable={press && !pressed ? press : undefined}
               onPick={() => setPressed(true)}
               pickLabel={() => (ar ? "اضغط على اليافطة" : "Press the sign")}
-              extendLeft={narrow ? 0 : 700}
+              extendLeft={ext}
               label={sceneLabel}
             />
+            {sceneLine && (
+              <div className={styles.sceneSpeech} style={speechAt} dir={ar ? "rtl" : "ltr"}>
+                <span>{speakerName}</span>
+                <p aria-live="polite">{sceneLine}</p>
+              </div>
+            )}
             {extras.length > 0 && (
               <dl className={styles.readouts}>
                 {extras.map(([key, value]) => (
@@ -312,6 +345,7 @@ export function MissionPlayer({ locale, mission, worldSlug, worldTitle, lessonId
                       locale={locale}
                       onContinue={advance}
                       awaiting={press && !pressed ? press : null}
+                      spokenInScene
                     />
                   )}
                   {phaseKey === "explore" && (
