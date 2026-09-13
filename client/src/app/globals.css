@@ -342,7 +342,11 @@ body.tico-overlay-open > *:not(#tico-loading-portal) {
 /* A ringed prop in the opening bakery tour is a button the child taps to hear the next
    line. SVG has no pointer cursor of its own and the default focus ring is drawn round
    the group's tight bbox, so both are set here. */
-.bakery-pick { cursor: pointer; }
+/* The mission player floats its panel over the scene, so the layer the bakery sits in is
+   `pointer-events: none` and nothing inside it can be clicked. Only the thing a phase is
+   actually waiting on takes clicks back — the rest of the shop stays transparent to them,
+   which is what that layer is for. */
+.bakery-pick { cursor: pointer; pointer-events: auto; }
 /* Whatever the mission is waiting to be pressed breathes, so it reads as a control rather
    than as scenery that happens to be lit. */
 .bakery-pick > rect:first-of-type { animation: bakery-press 1.6s ease-in-out infinite; transform-origin: center; transform-box: fill-box; }
