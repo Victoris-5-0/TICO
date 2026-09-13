@@ -4,3 +4,7 @@
 .env
 .env.*
 !.env.example
+
+# Python bytecode from the sprite-cutting script
+__pycache__/
+*.pyc

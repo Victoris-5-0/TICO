@@ -5,7 +5,7 @@ import { MarketingHeader, MarketingFooter } from "@/components/marketing-chrome"
 import { Reveal } from "@/components/motion/reveal";
 import { ScrollProgress } from "@/components/motion/scroll-progress";
 import { FaqAccordion } from "@/components/motion/faq-accordion";
-import { CompassRotate } from "@/components/motion/interactive";
+import { ArrowShift, CompassRotate } from "@/components/motion/interactive";
 import {
   HeroArtMotion,
   HeroTextMotion,
@@ -14,10 +14,10 @@ import {
   KineticWords,
   KineticParagraph,
   HeroFloatingCardMotion,
+  LiveBadgeMotion,
   CardMotion,
   StepNumberMotion,
 } from "@/components/motion/hero-motion";
-import { BakeryWorldDemo } from "@/components/bakery-world-demo";
 import { WorldsMap, type MapWorld } from "@/components/mission-ui/worlds-map";
 import { worlds } from "@/content/worlds";
 import { type Locale } from "@/i18n/config";
@@ -139,7 +139,16 @@ export function LandingPage({
           <KineticWords as="h2" id="preview-title" className={styles.sectionTitle} text={copy.previewTitle} />
           <KineticParagraph className={styles.intro} text={copy.previewBody} delay={0.08} />
           <Reveal delay={0.12}>
-            <BakeryWorldDemo locale={locale} autoPlay loop />
+            <CardMotion hoverY={-6}>
+              <Link className={styles.previewLink} href={`/${locale}/worlds/el-forn/missions/opening-message`}>
+                <LiveBadgeMotion label={isRtl ? "معاينة المهمة الأولى" : "Live Mission Preview"} />
+                <Image src="/assets/worlds/bakery/establishing-v1.webp" alt={worlds[0].imageAlt[locale]} fill sizes="(max-width: 1280px) 90vw, 1240px" />
+                <span className={styles.previewCaption}>
+                  {copy.previewAction}
+                  <ArrowShift isRtl={isRtl}>{arrow}</ArrowShift>
+                </span>
+              </Link>
+            </CardMotion>
           </Reveal>
           <KineticParagraph className={styles.deviceNote} text={copy.deviceNote} delay={0.16} />
           <div className={styles.previewActionWrap}>
