@@ -194,9 +194,11 @@ export function MissionPlayer({ locale, mission, worldSlug, worldTitle, lessonId
 
   const extras = undrawnProps(restProps);
 
-  // The encounter is spoken by whoever has the problem; every later phase is TICO.
-  const speaker = phaseKey === "encounter" ? phases.encounter.speaker || "tico" : "tico";
-  const speakerName = phaseKey === "encounter" ? phases.encounter.speakerNameAr : ar ? "تيكو" : "Tico";
+  // The recorded narration uses Salma's voice, so she remains the visible speaker for
+  // the whole lesson. Her full-body scene sprite is suppressed by `MissionScene` to
+  // avoid showing the same character in two places at once.
+  const speaker = "salma";
+  const speakerName = ar ? "سلمى" : "Salma";
   const blockedOnWidth = narrow && CODING.has(phaseKey);
   const runnerBusy = runner.state === "running";
 

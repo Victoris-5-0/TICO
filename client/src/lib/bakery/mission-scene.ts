@@ -18,7 +18,7 @@ import { CUSTOMER_IDS, DURATIONS, type BakeryState, type CustomerId, type Loaf, 
 export type MissionProps = Record<string, number | string>;
 
 const PHASES: readonly Phase[] = [
-  "idle", "loading", "baking", "retrieving", "stocking", "handover", "exiting", "advancing", "complete",
+  "idle", "loading", "baking", "retrieving", "stocking", "handover", "paying", "exiting", "advancing", "complete",
 ];
 
 export const isScenePhase = (name: string): name is Phase => (PHASES as readonly string[]).includes(name);
@@ -84,10 +84,25 @@ export type MissionSceneOptions = {
  * prevent.
  */
 export function missionSceneState({ props = {}, animate, progress = 0, queueLength = CUSTOMER_IDS.length }: MissionSceneOptions): BakeryState {
-  const phase: Phase = animate && isScenePhase(animate) ? animate : "idle";
+  // A generated handover is the same physical beat as the authored introduction:
+  // bread first, then the customer's banknote travels into the till.
+  const handoverShare = DURATIONS.handover / (DURATIONS.handover + DURATIONS.paying);
+  const phase: Phase = animate === "handover" && progress > handoverShare
+    ? "paying"
+    : animate && isScenePhase(animate) ? animate : "idle";
+  const phaseProgress = animate === "handover"
+    ? phase === "handover"
+      ? progress / handoverShare
+      : (progress - handoverShare) / (1 - handoverShare)
+    : progress;
 
   const loafCount = toCount(props.loaf) ?? toCount(props.dough) ?? 0;
-  const owner = ownerForPhase(phase);
+  const active = phase === "handover" || phase === "paying" || phase === "exiting" ? CUSTOMER_IDS[0] : null;
+  const owner: LoafOwner = phase === "handover" && active
+    ? `handover:${active}`
+    : phase === "paying" && active
+      ? `customer:${active}`
+      : ownerForPhase(phase);
 
   // `max_shown: 8` in the manifest is what the tray has slots for. Beyond that the scene
   // silently drops loaves, so clamp here and let the caller report the real number.
@@ -106,12 +121,12 @@ export function missionSceneState({ props = {}, animate, progress = 0, queueLeng
 
   return {
     phase: litWithoutPhase ? "baking" : phase,
-    elapsed: (DURATIONS[phase] || 0) * clamp(progress, 0, 1),
+    elapsed: (DURATIONS[phase] || 0) * clamp(phaseProgress, 0, 1),
     queue,
     served,
     loaves,
     batches: loaves.length ? 1 : 0,
-    active: phase === "handover" || phase === "exiting" ? queue[0] : null,
+    active,
     auto: false,
     paused: false,
     hidden: false,
@@ -124,6 +139,7 @@ export function missionSceneState({ props = {}, animate, progress = 0, queueLeng
 
 /** How long the scene will spend on this animation, in ms. 0 for a still scene. */
 export function missionSceneDuration(animate?: string | null): number {
+  if (animate === "handover") return DURATIONS.handover + DURATIONS.paying;
   return animate && isScenePhase(animate) ? DURATIONS[animate] : 0;
 }
 

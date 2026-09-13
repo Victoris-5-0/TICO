@@ -79,6 +79,7 @@ export function BakeryScene({
   sign,
   sacks,
   preview,
+  showCoordinator = true,
 }: {
   state: BakeryState;
   reducedMotion: boolean;
@@ -111,6 +112,8 @@ export function BakeryScene({
    * an animation that is mid-flight.
    */
   preview?: number | null;
+  /** Salma belongs in the lesson panel when she is the narrator, not duplicated on stage. */
+  showCoordinator?: boolean;
 }) {
   const isAr = locale.startsWith("ar");
   const resolvedOrders = customerOrders ?? getCustomerOrders(state, locale);
@@ -140,7 +143,7 @@ export function BakeryScene({
   const onStage = (id: CustomerId) => !cast || cast.includes(id);
   const counted = typeof sacks === "number";
   const visible = counted ? loose?.filter((name) => name !== "flour-sacks") : loose;
-  const crowd = cast ? [] : [scene.actors.salma];
+  const crowd = cast || !showCoordinator ? [] : [scene.actors.salma];
   const baking = ["loading", "baking", "retrieving", "stocking"].includes(state.phase);
 
   // ------------------------------------------------ the bake, in manifest coordinates

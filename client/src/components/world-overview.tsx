@@ -10,6 +10,7 @@ import { ChallengeMapView, type MapStage } from "@/components/mission-ui/challen
 import { LessonLoadingOverlay } from "@/components/mission-generating/lesson-loading-overlay";
 import type { World } from "@/content/worlds";
 import type { Locale } from "@/i18n/config";
+import { enterLessonFullscreen } from "@/lib/browser/fullscreen";
 
 import styles from "./world-overview.module.css";
 
@@ -113,6 +114,7 @@ export function WorldOverview({
                   href={`/${locale}/worlds/${world.slug}/play/${nextLesson.slug}`}
                   onClick={(e) => {
                     e.preventDefault();
+                    enterLessonFullscreen();
                     setLoadingLesson(nextLesson);
                   }}
                 >

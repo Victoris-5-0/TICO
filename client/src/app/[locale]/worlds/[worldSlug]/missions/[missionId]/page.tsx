@@ -74,9 +74,13 @@ export default async function Page({ params, searchParams }: { params: Params; s
 
   // `?lesson=` is set by the play route and is authoritative: a pinned mission is shared,
   // so the row itself cannot say which lesson a given student opened it from.
-  const fromUrl = lessonSlug
+  // Authored missions use the stable lesson slug as their route id and deliberately
+  // bypass mission generation. Resolve that slug here too, so completion credits the
+  // lesson and the result screen returns with `?done=` to reveal the next map node.
+  const routeLessonSlug = lessonSlug ?? missionId;
+  const fromUrl = routeLessonSlug
     ? await db.lesson.findFirst({
-        where: { slug: lessonSlug, track: { slug: worldSlug } },
+        where: { slug: routeLessonSlug, track: { slug: worldSlug } },
         select: { id: true, slug: true },
       })
     : null;

@@ -5,7 +5,7 @@ import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "
 
 import { BakeryScene } from "@/components/bakery/scene";
 import { missionSceneDuration, missionSceneState, type MissionProps } from "@/lib/bakery/mission-scene";
-import { sceneAssetUrls } from "@/lib/bakery/scene-manifest";
+import { frame, propAssetUrls, sceneAssetUrls, worldPropNames } from "@/lib/bakery/scene-manifest";
 import type { Locale } from "@/i18n/config";
 
 import styles from "./mission-player.module.css";
@@ -49,6 +49,7 @@ export function MissionScene({ locale, props, animate, playToken = 0, caption, h
 
   const [assets, setAssets] = useState<"loading" | "ready" | "error">("loading");
   const [progress, setProgress] = useState(1);
+  const [startedHandover, setStartedHandover] = useState<string | null>(null);
   // The run currently playing. Kept in a ref and compared inside the frame callback, so
   // starting a new animation never needs a state write during render or in an effect.
   const run = useRef({ id: "", elapsed: 0, lastFrame: null as number | null });
@@ -56,7 +57,7 @@ export function MissionScene({ locale, props, animate, playToken = 0, caption, h
   useEffect(() => {
     let cancelled = false;
     Promise.all(
-      sceneAssetUrls().map(
+      [...sceneAssetUrls(), ...propAssetUrls(worldPropNames), frame("banknotes")].map(
         (src) =>
           new Promise<void>((resolve, reject) => {
             const img = new window.Image();
@@ -72,11 +73,14 @@ export function MissionScene({ locale, props, animate, playToken = 0, caption, h
     return () => { cancelled = true; };
   }, []);
 
-  const duration = missionSceneDuration(animate);
+  const handoverKey = `${animate ?? "none"}:${playToken}`;
+  const waitingForHandover = animate === "handover" && startedHandover !== handoverKey;
+  const effectiveAnimate = waitingForHandover ? null : animate;
+  const duration = missionSceneDuration(effectiveAnimate);
 
   const advance = useCallback(
     (time: number) => {
-      const id = `${animate ?? "none"}:${playToken}`;
+      const id = `${effectiveAnimate ?? "none"}:${playToken}`;
       const state = run.current;
 
       // A new animation, or Run pressed again, rewinds to the start. Under reduced
@@ -100,12 +104,14 @@ export function MissionScene({ locale, props, animate, playToken = 0, caption, h
       state.elapsed = Math.min(duration, state.elapsed + Math.min(time - previous, 1000));
       setProgress(state.elapsed / duration);
     },
-    [animate, playToken, duration, reduced, assets],
+    [effectiveAnimate, playToken, duration, reduced, assets],
   );
 
   useAnimationFrame(advance);
 
-  const state = missionSceneState({ props, animate, progress });
+  const state = missionSceneState({ props, animate: effectiveAnimate, progress });
+  const sackValue = props?.["flour-sacks"] ?? props?.sacks;
+  const sacks = typeof sackValue === "number" ? sackValue : 4;
 
   return (
     <figure className={styles.scene} data-ready={assets} data-animate={animate ?? "none"}>
@@ -115,9 +121,15 @@ export function MissionScene({ locale, props, animate, playToken = 0, caption, h
           reducedMotion={reduced}
           counterView={false}
           label={label}
-          highlight={highlight}
+          highlight={waitingForHandover ? [...(highlight ?? []), "tray"] : highlight}
           extendLeft={extendLeft}
           locale={locale}
+          loose={worldPropNames}
+          sacks={sacks}
+          pickable={waitingForHandover ? "tray" : undefined}
+          onPick={waitingForHandover ? () => setStartedHandover(handoverKey) : undefined}
+          pickLabel={() => ar ? "سلّم العيش للزبون" : "Give the bread to the customer"}
+          showCoordinator={false}
         />
         {assets !== "ready" && (
           <div className={styles.sceneLoading}>
