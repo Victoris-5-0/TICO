@@ -4,6 +4,7 @@ import { Inter, Outfit } from "next/font/google";
 import { MarketingHeader, MarketingFooter } from "@/components/marketing-chrome";
 import { Reveal } from "@/components/motion/reveal";
 import { ScrollProgress } from "@/components/motion/scroll-progress";
+import { InteractiveTico } from "@/components/motion/interactive-tico";
 import { FaqAccordion } from "@/components/motion/faq-accordion";
 import { ArrowShift, CompassRotate } from "@/components/motion/interactive";
 import {
@@ -85,14 +86,15 @@ export function LandingPage({
       <main id="main-content">
         <section className={styles.hero} aria-labelledby="hero-title">
           <HeroArtMotion>
-            <Image src="/assets/landing/hero.png" alt="" fill sizes="100vw" preload />
+            <Image src="/assets/landing/tico/background.webp" alt="" fill sizes="100vw" preload />
           </HeroArtMotion>
+          <InteractiveTico locale={locale} />
           <div className={styles.heroInner}>
             <div className={styles.heroCopy}>
               <HeroTextMotion title={copy.title} subtitle={copy.subtitle} body={copy.body} />
               <div className={styles.actions}>
                 <KineticButton delay={0.38} hoverY={-3} hoverScale={1.03} tapScale={0.95}>
-                  <Link className={styles.primary} href={learnHref}>{copy.start}</Link>
+                  <Link className={styles.primary} href={learnHref} data-tico-greeting>{copy.start}</Link>
                 </KineticButton>
                 <KineticButton delay={0.44} hoverY={-2} hoverScale={1.02} tapScale={0.95}>
                   <a className={styles.secondary} href="#method">{copy.how}</a>
@@ -211,5 +213,4 @@ export function LandingPage({
     </div>
   );
 }
-
 

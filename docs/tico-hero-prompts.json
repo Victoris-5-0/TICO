@@ -1,0 +1,17 @@
+{
+  "tool": "built-in image_gen",
+  "date": "2026-09-13",
+  "prompts": {
+    "background": "Use case: precise-object-edit. Asset type: clean landing hero background plate. Edit the supplied hero image: remove ONLY the orange robot TICO, including both antennae, floating gold light, hands, feet and its oval ground shadow. Reconstruct the scenery naturally behind it. Preserve the exact wide composition, warm peach sky, clouds, palms, sandy path, pyramids (existing approved landing reference), flat illustrated shading, and empty left half for website copy. No characters, no text, no new objects. Keep original aspect ratio. Output the finished background image.",
+    "atlas": "Use case: identity-preserve. Asset type: ONE transparent cutout animation sprite atlas for the TICO website hero. Reference image is the canonical orange robot; preserve EXACT identity, asymmetric antennae, dark brown outlines, orange cel shading, gold joints and round friendly proportions. Create a 1536x1024 transparent PNG organized in a strict 3 column by 2 row grid (each cell 512x512), no visible grid. One isolated component per cell with 40px empty margin, no overlap: TOP LEFT: complete large head with ears, both asymmetric antennae attached, small curved smile, two cream eye whites but NO black pupils and NO floating gold light. TOP MIDDLE: torso with neck, both attached legs and feet, NO head and NO arms, shoulders have gold circular joints; the torso continues fully behind where arms attach. TOP RIGHT: single entire relaxed arm from round shoulder joint to rounded mitten hand pointing down, matching robot's viewer-left arm. BOTTOM LEFT: single entire arm with round shoulder joint at bottom-left and forearm raised up toward top-right, hand making friendly two-finger greeting like original landing mascot. BOTTOM MIDDLE: exactly one black oval pupil with a small cream highlight at upper right, isolated centered. BOTTOM RIGHT: exactly one round orange-gold floating antenna light with thick dark brown outline, isolated centered. Each component must be complete, fully opaque inside, genuinely transparent outside (alpha), no checkerboard painted in, no ground shadows, no other pieces, NO assembled character, NO labels, NO text. These will be composited into one robot by code, so edges must be clean and joints overlap. Clean rounded 2D cel-shaded canonical style, no redesign, no 3D.",
+    "alphaCorrection": "Use case: background-extraction. Edit target: supplied TICO component atlas. REMOVE the entire gray checkerboard background and replace it with true alpha transparency. It is currently a painted checkerboard, which is wrong. Preserve all six components exactly as drawn, their positions, scale, colors, solid white eye interiors, pupil highlight, and all dark outlines. Transparent PNG with actual alpha channel; zero background pixels outside the six shapes. Do not rearrange, redraw, add shadows, or add text. Keep 1536x1024 size."
+  },
+  "sources": {
+    "background": "client/assets/source/tico-hero/background.png",
+    "atlas": "client/assets/source/tico-hero/layers.png"
+  },
+  "runtime": {
+    "background": "client/public/assets/landing/tico/background.webp",
+    "atlas": "client/public/assets/landing/tico/layers.webp"
+  }
+}
