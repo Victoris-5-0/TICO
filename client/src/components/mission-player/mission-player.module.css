@@ -842,3 +842,11 @@ html[lang="ar-EG"] .testsTitle { letter-spacing: 0; }
   .close, .narrationButton, .runButton, .primaryAction, .option, .readouts > div { transition: none; }
   .close:hover, .narrationButton:hover, .runButton:hover:not(:disabled), .primaryAction:hover { transform: none; }
 }
+
+/* Shown in place of the Continue button while the opening waits for the child to press
+   something in the scene. It is an instruction, not a control — the control is the shop. */
+.awaiting {
+  margin: 0; padding: 12px 16px; border-radius: 12px;
+  border: 2px dashed #E9992F; background: #E9992F1f;
+  color: #E9992F; font-weight: 700; font-size: 15px; text-align: center;
+}

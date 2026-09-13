@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
 import type { PhasedMissionOut } from "@/lib/ai/types";
-import { flourSacks, isScenePhase, queueLength, shopOpen, undrawnProps } from "./mission-scene";
+import { flourSacks, isScenePhase, pressTarget, queueLength, shopOpen, undrawnProps } from "./mission-scene";
 import { bakeryScene, fixtures, worldPropNames } from "./scene-manifest";
 import { CUSTOMER_IDS } from "./simulation";
 
@@ -143,6 +143,16 @@ test("the world it asks for is a world the scene can draw", () => {
     assert.ok(queueLength(props) <= CUSTOMER_IDS.length);
     if (props.sign !== undefined) assert.notEqual(shopOpen(props), undefined, `sign: ${props.sign} means nothing`);
   }
+});
+
+test("the shop itself is the first thing they touch", () => {
+  // The opening hands them the bakery rather than a Continue button: Am Hassan says the
+  // sign still reads مقفول, the sign is the only lit thing, and pressing it opens the
+  // shop before a line of code exists.
+  const opening = phases.encounter.world!.props!;
+  assert.equal(pressTarget(opening), "sign", "the opening does not ask for a press");
+  assert.match(phases.encounter.lineAr, /اضغط/, "nobody tells the child to press it");
+  assert.equal(phases.encounter.ctaAr ?? null, null, "a Continue button competes with the sign");
 });
 
 test("whoever speaks has a face", () => {

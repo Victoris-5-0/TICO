@@ -125,17 +125,26 @@ async function boot() {
 }
 
 /**
- * Only a plain call on a plain name is allowed through.
+ * Only a plain name, or a plain call on a plain name, is allowed through.
  *
  * These expressions come from a mission the Python validator already accepted, so this
  * should never fire. It is here because docs/07 asks for it by name — "Private attribute
  * access and dynamic function names are rejected" — and because the cost of being wrong
  * about where input came from is paid here rather than noticed later.
+ *
+ * A bare name is allowed because the variables lessons check a variable, not a function.
+ * Before this, `sign` came back REJECTED as "not a plain function call" and the student
+ * was shown `undefined` with no way to pass — the runner assumed every mission in the
+ * curriculum defines a function, which is exactly the assumption those lessons exist to
+ * come before. Reading a name is strictly narrower than calling one: no arguments, no
+ * call, nothing to evaluate but a lookup.
  */
+const NAME_SHAPE = /^[A-Za-z_][A-Za-z0-9_]*$/;
 const CALL_SHAPE = /^[A-Za-z_][A-Za-z0-9_]*\s*\([\s\S]*\)$/;
 
 function rejectable(call) {
-  if (!CALL_SHAPE.test(String(call).trim())) return "not a plain function call";
+  const text = String(call).trim();
+  if (!NAME_SHAPE.test(text) && !CALL_SHAPE.test(text)) return "not a plain name or function call";
   if (String(call).includes("__")) return "dunder access is not allowed";
   if (/\bimport\b|\bexec\b|\beval\b|\bopen\b|\bcompile\b/.test(call)) return "not allowed in a test call";
   return null;

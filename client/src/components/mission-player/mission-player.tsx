@@ -8,7 +8,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { MissionDialog, MissionExitPanel } from "@/components/mission-ui/mission-panels";
 import { SiteLogo } from "@/components/site-logo";
 import type { MissionTest, PhasedMissionOut, WorldChange } from "@/lib/ai/types";
-import { undrawnProps, type MissionProps } from "@/lib/bakery/mission-scene";
+import { pressTarget, undrawnProps, type MissionProps } from "@/lib/bakery/mission-scene";
 import * as telemetry from "@/lib/mission/telemetry";
 import { usePythonRunner, type RunResult } from "@/lib/runner/use-python-runner";
 import type { Locale } from "@/i18n/config";
@@ -176,10 +176,25 @@ export function MissionPlayer({ locale, mission, worldSlug, worldTitle, lessonId
     setDebrief(await telemetry.finishSession(sessionId.current));
   }, []);
 
-  const restProps: MissionProps | undefined = useMemo(
-    () => change?.props ?? phases.encounter.world?.props,
-    [change, phases.encounter.world?.props],
-  );
+  /**
+   * The thing the opening asks the child to press, and whether they have.
+   *
+   * A mission can open by handing them the shop rather than a Continue button: Am Hassan
+   * says the sign still reads مقفول, the sign is the only thing lit, and pressing it is
+   * what starts the lesson. Pressing is a click, so the state change lives in the handler
+   * and never in an effect.
+   */
+  const opening = phases.encounter.world?.props;
+  const press = phaseKey === "encounter" ? pressTarget(opening) : null;
+  const [pressed, setPressed] = useState(false);
+
+  const restProps: MissionProps | undefined = useMemo(() => {
+    const base = change?.props ?? opening;
+    // Pressing the sign turns it, before a single line of code is written. That is the
+    // point of the beat: the world answers them first, and then they learn to say it.
+    if (!press || !pressed || !base) return base;
+    return { ...base, sign: "open" };
+  }, [change, opening, press, pressed]);
 
   const sceneLabel = ar
     ? "فرن الحارة: حسن بيخبز والزباين مستنيين في الطابور."
@@ -235,7 +250,10 @@ export function MissionPlayer({ locale, mission, worldSlug, worldTitle, lessonId
               animate={change?.animate}
               playToken={playToken}
               caption={change?.captionAr}
-              highlight={highlight}
+              highlight={press && !pressed ? [press] : highlight}
+              pickable={press && !pressed ? press : undefined}
+              onPick={() => setPressed(true)}
+              pickLabel={() => (ar ? "اضغط على اليافطة" : "Press the sign")}
               extendLeft={narrow ? 0 : 700}
               label={sceneLabel}
             />
@@ -289,7 +307,12 @@ export function MissionPlayer({ locale, mission, worldSlug, worldTitle, lessonId
               ) : (
                 <>
                   {phaseKey === "encounter" && (
-                    <EncounterPhase phase={phases.encounter} locale={locale} onContinue={advance} />
+                    <EncounterPhase
+                      phase={phases.encounter}
+                      locale={locale}
+                      onContinue={advance}
+                      awaiting={press && !pressed ? press : null}
+                    />
                   )}
                   {phaseKey === "explore" && (
                     <ExplorePhase phase={phases.explore} locale={locale} onHighlight={setHighlight} onContinue={advance} />

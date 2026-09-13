@@ -40,16 +40,30 @@ function Speech({ portrait, name, line, ar }: { portrait: string; name: string; 
 
 // --------------------------------------------------------------------- 1. encounter
 
-export function EncounterPhase({ phase, locale, onContinue }: { phase: PhaseEncounter; locale: Locale; onContinue: () => void }) {
+/**
+ * The problem, stated by whoever has it.
+ *
+ * `awaiting` names a prop in the scene that has to be pressed before the mission will
+ * move on. When it is set there is no Continue button at all — the way forward is the
+ * shop itself, lit and waiting. A child who opens the bakery by turning its sign has
+ * already changed the world once before they are asked to write anything.
+ */
+export function EncounterPhase({ phase, locale, onContinue, awaiting = null }: { phase: PhaseEncounter; locale: Locale; onContinue: () => void; awaiting?: string | null }) {
   const ar = locale === "ar-EG";
   const portrait = SPEAKER_PORTRAITS[phase.speaker] ?? TICO_PORTRAIT;
 
   return (
     <div className={styles.storyPhase}>
       <Speech portrait={portrait} name={phase.speakerNameAr} line={phase.lineAr} ar={ar} />
-      <button type="button" className={styles.primaryAction} onClick={onContinue}>
-        {phase.ctaAr || (ar ? "يلا نبدأ" : "Let's start")}
-      </button>
+      {awaiting ? (
+        <p className={styles.awaiting} dir={ar ? "rtl" : "ltr"}>
+          {ar ? "اضغط على اليافطة المضوّية جوّه المحل." : "Press the highlighted sign inside the shop."}
+        </p>
+      ) : (
+        <button type="button" className={styles.primaryAction} onClick={onContinue}>
+          {phase.ctaAr || (ar ? "يلا نبدأ" : "Let's start")}
+        </button>
+      )}
     </div>
   );
 }

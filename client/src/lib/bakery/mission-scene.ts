@@ -56,7 +56,7 @@ const clamp = (value: number, min: number, max: number) => Math.max(min, Math.mi
  * the only thing this mapper knew how to do, so every scene looked identical no matter who
  * the mission was about. A mission about one customer now gets one customer.
  */
-const DRAWN = new Set(["loaf", "dough", "oven", "queue", "flour-sack", "sign"]);
+const DRAWN = new Set(["loaf", "dough", "oven", "queue", "flour-sack", "sign", "press"]);
 
 const toCount = (value: number | string | undefined): number | null => {
   if (typeof value === "number" && Number.isFinite(value)) return value;
@@ -160,6 +160,20 @@ export function queueLength(props: MissionProps = {}): number {
 export function flourSacks(props: MissionProps = {}): number | undefined {
   const count = toCount(props["flour-sack"]);
   return count === null ? undefined : clamp(Math.round(count), 0, 4);
+}
+
+/**
+ * The one thing in the scene this phase wants pressed before it will move on.
+ *
+ * A convention on `world.props` rather than a field on the DTO, because `lib/ai/types.ts`
+ * is generated from the service's OpenAPI, so adding a field there is a backend change.
+ * It earns its keep: a mission can say "turn the sign" and mean it, instead of putting a
+ * Continue button underneath a sentence about turning the sign. `docs/14` step 4 is where
+ * this should become a real field.
+ */
+export function pressTarget(props: MissionProps = {}): string | null {
+  const value = props.press;
+  return typeof value === "string" && value.trim() ? value : null;
 }
 
 /**
