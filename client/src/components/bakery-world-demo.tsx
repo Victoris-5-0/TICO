@@ -92,9 +92,9 @@ export function BakeryWorldDemo({
   };
 
   const copy: Record<Phase, string> = ar ? {
-    idle: "الصينية جاهزة! قدّم العيش لأول واحد في الطابور.", loading: "حسن بيحط العجين في الفرن بالمِطرحة.", baking: "العيش البلدي بيستوي جوّه الفرن.", retrieving: "حسن بيطلّع العيش السخن بالمِطرحة.", stocking: "من المِطرحة للصينية… الدفعة جاهزة!", handover: "رغيفين لأول واحد في الطابور، بالترتيب.", exiting: "العيش في الشنطة، والزبون يكمّل يومه.", advancing: "الطابور بيتقدّم خطوة. مين عليه الدور؟", complete: "كل الـ٨ خدوا العيش! دفعتين، ١٦ رغيف، بالترتيب.",
+    idle: "الصينية جاهزة! قدّم العيش لأول واحد في الطابور.", arriving: "زبون جديد داخل المحل.", paying: "الزبون بيدفع الحساب.", loading: "حسن بيحط العجين في الفرن بالمِطرحة.", baking: "العيش البلدي بيستوي جوّه الفرن.", retrieving: "حسن بيطلّع العيش السخن بالمِطرحة.", stocking: "من المِطرحة للصينية… الدفعة جاهزة!", handover: "رغيفين لأول واحد في الطابور، بالترتيب.", exiting: "العيش في الشنطة، والزبون يكمّل يومه.", advancing: "الطابور بيتقدّم خطوة. مين عليه الدور؟", complete: "كل الـ٨ خدوا العيش! دفعتين، ١٦ رغيف، بالترتيب.",
   } : {
-    idle: "The tray is ready. Serve the first person in the queue.", loading: "Hassan slides the dough into the oven with his peel.", baking: "The baladi bread is baking inside the oven.", retrieving: "Hassan brings the warm bread out on his peel.", stocking: "From the peel to the tray. A fresh batch is ready!", handover: "Two loaves for the first customer. Everyone gets a turn.", exiting: "Bread in the bag, and on with their day.", advancing: "The queue takes a step forward. Who is next?", complete: "All 8 served! Two batches, 16 loaves, one orderly queue.",
+    idle: "The tray is ready. Serve the first person in the queue.", arriving: "A customer is walking in.", paying: "The customer is paying.", loading: "Hassan slides the dough into the oven with his peel.", baking: "The baladi bread is baking inside the oven.", retrieving: "Hassan brings the warm bread out on his peel.", stocking: "From the peel to the tray. A fresh batch is ready!", handover: "Two loaves for the first customer. Everyone gets a turn.", exiting: "Bread in the bag, and on with their day.", advancing: "The queue takes a step forward. Who is next?", complete: "All 8 served! Two batches, 16 loaves, one orderly queue.",
   };
   const stock = readyLoaves(state).length;
   const busy = isBusy(state);

@@ -1,26 +1,46 @@
 import Link from "next/link";
 
-import { BakeryWorldDemo } from "@/components/bakery-world-demo";
 import { SiteLogo } from "@/components/site-logo";
 import type { Locale } from "@/i18n/config";
 
-export function MissionBriefing({ locale }: { locale: Locale }) {
-  const isArabic = locale === "ar-EG";
+/**
+ * The page around a bakery script — the logo, the close button, the title.
+ *
+ * Shared by the opening tour and by mission one so they are visibly the same place. The
+ * script itself is passed in as children; this only owns the chrome.
+ */
+export function MissionBriefing({
+  locale,
+  label,
+  eyebrow,
+  title,
+  blurb,
+  children,
+}: {
+  locale: Locale;
+  label: { ar: string; en: string };
+  eyebrow: { ar: string; en: string };
+  title: { ar: string; en: string };
+  blurb: { ar: string; en: string };
+  children: React.ReactNode;
+}) {
+  const ar = locale === "ar-EG";
+  const pick = (copy: { ar: string; en: string }) => (ar ? copy.ar : copy.en);
 
   return (
     <div className="briefing-page">
       <header className="briefing-header shell">
         <SiteLogo href={`/${locale}`} />
-        <span className="briefing-preview-label">{isArabic ? "معاينة الفرن" : "Bakery preview"}</span>
-        <Link className="briefing-close" href={`/${locale}/worlds/el-forn`} aria-label={isArabic ? "إغلاق المهمة" : "Close mission"}>×</Link>
+        <span className="briefing-preview-label">{pick(label)}</span>
+        <Link className="briefing-close" href={`/${locale}/worlds/el-forn`} aria-label={ar ? "إغلاق المهمة" : "Close mission"}>×</Link>
       </header>
 
       <main className="briefing-main shell">
         <header className="briefing-title">
-          <div><p className="eyebrow">{isArabic ? "العالم ٠١ · الفرن" : "WORLD 01 · EL FORN"}</p><h1>{isArabic ? "صباح في الفرن" : "A morning at the bakery"}</h1></div>
-          <p>{isArabic ? "اخبز العيش، قدّم للي عليه الدور، وشوف الطابور بيتحرّك." : "Bake the bread, serve your neighbours, and watch the queue come to life."}</p>
+          <div><p className="eyebrow">{pick(eyebrow)}</p><h1>{pick(title)}</h1></div>
+          <p>{pick(blurb)}</p>
         </header>
-        <BakeryWorldDemo locale={locale} />
+        {children}
       </main>
     </div>
   );
