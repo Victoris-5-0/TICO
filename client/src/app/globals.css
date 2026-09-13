@@ -239,7 +239,8 @@ html[lang="ar-EG"] .hero h1 { font-size: clamp(3rem, 5.3vw, 5.4rem); letter-spac
 .briefing-title h1 { margin: 0; font-size: clamp(1.8rem, 3vw, 2.25rem); line-height: 1.18; letter-spacing: -.04em; }
 .briefing-preview-label { color: #267977; font-size: 13px; font-weight: 700; }
 .briefing-title > p { max-width: 480px; margin: 0; color: var(--muted); line-height: 1.7; }
-/* Layered bakery styles live in components/bakery/bakery.module.css. */
+/* Layered bakery styles live in components/bakery/bakery.module.css, and the opening
+   tour has its own in components/bakery/world-tour.module.css. */
 
 @media (max-width: 1020px) {
   .hero { grid-template-columns: 1fr; padding-block-start: 70px; }
@@ -338,3 +339,8 @@ body.tico-overlay-open > *:not(#tico-loading-portal) {
   }
 }
 
+/* A ringed prop in the opening bakery tour is a button the child taps to hear the next
+   line. SVG has no pointer cursor of its own and the default focus ring is drawn round
+   the group's tight bbox, so both are set here. */
+.bakery-pick { cursor: pointer; }
+.bakery-pick:focus-visible { outline: 3px solid var(--coral); outline-offset: 4px; border-radius: 10px; }

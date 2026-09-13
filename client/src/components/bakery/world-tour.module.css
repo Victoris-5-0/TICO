@@ -1,0 +1,120 @@
+/* TICO stands in the page's margin, on the background, not inside the picture's frame —
+   the scene gets the whole card and he gets the empty strip beside it. The `dir` attribute
+   on the section decides which strip, so he is on the reading edge in both languages.
+   
+   The block is also allowed to be wider than the 1180px page shell it sits in: the
+   margin trick below re-centres an over-wide box inside its parent, which buys the scene
+   back the width the rail costs and then some. */
+.tour {
+  display: grid; grid-template-columns: minmax(92px, 148px) 1fr; gap: 18px; align-items: stretch;
+  inline-size: min(1420px, calc(100vw - 32px));
+  margin-inline: calc(50% - min(710px, 50vw - 16px));
+}
+
+.rail { display: flex; flex-direction: column; justify-content: flex-end; gap: 10px; min-inline-size: 0; }
+.railBubble { display: flex; flex-direction: column; justify-content: flex-end; flex: 1 1 auto; min-block-size: 0; }
+.tico { display: block; inline-size: 100%; max-inline-size: 148px; block-size: auto; margin-inline: auto; filter: drop-shadow(0 8px 14px #38282026); }
+
+.stage {
+  position: relative; overflow: hidden; background: #ddc298;
+  border: 1px solid #E5DDD5; border-radius: 24px; box-shadow: 0 16px 48px #3828200a;
+}
+.stage > svg { display: block; inline-size: 100%; block-size: 100%; aspect-ratio: 16 / 9; }
+
+/* A bubble for somebody standing in the shop, placed in the scene's own coordinates — the
+   component converts their world position into these offsets and the bubble grows upward
+   from their head. */
+.inScene { position: absolute; inline-size: 26%; min-inline-size: 230px; transform: translateX(-50%); }
+
+/* The two panels for things the picture cannot draw: what was ordered, and what the till
+   holds. Both are deliberately boxes with words in them. */
+.note, .till {
+  position: absolute; display: flex; flex-direction: column; gap: 2px;
+  padding: 8px 12px; border: 2px solid #1F1820; border-radius: 12px;
+  background: #FFFDF9f2; box-shadow: 0 8px 20px #38282026; white-space: nowrap;
+}
+.note { transform: translateX(-50%); }
+.till { inset-block-start: 14px; inset-inline-start: 14px; }
+.note span, .till span { color: #716A72; font-size: clamp(9px, .72vw, 11px); font-weight: 700; letter-spacing: .05em; }
+.note strong, .till strong { color: #1F1820; font-size: clamp(12px, 1.05vw, 16px); font-weight: 750; font-variant-numeric: tabular-nums; }
+.till strong { font-size: clamp(14px, 1.35vw, 21px); }
+.till small { color: #716A72; font-size: .6em; font-weight: 600; }
+.gain { position: absolute; inset-block-start: -6px; inset-inline-end: -14px; padding: 3px 8px; border-radius: 999px; background: #267977; color: #FFFDF9; font-size: clamp(10px, .85vw, 13px); font-style: normal; font-weight: 750; font-variant-numeric: tabular-nums; }
+
+/* Where a stop that needs room goes: across the pavement, with the counter and the tray
+   left uncovered above it. */
+.dock { position: absolute; inset-inline: 10%; inset-block-end: 20px; }
+.dock .bubble::after { display: none; }
+
+.answers { display: flex; flex-direction: column; gap: 6px; margin: 0 0 8px; padding: 0; list-style: none; }
+.answers button {
+  inline-size: 100%; min-block-size: 42px; padding: 9px 14px; text-align: start;
+  border: 1px solid #E5DDD5; border-radius: 10px; background: #FFFDF9;
+  color: #1F1820; font: inherit; font-size: clamp(12px, 1vw, 15px); font-weight: 600; cursor: pointer;
+}
+.answers button:hover { border-color: #267977; background: #DDF1F0; }
+.answers button:focus-visible { outline: 3px solid #267977; outline-offset: 3px; }
+
+.editor { display: flex; flex-direction: column; gap: 10px; }
+.editor .actions { align-items: center; }
+
+.bubble {
+  position: relative;
+  padding: 13px 15px 11px; border: 2px solid #1F1820; border-radius: 16px;
+  background: #FFFDF9; box-shadow: 0 14px 34px #38282033;
+}
+/* The tail. A rotated square under the bubble, with the two outer sides inheriting the
+   border, so it reads as one continuous outline rather than a triangle stuck on. It is
+   centred because each bubble is centred on its own speaker, which is the whole point of
+   giving TICO a rail instead of a corner. */
+.bubble::after {
+  content: ""; position: absolute; inset-block-end: -9px; left: 50%;
+  inline-size: 15px; block-size: 15px; background: #FFFDF9;
+  border-inline-end: 2px solid #1F1820; border-block-end: 2px solid #1F1820;
+  transform: translateX(-50%) rotate(45deg);
+}
+
+.who { display: block; color: #267977; font-size: clamp(10px, .8vw, 12px); font-weight: 750; letter-spacing: .06em; }
+.line { margin: 6px 0 10px; color: #1F1820; font-size: clamp(12px, 1.05vw, 15px); line-height: 1.7; text-wrap: pretty; }
+.line:focus-visible { outline: 3px solid #267977; outline-offset: 4px; border-radius: 6px; }
+
+.actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
+.actions button, .actions a { min-block-size: 40px; display: inline-flex; align-items: center; justify-content: center; padding: 8px 15px; border: 1px solid #E5DDD5; border-radius: 10px; background: #FFFDF9; color: #1F1820; font: inherit; font-size: clamp(12px, .95vw, 14px); font-weight: 700; text-decoration: none; cursor: pointer; }
+.actions button:focus-visible, .actions a:focus-visible { outline: 3px solid #267977; outline-offset: 3px; }
+.primary { background: #DB5B31; border-color: #DB5B31; color: #1F1820; }
+.ghost { border-color: transparent; color: #716A72; }
+
+/* An `ask` has no Next button on purpose — the lit prop is the only way on, and this line
+   says so for anybody who cannot tell the outline apart from the artwork. */
+.waiting { display: block; padding-block-start: 2px; color: #B9401E; font-size: clamp(11px, .9vw, 13px); font-weight: 700; }
+
+.skip { position: absolute; inset-block-start: 14px; inset-inline-end: 14px; min-block-size: 36px; padding: 8px 14px; border: 1px solid #E5DDD580; border-radius: 999px; background: #FFFDF9d9; color: #716A72; font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; }
+.skip:hover { color: #1F1820; }
+.skip:focus-visible { outline: 3px solid #267977; outline-offset: 3px; }
+
+.progress { position: absolute; inset-block-end: 0; inset-inline: 0; block-size: 4px; background: #1F182026; }
+.progress > span { display: block; block-size: 100%; background: #DB5B31; transition: inline-size .3s ease; }
+
+.loading { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 20px; padding: 24px; background: #FBF8F3ed; color: #1F1820; text-align: center; }
+.loading button { min-block-size: 44px; padding: 10px 16px; border: 1px solid #E5DDD5; border-radius: 12px; background: #FFFDF9; color: #1F1820; font: inherit; font-weight: 700; cursor: pointer; }
+
+@media (prefers-reduced-motion: reduce) {
+  .progress > span { transition: none; }
+}
+
+/* Below roughly 860px there is no margin left to put a rail in, so the scene takes the
+   full width and TICO moves under it, beside whatever is being said. The props stay big
+   enough to aim at with a thumb, which is the part that matters. */
+@media (max-width: 860px) {
+  .tour { grid-template-columns: 1fr; gap: 0; }
+  .dock { position: static; inset: auto; padding: 12px 12px 0; order: 3; }
+  .rail { flex-direction: row; align-items: flex-end; gap: 12px; padding: 12px; order: 2; }
+  .railBubble { flex: 1 1 auto; }
+  .tico { inline-size: 72px; }
+  .inScene { position: static; inline-size: auto; min-inline-size: 0; transform: none; padding: 12px 12px 0; }
+  .inScene .bubble::after { display: none; }
+  .note { inset-block-start: 10px; inset-inline-start: 10px; left: auto !important; top: auto; transform: none; }
+  .till { inset-block-start: 10px; inset-inline-end: 10px; inset-inline-start: auto; }
+  .stage { order: 1; }
+  .line { font-size: 15px; }
+}

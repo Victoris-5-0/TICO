@@ -132,3 +132,72 @@ Use `db.$transaction(...)` for multi-table mutations that must succeed atomicall
 
 - Put architecture decisions, API contracts, setup guides, and product/implementation notes in `docs/`.
 - Update relevant docs whenever a change modifies an interface between `client/` and `ai-backend/`.
+
+## 7. Current Lane: Assets and Interactivity
+
+The bakery world is being deepened — more props, more customer reactions, and visible
+consequences for the code a learner writes. An agent picking this up starts here.
+
+### What exists now
+
+`client/public/assets/bakery-v2/frames/` — 40 sprites cut on 2026-09-13 from five source
+sheets, webp with alpha, matching the pack's existing format.
+
+| group | files |
+| --- | --- |
+| bakery props | `flour-sacks` `tray-stack` `dough-table` `oven-gauge` `till` `ticket-stand` `ticket-discs` `scale` `bread-board` `bread-crate` `coin-drawer` `order-clipboard` `paper-bag-stack` |
+| customer reactions | 12 × `cross-*` — `cross-baker` `cross-woman-white` `cross-elder-turban` `cross-woman-navy` `cross-woman-ochre` `cross-elder-grey` `cross-girl-red` `cross-man-blue` `cross-woman-green` `cross-boy-backpack` `cross-woman-teal` `cross-woman-folded` |
+| delivery | `delivery-ride-1`…`-4` `delivery-speed` `delivery-brake` `delivery-crate-open` `delivery-load` `delivery-clipboard` `delivery-pay` `scooter-crate` |
+| loose | `paper-bag-1` `paper-bag-2` `banknotes` `coin-purse` |
+
+`bread-board` carries one burnt loaf beside two good ones — it is the asset for the
+"bread can burn" consequence, not a decorative prop.
+
+`client/scripts/cut-sprite-sheet.py` cuts more sheets of the same kind. It finds objects by
+connected components rather than slicing a grid, because none of these sheets are grids.
+Two flags matter: `--alpha-floor 64` on sheets matted off a dark ground (they carry a red
+fringe at low alpha), and `--white-bg` on JPEGs drawn on white. Each piece is masked to its
+own component before cropping, so a neighbour that overlaps the bounding box is dropped.
+
+### Open decisions — do not resolve these silently
+
+1. **The reaction sheet is drawn angry; the manifest forbids anger.** `visual.actions.face`
+   in `ai-backend/content/worlds/el_forn.yaml` documents `puzzled` / `pleased` and says
+   *never anger*. The files are named `cross-*` so they commit to neither. A customer angry
+   at a ten-year-old's first attempt punishes the attempt, which contradicts the rest of the
+   design. Either the art softens or the manifest changes — a product call, not a code one.
+2. **Two art styles.** The cast already in `bakery-v2/` (`hassan.webp`, `mariam.webp`, …) are
+   flat walk-cycle sheets; the new `cross-*` frames are thick-outline, front-facing single
+   poses. In one frame they read as two different games. They may belong in a portrait or
+   reaction layer rather than as scene actors.
+3. **Nothing references the frames yet.** `visual.sprites` in `el_forn.yaml` is a closed
+   vocabulary of 15 ids and the phase guards reject anything outside it, so no generated
+   mission can name these until the fence is extended. `client/src/lib/bakery/scene-manifest.ts`
+   likewise lists fixtures explicitly. Both need entries, in the same change.
+
+### The interactivity work these assets are for
+
+Discussed and agreed, not yet built. The through-line: a learner should see the world react
+to their code, and see a *different* world each mission.
+
+- **Consequences.** A wrong quantity leaves a customer unserved; an unattended oven burns the
+  loaf; a slow service loses the sale. The assets above cover the burnt loaf, the money, and
+  the delivery. Consequences must stay legible and never scold.
+- **A timer and money.** Serving under time, and takings that go up or down, give the code a
+  result the learner can read without being told.
+- **Variety per mission.** A standing requirement: *the same scene with the same people and
+  objects is not acceptable*. Each mission draws a different cast and different props from
+  the world's vocabulary. `app/services/missions.py` already rotates speakers server-side for
+  this reason — the model would not vary them on its own.
+- **The opening.** TICO explains what programming is, and what Python is, from a fixed
+  authored script before any mission — then walks the site. The tour pattern already exists
+  in `client/src/components/analysis/tico-dock.tsx` (tour → dock → chat, with a spotlight
+  veil) and is the model to follow.
+- **Scope of the mechanic.** Variables, conditionals, and loops only. Do not add functions.
+
+The design principle behind all of it, learned from three documented model failures:
+**author the beats, generate the dressing.** Anything the learner must not get wrong is
+written by a person; the model varies the surface around it.
+
+Read `docs/09-asset-bible-and-image-prompts.md` before adding art, and
+`docs/13-bakery-layered-production.md` for how the bakery scene is composited.

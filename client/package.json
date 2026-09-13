@@ -9,7 +9,7 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "prisma generate && tsc --noEmit",
-    "test:bakery": "tsx --test src/lib/bakery/*.test.ts",
+    "test:bakery": "tsx --test src/lib/bakery/*.test.ts src/lib/bakery/missions/*.test.ts",
     "assets:bakery": "node scripts/prepare-bakery-assets.mjs",
     "mission:import": "tsx scripts/import-mission.ts",
     "db:generate": "prisma generate",

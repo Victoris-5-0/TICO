@@ -116,6 +116,9 @@ export function missionSceneState({ props = {}, animate, progress = 0, queueLeng
     paused: false,
     hidden: false,
     notice: "phase",
+    // A mission draws a still frame of the world; nobody is buying anything in it.
+    money: 0,
+    charge: 0,
   };
 }
 
