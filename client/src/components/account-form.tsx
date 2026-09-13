@@ -5,7 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { motion, useReducedMotion } from "motion/react";
 import type { Locale } from "@/i18n/config";
-import { authClient } from "@/lib/auth-client";
+import { authClient, signInAsGuest } from "@/lib/auth-client";
 import styles from "./account-form.module.css";
 
 export function AccountForm({ locale, authFailed = false }: { locale: Locale; authFailed?: boolean }) {
@@ -38,6 +38,20 @@ export function AccountForm({ locale, authFailed = false }: { locale: Locale; au
     }
   }
 
+  async function handleGuestSignIn() {
+    if (pending) return;
+    setPending(true);
+    setFailed(false);
+    try {
+      await signInAsGuest();
+      window.location.href = `/${locale}/onboarding`;
+    } catch (err) {
+      console.error("Guest sign-in failed:", err);
+      setFailed(true);
+      setPending(false);
+    }
+  }
+
   return <main className={styles.loginPage}>
     <div className={styles.window}>
       <header className={styles.windowBar}>
@@ -56,6 +70,28 @@ export function AccountForm({ locale, authFailed = false }: { locale: Locale; au
               {pending ? (ar ? "جاري فتح Google…" : "Connecting to Google…") : (ar ? "كمّل باستخدام Google" : "Continue with Google")}
               <span aria-hidden="true">{ar ? "←" : "→"}</span>
             </motion.button>
+
+            <div className={styles.divider}>
+              <span>{ar ? "أو" : "or"}</span>
+            </div>
+
+            <motion.button
+              className={styles.guestBtn}
+              type="button"
+              onClick={handleGuestSignIn}
+              disabled={pending}
+              aria-busy={pending}
+              whileHover={reduced ? undefined : { y: -2 }}
+              whileTap={reduced ? undefined : { scale: 0.98 }}
+            >
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
+                <circle cx="12" cy="7" r="4" />
+              </svg>
+              {pending ? (ar ? "جاري الدخول…" : "Connecting…") : (ar ? "المتابعة كضيف" : "Continue as guest")}
+              <span aria-hidden="true">{ar ? "←" : "→"}</span>
+            </motion.button>
+
             {failed && <p className={styles.error} role="alert">{ar ? "مقدرناش نسجّل دخولك. جرّب تاني." : "We couldn’t sign you in. Please try again."}</p>}
             <p className={styles.note}>{ar ? "أول مرة هنا؟ هنجهّز حسابك تلقائيًا." : "First time here? We’ll set up your account automatically."}</p>
           </div>

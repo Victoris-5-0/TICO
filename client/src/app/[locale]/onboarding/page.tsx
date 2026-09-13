@@ -20,7 +20,13 @@ export default async function OnboardingPage({ params }: { params: Promise<{ loc
     <div className={inter.variable}>
       <OnboardingForm
         locale={locale}
-        name={profile.name ?? session.user.name ?? ''}
+        name={
+          profile.name && profile.name !== "Guest"
+            ? profile.name
+            : session.user.name && session.user.name !== "Guest"
+            ? session.user.name
+            : ""
+        }
         initialAvatar={session.user.image ?? undefined}
       />
     </div>
