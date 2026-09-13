@@ -163,6 +163,33 @@ export function flourSacks(props: MissionProps = {}): number | undefined {
 }
 
 /**
+ * One beat of a phase's world change: an animation, the world it runs against, and who
+ * says what while it plays.
+ *
+ * A phase used to be able to play exactly one animation, which is why a customer could
+ * only ever appear — there was no way to say "bake, then she walks in, then she asks".
+ * Missions that need a sequence carry `steps` on their `WorldChange` and the scene plays
+ * them back to back, speaking each one's line over the character as it goes.
+ *
+ * Read through a cast because `lib/ai/types.ts` is generated from the service's OpenAPI
+ * and `WorldChange` has no `steps` yet. `docs/14` step 4 is where it becomes a real field;
+ * until then this is the only place that knows the shape, and a malformed one degrades to
+ * the single `animate` the phase already had.
+ */
+export type WorldBeat = {
+  animate?: string | null;
+  props?: MissionProps;
+  speakerNameAr?: string;
+  lineAr?: string;
+};
+
+export function beatsOf(change: { animate?: string | null; props?: MissionProps } | null | undefined): WorldBeat[] {
+  const steps = (change as { steps?: unknown } | null | undefined)?.steps;
+  if (!Array.isArray(steps)) return [];
+  return steps.filter((step): step is WorldBeat => Boolean(step) && typeof step === "object");
+}
+
+/**
  * The one thing in the scene this phase wants pressed before it will move on.
  *
  * A convention on `world.props` rather than a field on the DTO, because `lib/ai/types.ts`

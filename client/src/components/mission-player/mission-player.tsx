@@ -8,7 +8,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { MissionDialog, MissionExitPanel } from "@/components/mission-ui/mission-panels";
 import { SiteLogo } from "@/components/site-logo";
 import type { MissionTest, PhasedMissionOut, WorldChange } from "@/lib/ai/types";
-import { pressTarget, undrawnProps, type MissionProps } from "@/lib/bakery/mission-scene";
+import { beatsOf, pressTarget, undrawnProps, type MissionProps } from "@/lib/bakery/mission-scene";
 import { bakeryScene } from "@/lib/bakery/scene-manifest";
 import * as telemetry from "@/lib/mission/telemetry";
 import { usePythonRunner, type RunResult } from "@/lib/runner/use-python-runner";
@@ -281,15 +281,12 @@ export function MissionPlayer({ locale, mission, worldSlug, worldTitle, lessonId
               pickable={press && !pressed ? press : undefined}
               onPick={() => setPressed(true)}
               pickLabel={() => (ar ? "اضغط على اليافطة" : "Press the sign")}
+              beats={beatsOf(change)}
+              speech={sceneLine ? { name: speakerName, line: sceneLine } : null}
+              speechAt={speechAt}
               extendLeft={ext}
               label={sceneLabel}
             />
-            {sceneLine && (
-              <div className={styles.sceneSpeech} style={speechAt} dir={ar ? "rtl" : "ltr"}>
-                <span>{speakerName}</span>
-                <p aria-live="polite">{sceneLine}</p>
-              </div>
-            )}
             {extras.length > 0 && (
               <dl className={styles.readouts}>
                 {extras.map(([key, value]) => (

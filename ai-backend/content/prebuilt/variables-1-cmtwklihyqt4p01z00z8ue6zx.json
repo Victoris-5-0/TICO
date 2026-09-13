@@ -118,19 +118,90 @@
     }
    },
    "remix": {
-    "twistAr": "عم حسن ولّع الفرن وخبز أول دفعة — تمن أرغفة على الصينية. وأهي أول زبونة داخلة: مدام مريم عاوزة خمس أرغفة.",
-    "newRequirementAr": "سيب اليافطة زي ما هي، وزوّد تحتها متغيّر تاني اسمه loaves فيه عدد الأرغفة اللي مدام مريم طلبتها.",
+    "twistAr": "عم حسن هيخبز أول دفعة، وأول زبونة هتدخل وتطلب. اتفرّج الأول — وبعدين اكتب طلبها في متغيّر.",
+    "newRequirementAr": "سيب سطر اليافطة زي ما هو، وزوّد تحته متغيّر اسمه loaves فيه عدد الأرغفة اللي مدام مريم طلبتها.",
     "worldChange": {
-     "animate": "arriving",
+     "animate": "loading",
      "actions": [],
      "props": {
       "sign": "open",
-      "oven": "lit",
       "queue": 1,
       "flour-sack": 3,
+      "oven": "lit",
       "loaf": 8
      },
-     "captionAr": "مدام مريم أهي واصلة الكاونتر."
+     "captionAr": null,
+     "steps": [
+      {
+       "animate": "loading",
+       "props": {
+        "sign": "open",
+        "queue": 0,
+        "flour-sack": 4,
+        "oven": "lit"
+       },
+       "speakerNameAr": "عم حسن",
+       "lineAr": "قبل ما ييجي حد، لازم نخبز. أهو العجين داخل الفرن."
+      },
+      {
+       "animate": "baking",
+       "props": {
+        "sign": "open",
+        "queue": 0,
+        "flour-sack": 4,
+        "oven": "lit"
+       },
+       "speakerNameAr": "عم حسن",
+       "lineAr": "العيش بيستوي… وشوال دقيق راح في الدفعة دي."
+      },
+      {
+       "animate": "retrieving",
+       "props": {
+        "sign": "open",
+        "queue": 0,
+        "flour-sack": 3,
+        "oven": "lit"
+       },
+       "speakerNameAr": "عم حسن",
+       "lineAr": "وأهو طالع سخن."
+      },
+      {
+       "animate": "stocking",
+       "props": {
+        "sign": "open",
+        "queue": 0,
+        "flour-sack": 3,
+        "oven": "lit",
+        "loaf": 8
+       },
+       "speakerNameAr": "عم حسن",
+       "lineAr": "تمن أرغفة على الصينية."
+      },
+      {
+       "animate": "arriving",
+       "props": {
+        "sign": "open",
+        "queue": 1,
+        "flour-sack": 3,
+        "oven": "lit",
+        "loaf": 8
+       },
+       "speakerNameAr": "عم حسن",
+       "lineAr": "أهو أول زبونة! صباح الخير يا مدام مريم."
+      },
+      {
+       "animate": null,
+       "props": {
+        "sign": "open",
+        "queue": 1,
+        "flour-sack": 3,
+        "oven": "lit",
+        "loaf": 8
+       },
+       "speakerNameAr": "مدام مريم",
+       "lineAr": "صباح النور يا عم حسن. عاوزة خمس أرغفة النهاردة، البيت مليان ضيوف."
+      }
+     ]
     },
     "startingCode": "sign = \"open\"",
     "solutionCode": "sign = \"open\"\nloaves = 5",
@@ -153,12 +224,57 @@
      "actions": [],
      "props": {
       "sign": "open",
-      "oven": "lit",
       "queue": 1,
       "flour-sack": 3,
-      "loaf": 3
+      "oven": "lit",
+      "loaf": 3,
+      "loaves": 5,
+      "total_price": 25
      },
-     "captionAr": "خمس أرغفة لمدام مريم، وفضل تلاتة في الصينية."
+     "captionAr": null,
+     "steps": [
+      {
+       "animate": "handover",
+       "props": {
+        "sign": "open",
+        "queue": 1,
+        "flour-sack": 3,
+        "oven": "lit",
+        "loaf": 3,
+        "loaves": 5
+       },
+       "speakerNameAr": "عم حسن",
+       "lineAr": "اتفضلي يا ستي — خمس أرغفة بالظبط."
+      },
+      {
+       "animate": "paying",
+       "props": {
+        "sign": "open",
+        "queue": 1,
+        "flour-sack": 3,
+        "oven": "lit",
+        "loaf": 3,
+        "loaves": 5,
+        "total_price": 25
+       },
+       "speakerNameAr": "مدام مريم",
+       "lineAr": "اتفضل الحساب، خمسة وعشرين جنيه."
+      },
+      {
+       "animate": "exiting",
+       "props": {
+        "sign": "open",
+        "queue": 1,
+        "flour-sack": 3,
+        "oven": "lit",
+        "loaf": 3,
+        "loaves": 5,
+        "total_price": 25
+       },
+       "speakerNameAr": "عم حسن",
+       "lineAr": "مع السلامة يا ستي، وحشتينا!"
+      }
+     ]
     }
    }
   }

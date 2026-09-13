@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
 import type { PhasedMissionOut } from "@/lib/ai/types";
-import { flourSacks, isScenePhase, pressTarget, queueLength, shopOpen, undrawnProps } from "./mission-scene";
+import { beatsOf, flourSacks, isScenePhase, pressTarget, queueLength, shopOpen, undrawnProps } from "./mission-scene";
 import { bakeryScene, fixtures, worldPropNames } from "./scene-manifest";
 import { CUSTOMER_IDS } from "./simulation";
 
@@ -153,6 +153,34 @@ test("the shop itself is the first thing they touch", () => {
   assert.equal(pressTarget(opening), "sign", "the opening does not ask for a press");
   assert.match(phases.encounter.lineAr, /اضغط/, "nobody tells the child to press it");
   assert.equal(phases.encounter.ctaAr ?? null, null, "a Continue button competes with the sign");
+});
+
+test("nobody appears out of nowhere", () => {
+  // She used to be asked about before she existed on screen: the phase could play one
+  // animation, so a customer could only pop into place. The twist is a sequence now —
+  // he bakes, she walks in, she asks — and only then is a number wanted.
+  const twist = beatsOf(phases.remix.worldChange);
+  assert.ok(twist.length >= 4, `the twist is ${twist.length} beats; she still appears at once`);
+  const arrives = twist.findIndex((b) => b.animate === "arriving");
+  assert.ok(arrives > 0, "she is never seen walking in");
+  assert.ok(twist.slice(0, arrives).some((b) => b.animate === "baking"), "the bread is never baked");
+  // Her line, not any line mentioning bread — he counts loaves aloud while stocking.
+  const asks = twist.findIndex((b) => b.speakerNameAr === "مدام مريم");
+  assert.ok(asks > arrives, "she asks for bread before she has arrived");
+  assert.match(twist[asks].lineAr ?? "", /أرغفة/, "she arrives but never says what she wants");
+
+  // And the pay-off runs the same way: handed over, paid for, goodbye.
+  const serve = beatsOf(phases.remix.onRun);
+  assert.deepEqual(serve.map((b) => b.animate), ["handover", "paying", "exiting"]);
+  for (const b of serve) assert.ok(b.lineAr?.trim(), "a beat plays in silence");
+});
+
+test("every beat names an animation the scene can play", () => {
+  for (const change of everyChange()) {
+    for (const b of beatsOf(change)) {
+      if (b.animate) assert.ok(isScenePhase(b.animate), `${b.animate} is not a phase the scene knows`);
+    }
+  }
 });
 
 test("whoever speaks has a face", () => {
