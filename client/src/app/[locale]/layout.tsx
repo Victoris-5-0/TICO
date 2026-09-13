@@ -37,7 +37,10 @@ export default async function LocaleLayout({ children, params }: { children: Rea
 
   return (
     <html lang={locale} dir={direction(locale)} className={`${alexandria.variable} ${jakarta.variable} ${jetbrains.variable}`}>
-      <body><MotionProvider>{children}</MotionProvider></body>
+      <body>
+        <MotionProvider>{children}</MotionProvider>
+        <div id="tico-loading-portal" />
+      </body>
     </html>
   );
 }

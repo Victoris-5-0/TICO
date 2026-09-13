@@ -3,12 +3,14 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { motion, useReducedMotion } from "motion/react";
 import type { Locale } from "@/i18n/config";
 import { authClient, signInAsGuest } from "@/lib/auth-client";
 import styles from "./account-form.module.css";
 
 export function AccountForm({ locale, authFailed = false }: { locale: Locale; authFailed?: boolean }) {
+  const router = useRouter();
   const ar = locale === "ar-EG";
   const reduced = useReducedMotion();
   const [pending, setPending] = useState(false);
@@ -44,7 +46,8 @@ export function AccountForm({ locale, authFailed = false }: { locale: Locale; au
     setFailed(false);
     try {
       await signInAsGuest();
-      window.location.href = `/${locale}/onboarding`;
+      router.push(`/${locale}/onboarding`);
+      router.refresh();
     } catch (err) {
       console.error("Guest sign-in failed:", err);
       setFailed(true);

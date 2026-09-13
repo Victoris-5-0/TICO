@@ -52,7 +52,6 @@ export function WorldOverview({
   const reduced = useReducedMotion();
 
   const nextLesson = lessons.find((lesson) => !lesson.completed) ?? lessons[0];
-  const nextLessonId = nextLesson?.id;
   const completedCount = lessons.filter((l) => l.completed).length;
   const startedAny = completedCount > 0;
   const allCompleted = lessons.length > 0 && completedCount === lessons.length;

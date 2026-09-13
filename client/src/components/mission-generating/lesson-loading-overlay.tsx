@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -11,6 +11,16 @@ import { playCue } from "@/lib/sound/cues";
 import type { Locale } from "@/i18n/config";
 
 import styles from "./lesson-loading-overlay.module.css";
+
+const subscribeToPortal = () => () => {};
+
+function getPortalSnapshot(): HTMLElement | null {
+  return document.getElementById("tico-loading-portal") ?? (typeof document !== "undefined" ? document.body : null);
+}
+
+function getServerSnapshot(): HTMLElement | null {
+  return null;
+}
 
 export type LessonLoadingOverlayProps = {
   locale: Locale;
@@ -41,23 +51,13 @@ export function LessonLoadingOverlay({
   const [resolvedMissionId, setResolvedMissionId] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [authRedirect, setAuthRedirect] = useState<string | null>(null);
-  const [portalElement, setPortalElement] = useState<HTMLElement | null>(null);
+  const portalElement = useSyncExternalStore(subscribeToPortal, getPortalSnapshot, getServerSnapshot);
 
-  const startTimestamp = useRef<number>(Date.now());
+  const startTimestamp = useRef<number | null>(null);
   const completedRef = useRef<boolean>(false);
 
-  // Mount tracking, portal setup, and full website blur class toggle
+  // Mount tracking and full website blur class toggle
   useEffect(() => {
-    let container = document.getElementById("tico-loading-portal");
-    let created = false;
-    if (!container) {
-      container = document.createElement("div");
-      container.id = "tico-loading-portal";
-      document.body.appendChild(container);
-      created = true;
-    }
-    setPortalElement(container);
-
     // Activates full website blur via globals.css:
     // body.tico-overlay-open > *:not(#tico-loading-portal) { filter: blur(12px) ... }
     document.body.classList.add("tico-overlay-open");
@@ -67,9 +67,6 @@ export function LessonLoadingOverlay({
     return () => {
       document.body.classList.remove("tico-overlay-open");
       document.body.style.overflow = originalOverflow;
-      if (created && container && container.parentNode) {
-        container.parentNode.removeChild(container);
-      }
     };
   }, []);
 
@@ -137,8 +134,13 @@ export function LessonLoadingOverlay({
   useEffect(() => {
     let frameId: number;
 
+    if (startTimestamp.current === null) {
+      startTimestamp.current = Date.now();
+    }
+    const start = startTimestamp.current;
+
     function tick() {
-      const elapsed = Date.now() - startTimestamp.current;
+      const elapsed = Date.now() - start;
       const ratio = Math.min(elapsed / durationMs, 1);
 
       // Smooth easing curve

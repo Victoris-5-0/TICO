@@ -13,7 +13,7 @@ type Params = Promise<{ locale: string; worldSlug: string; lessonSlug: string }>
 type Search = Promise<{ preview?: string }>;
 
 export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
-  const { locale, worldSlug, lessonSlug } = await params;
+  const { locale, worldSlug } = await params;
   if (!isLocale(locale)) return {};
 
   const world = worlds.find((w) => w.slug === worldSlug);
@@ -93,8 +93,6 @@ export default async function Page({
   const map = stages.find((stage) => stage.worldSlug === worldSlug) ?? null;
 
   const currentLesson = lessons.find((l) => l.slug === lessonSlug);
-  const lessonTitle = currentLesson?.title || lessonSlug;
-  const worldTitle = world.title[locale];
 
   const fallbackLesson: WorldLesson = {
     id: lessonSlug,
