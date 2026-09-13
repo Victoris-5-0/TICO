@@ -321,6 +321,16 @@ export class MissionService {
           forceRegenerate: forceRegenerate ?? false,
         });
 
+        // A map click names an exact lesson. Do not turn it into "next mission" if an
+        // older or stale AI-service deployment resolves the request from progression
+        // instead: that made replaying the completed intro open lesson two. Falling
+        // through uses the local lesson-keyed prepared set and preserves the click.
+        if (served.worldSlug !== worldSlug || served.lessonSlug !== lessonSlug) {
+          throw new Error(
+            `mission resolver returned ${served.worldSlug}/${served.lessonSlug} for ${worldSlug}/${lessonSlug}`,
+          );
+        }
+
         console.info(
           `mission for ${worldSlug}/${lessonSlug}: ${served.id} (${served.delivery}, live=${served.live}, stop ${served.stop})`,
         );
@@ -483,9 +493,7 @@ export class MissionService {
       select: { id: true, params: true, content: true },
     });
 
-    const stops = rows
-      .filter((r) => hasPhases(r.content))
-      .sort((a, b) => repetitionOf(a.params) - repetitionOf(b.params));
+    const stops = rows.filter((r) => hasPhases(r.content));
 
     if (!stops.length) return null;
 
@@ -500,9 +508,11 @@ export class MissionService {
     });
 
     const index = siblings.findIndex((l) => l.id === lessonId);
-    // More lessons than prepared stops is possible; the last stop repeats rather than
-    // leaving a lesson with nothing to play.
-    return stops[Math.min(index < 0 ? 0 : index, stops.length - 1)].id;
+    const repetition = index < 0 ? 1 : index + 1;
+
+    // Match the authored stop number itself. Selecting by array index silently shifted
+    // lesson one to repetition 2 when the repetition-1 database row was missing.
+    return stops.find((row) => repetitionOf(row.params) === repetition)?.id ?? null;
   }
 
   /**

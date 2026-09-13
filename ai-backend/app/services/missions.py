@@ -694,7 +694,11 @@ def for_lesson(
     # this endpoint has to *report* which one happened. Asking `next_mission` afterwards
     # would mean guessing from the row, and a guess is exactly what `delivery` is for
     # replacing.
-    repetition, already_taught = _repetition_context(db, user_id, concept.id)
+    # This endpoint answers an exact map click, not "what should I play next?". The
+    # student's mastery may already be on repetition 2, but replaying the first lesson
+    # must still reuse or generate repetition 1 when its pinned row is unavailable.
+    _, already_taught = _repetition_context(db, user_id, concept.id)
+    repetition = stop
 
     if not live:
         spare = find_reusable(
