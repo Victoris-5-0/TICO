@@ -4,8 +4,8 @@ import { useAnimationFrame, useReducedMotion } from "motion/react";
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 
 import { BakeryScene } from "@/components/bakery/scene";
-import { missionSceneDuration, missionSceneState, type MissionProps } from "@/lib/bakery/mission-scene";
-import { sceneAssetUrls } from "@/lib/bakery/scene-manifest";
+import { flourSacks, missionSceneDuration, missionSceneState, shopOpen, type MissionProps } from "@/lib/bakery/mission-scene";
+import { propAssetUrls, sceneAssetUrls, worldPropNames } from "@/lib/bakery/scene-manifest";
 import type { Locale } from "@/i18n/config";
 
 import styles from "./mission-player.module.css";
@@ -30,6 +30,16 @@ export type MissionSceneProps = {
    * letterbox the bakery into a strip.
    */
   extendLeft?: number;
+  /**
+   * The one prop a phase is waiting to be clicked, and what to do about it.
+   *
+   * Missions point at things with `highlight`; this makes the pointed-at thing pressable,
+   * so a phase can say "press the sign" and mean it. Only the named prop is clickable —
+   * the ring is the whole affordance.
+   */
+  pickable?: string;
+  onPick?: (name: string) => void;
+  pickLabel?: (name: string) => string;
   label: string;
 };
 
@@ -40,13 +50,14 @@ export type MissionSceneProps = {
  * when the phase arrives or Run is pressed, then holds on its last frame. The scene
  * never autoplays on page load, which `docs/design.md` section 11 requires.
  */
-export function MissionScene({ locale, props, animate, playToken = 0, caption, highlight, extendLeft = 0, label }: MissionSceneProps) {
+export function MissionScene({ locale, props, animate, playToken = 0, caption, highlight, extendLeft = 0, pickable, onPick, pickLabel, label }: MissionSceneProps) {
   const ar = locale === "ar-EG";
   const motionPreference = useReducedMotion();
   // Match the server markup first, then apply the browser preference before playback.
   const hydrated = useSyncExternalStore(subscribeToHydration, () => true, () => false);
   const reduced = hydrated && Boolean(motionPreference);
 
+  const open = shopOpen(props);
   const [assets, setAssets] = useState<"loading" | "ready" | "error">("loading");
   const [progress, setProgress] = useState(1);
   // The run currently playing. Kept in a ref and compared inside the frame callback, so
@@ -56,7 +67,7 @@ export function MissionScene({ locale, props, animate, playToken = 0, caption, h
   useEffect(() => {
     let cancelled = false;
     Promise.all(
-      sceneAssetUrls().map(
+      [...sceneAssetUrls(), ...propAssetUrls(worldPropNames)].map(
         (src) =>
           new Promise<void>((resolve, reject) => {
             const img = new window.Image();
@@ -110,7 +121,23 @@ export function MissionScene({ locale, props, animate, playToken = 0, caption, h
   return (
     <figure className={styles.scene} data-ready={assets} data-animate={animate ?? "none"}>
       <div className={styles.sceneStage} dir="ltr">
-        <BakeryScene state={state} reducedMotion={reduced} counterView={false} label={label} highlight={highlight} extendLeft={extendLeft} />
+        {/* `loose` furnishes the shop the way the opening tour does — the till, the scale,
+            the bags, the order sheet. A mission drawn without them is the same bare counter
+            every time, which is what made every scene look identical. */}
+        <BakeryScene
+          state={state}
+          reducedMotion={reduced}
+          counterView={false}
+          label={label}
+          highlight={highlight}
+          extendLeft={extendLeft}
+          loose={worldPropNames}
+          sacks={flourSacks(props)}
+          sign={open === undefined ? undefined : { open, label: open ? (ar ? "مفتوح" : "OPEN") : (ar ? "مقفول" : "CLOSED") }}
+          pickable={pickable}
+          onPick={onPick}
+          pickLabel={pickLabel}
+        />
         {assets !== "ready" && (
           <div className={styles.sceneLoading}>
             {assets === "loading"
