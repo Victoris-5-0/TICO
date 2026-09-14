@@ -19,7 +19,7 @@ import {
   CardMotion,
   StepNumberMotion,
 } from "@/components/motion/hero-motion";
-import { WorldsMap, type MapWorld } from "@/components/mission-ui/worlds-map";
+import { ChapterWorldsMap, type MapWorld } from "@/components/mission-ui/chapter-worlds-map";
 import { worlds } from "@/content/worlds";
 import { type Locale } from "@/i18n/config";
 import { getDictionary } from "@/i18n/dictionaries";
@@ -167,7 +167,7 @@ export function LandingPage({
           <KineticParagraph className={styles.intro} text={dict.worlds.body} delay={0.08} />
           <Reveal delay={0.12}>
             <div className={styles.mapWrapper}>
-              <WorldsMap locale={locale} worlds={resolvedWorlds} />
+              <ChapterWorldsMap locale={locale} title={copy.challenges} worlds={resolvedWorlds} framed />
             </div>
           </Reveal>
         </section>

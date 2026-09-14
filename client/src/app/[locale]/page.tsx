@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { LandingPage } from "@/components/landing-page";
 import { isLocale } from "@/i18n/config";
 import { getCurrentUser } from "@/lib/auth";
-import { buildWorldsMap } from "@/services/worlds-map.service";
+import { buildChapterWorlds } from "@/services/chapters-map.service";
 
 export default async function Page({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
@@ -11,7 +11,8 @@ export default async function Page({ params }: { params: Promise<{ locale: strin
   const user = await getCurrentUser();
   let mapWorlds;
   try {
-    mapWorlds = await buildWorldsMap({ userId: user?.id, locale });
+    // The landing previews the first chapter's worlds, the ones a new student starts in.
+    mapWorlds = (await buildChapterWorlds({ userId: user?.id, locale, chapterSlug: "programming-basics" })).worlds;
   } catch {
     mapWorlds = undefined;
   }

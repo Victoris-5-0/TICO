@@ -1,22 +1,24 @@
 import type { Metadata } from "next";
+import { Inter } from "next/font/google";
 import { notFound, redirect } from "next/navigation";
 
 import { MarketingHeader } from "@/components/marketing-chrome";
-import { WorldsMap } from "@/components/mission-ui/worlds-map";
-import styles from "@/components/mission-ui/worlds-map.module.css";
+import { ChaptersMap } from "@/components/mission-ui/chapters-map";
+import styles from "@/components/mission-ui/chapters-map.module.css";
 import { isLocale } from "@/i18n/config";
 import { getDictionary } from "@/i18n/dictionaries";
 import { getCurrentUser } from "@/lib/auth";
-import { buildWorldsMap } from "@/services/worlds-map.service";
+import { buildChaptersMap } from "@/services/chapters-map.service";
 
-export const metadata: Metadata = { title: "World map" };
+const inter = Inter({ subsets: ["latin"], variable: "--font-landing", display: "swap" });
+
+export const metadata: Metadata = { title: "Select your world" };
 
 /**
- * The world map — Figma node 10:50.
+ * "Select your world" — Figma node 23:52.
  *
- * Six painted clearings on one long scroll, three of them worlds with missions in them
- * and three waiting to be drawn. Which are open comes from the student's own progress,
- * and an open island walks into that world's challenge map.
+ * Four chapter islands down one painted sky. Which is open comes from the student's own
+ * progress, and joining one walks into that chapter's worlds map.
  */
 export default async function Page({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
@@ -27,22 +29,21 @@ export default async function Page({ params }: { params: Promise<{ locale: strin
     redirect(`/${locale}/login`);
   }
 
-  const dict = getDictionary(locale);
-  const worlds = await buildWorldsMap({ userId: user.id, locale });
+  const chapters = await buildChaptersMap({ userId: user.id, locale });
 
   return (
-    <div className={styles.page}>
-      <a className="skip-link" href="#world-map">{locale === "ar-EG" ? "انتقل للخريطة" : "Skip to the map"}</a>
+    <div className={`${styles.page} ${inter.variable}`}>
+      <a className="skip-link" href="#world-map">{getDictionary(locale).skip}</a>
+      <div className={styles.sky} aria-hidden="true">
+        <span /><span /><span /><span /><span />
+      </div>
       <MarketingHeader
         locale={locale}
         currentPage="learn"
         user={{ id: user.id, name: user.name, email: user.email, avatarUrl: user.avatarUrl, xp: user.xp, streak: user.streak }}
       />
-      <main id="world-map" className={styles.canvas}>
-        {/* Figma puts nothing between the header and the map, and the islands carry their
-            own names. The page still needs a heading for anyone not looking at it. */}
-        <h1 className="sr-only">{dict.roadmap.title}</h1>
-        <WorldsMap locale={locale} worlds={worlds} priority />
+      <main id="world-map" className={styles.main}>
+        <ChaptersMap locale={locale} chapters={chapters} />
       </main>
     </div>
   );

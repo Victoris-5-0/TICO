@@ -1,16 +1,12 @@
 {
-  "note": "World map background and floating island assets. Compressed via LIBIMAGEQUANT 256 colors at full native resolution. Preserves all other map components (Tico, stepping stones, locks, sources).",
-  "background": { "file": "new_bg.png", "dimensions": [1104, 1425] },
+  "note": "A chapter's worlds map — Figma file mYA52DN0D9UfDUJzB4PQsX, node 23:119. Island PNGs are the Figma image fills trimmed to their alpha bounding box; the sky is the frame's background fill, drawn at 50% over white and mirrored horizontally. tico.png predates this map and faces left; the map flips it. The Figma's own TICO (23:145) is the same sprite mirrored.",
+  "fileKey": "mYA52DN0D9UfDUJzB4PQsX",
   "assets": [
-    { "file": "world1.png", "title": "El Forn (Baladi Bakery)", "dimensions": [694, 538] },
-    { "file": "world2.png", "title": "Isharet Cairo (Traffic Intersection)", "dimensions": [701, 535] },
-    { "file": "world3.png", "title": "El Mahatta / Workshop (Industrial Hub)", "dimensions": [654, 442] },
-    { "file": "world-1.png", "aliasFor": "world1.png" },
-    { "file": "world-2.png", "aliasFor": "world2.png" },
-    { "file": "world-3.png", "aliasFor": "world3.png" },
-    { "file": "step-open.png", "dimensions": [441, 343] },
-    { "file": "step-locked.png", "dimensions": [441, 343] },
-    { "file": "tico.png", "dimensions": [650, 701] },
-    { "file": "lock.svg" }
+    { "file": "sky.webp", "node": "23:126", "dimensions": [896, 1200] },
+    { "file": "island-el-forn.webp", "node": "23:140", "dimensions": [904, 800] },
+    { "file": "island-el-mahatta.webp", "node": "23:141", "dimensions": [928, 816] },
+    { "file": "island-isharet-cairo.webp", "node": "23:142", "dimensions": [923, 854] },
+    { "file": "lock.svg", "node": "23:143", "dimensions": [113, 139] },
+    { "file": "tico.png", "dimensions": [650, 701] }
   ]
 }
