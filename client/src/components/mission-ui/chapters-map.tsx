@@ -126,13 +126,31 @@ function road(points: { x: number; y: number }[], height: number) {
   return d;
 }
 
-export function ChaptersMap({ locale, chapters }: { locale: Locale; chapters: readonly MapChapter[] }) {
+export function ChaptersMap({
+  locale,
+  chapters,
+  framed = false,
+}: {
+  locale: Locale;
+  chapters: readonly MapChapter[];
+  /**
+   * Embedded on another page rather than being one (the landing's worlds section): the
+   * sky comes inside a rounded frame, the page's own heading stands in for the intro,
+   * and the band above the first island is trimmed off the top.
+   */
+  framed?: boolean;
+}) {
   const reduced = useReducedMotion();
   const words = copy[locale];
   const mapId = useId();
 
-  const rows = chapters.map((_, index) => rowFor(index));
-  const height = Math.max(SCENE.height, (rows[rows.length - 1]?.island.y ?? 0) + 830);
+  const trim = framed ? 400 : 0;
+  const rows = chapters.map((_, index) => rowFor(index)).map((row) => ({
+    ...row,
+    island: { ...row.island, y: row.island.y - trim },
+    card: { ...row.card, y: row.card.y - trim },
+  }));
+  const height = Math.max(SCENE.height - trim, (rows[rows.length - 1]?.island.y ?? 0) + 830);
   const centres = rows.map((row, index) => {
     const art = chapters[index].island;
     return { x: row.island.x + row.island.w / 2, y: row.island.y + (row.island.w * art.height) / art.width / 2 };
@@ -140,11 +158,23 @@ export function ChaptersMap({ locale, chapters }: { locale: Locale; chapters: re
 
   return (
     <div className={styles.canvas}>
-      <section className={styles.scene} style={{ "--scene-height": height } as React.CSSProperties} aria-labelledby={`${mapId}-title`}>
-        <div className={styles.intro}>
-          <h1 id={`${mapId}-title`} className={styles.title}>{words.map}</h1>
-          <p className={styles.lead}>{words.lead}</p>
-        </div>
+      <section
+        className={styles.scene}
+        style={{ "--scene-height": height } as React.CSSProperties}
+        aria-labelledby={framed ? undefined : `${mapId}-title`}
+        aria-label={framed ? words.map : undefined}
+        data-framed={framed || undefined}
+      >
+        {framed ? (
+          <div className={styles.frameSky} aria-hidden="true">
+            <span /><span /><span />
+          </div>
+        ) : (
+          <div className={styles.intro}>
+            <h1 id={`${mapId}-title`} className={styles.title}>{words.map}</h1>
+            <p className={styles.lead}>{words.lead}</p>
+          </div>
+        )}
 
         <svg className={styles.road} viewBox={`0 0 ${SCENE.width} ${height}`} preserveAspectRatio="none" aria-hidden="true">
           <path d={road(centres, height)} />
@@ -170,7 +200,8 @@ export function ChaptersMap({ locale, chapters }: { locale: Locale; chapters: re
                     width={chapter.island.width}
                     height={chapter.island.height}
                     sizes="(max-width: 760px) 360px, (max-width: 1440px) 50vw, 730px"
-                    priority={index === 0}
+                    /* Embedded, the map is below a hero that already has the preload budget. */
+                    priority={index === 0 && !framed}
                   />
 
                   <div className={styles.action} style={{ "--ax": `${row.action.x * 100}%`, "--ay": `${row.action.y * 100}%` } as React.CSSProperties}>

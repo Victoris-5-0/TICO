@@ -3,24 +3,23 @@ import { notFound } from "next/navigation";
 import { LandingPage } from "@/components/landing-page";
 import { isLocale } from "@/i18n/config";
 import { getCurrentUser } from "@/lib/auth";
-import { buildChapterWorlds } from "@/services/chapters-map.service";
+import { buildChaptersMap } from "@/services/chapters-map.service";
 
 export default async function Page({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
   if (!isLocale(locale)) notFound();
   const user = await getCurrentUser();
-  let mapWorlds;
+  let mapChapters;
   try {
-    // The landing previews the first chapter's worlds, the ones a new student starts in.
-    mapWorlds = (await buildChapterWorlds({ userId: user?.id, locale, chapterSlug: "programming-basics" })).worlds;
+    mapChapters = await buildChaptersMap({ userId: user?.id, locale });
   } catch {
-    mapWorlds = undefined;
+    mapChapters = undefined;
   }
 
   return (
     <LandingPage
       locale={locale}
-      mapWorlds={mapWorlds}
+      mapChapters={mapChapters}
       user={
         user
           ? {

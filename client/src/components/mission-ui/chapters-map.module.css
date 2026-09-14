@@ -48,6 +48,28 @@
   overflow: hidden;
 }
 
+/* Embedded on another page: the sky comes inside a rounded frame instead of behind the page. */
+.scene[data-framed] {
+  border-radius: 28px;
+  background: #F6E9DC;
+  box-shadow: 0 24px 64px rgba(31, 24, 32, 0.12), 0 2px 8px rgba(31, 24, 32, 0.04);
+}
+.frameSky {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  pointer-events: none;
+}
+.frameSky > span {
+  flex: none;
+  inline-size: 100%;
+  aspect-ratio: 1536 / 2752;
+  background: url("/assets/chapters-map/sky.webp") center / cover no-repeat;
+}
+.frameSky > span:nth-child(even) { scale: 1 -1; }
+
 .intro {
   position: absolute;
   inset-inline: 0;
@@ -209,6 +231,10 @@
     padding-block: 128px 64px;
     padding-inline: 16px;
     overflow: visible;
+  }
+  .scene[data-framed] {
+    padding-block-start: 40px;
+    overflow: hidden;
   }
   .intro {
     position: static;
