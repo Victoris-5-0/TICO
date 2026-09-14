@@ -1,0 +1,51 @@
+.character {
+  position: absolute;
+  inset-inline-end: max(3%, calc((100% - 1280px) / 2));
+  inset-block-end: 52px;
+  inline-size: clamp(310px, 37vw, 510px);
+  z-index: 1;
+  pointer-events: none;
+}
+.greeting {
+  display: block;
+  position: relative;
+  inline-size: 100%;
+  padding: 0;
+  border: 0;
+  border-radius: 35%;
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  pointer-events: auto;
+}
+.greeting:focus-visible { outline: 3px solid var(--focus, #267977); outline-offset: 4px; }
+.rig { display: block; inline-size: 100%; block-size: auto; overflow: visible; }
+.hint {
+  position: absolute;
+  inset-block-end: 0;
+  inset-inline: 0;
+  margin-inline: auto;
+  inline-size: fit-content;
+  padding: 6px 14px;
+  border-radius: 12px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.5;
+  background: rgb(255 253 249 / 92%);
+  opacity: 0;
+  transition: opacity 160ms ease;
+}
+.greeting:hover .hint, .greeting:focus-visible .hint { opacity: 1; }
+@media (min-width: 901px) and (max-width: 1050px) {
+  .character { inline-size: 330px; inset-inline-end: 0; inset-block-end: 90px; }
+}
+@media (max-width: 900px) {
+  .character { inline-size: 255px; inset-inline-end: calc(50% - 127.5px); inset-block-end: 25px; }
+  .hint { opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hint { transition: none; }
+}
