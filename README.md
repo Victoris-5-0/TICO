@@ -1,4 +1,4 @@
-# TICO — learn Python by helping Egypt 
+# TICO — learn Python by helping Egypt
 
 TICO is a bilingual programming game for children and undergraduates. Learners write real Python in the browser to solve recognizable Egyptian problems: organizing a public bakery queue, dispatching passengers at a railway station, and coordinating Cairo traffic lights.
 
