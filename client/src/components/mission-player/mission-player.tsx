@@ -117,11 +117,25 @@ export function MissionPlayer({ locale, mission, worldSlug, worldTitle, lessonId
     return () => query.removeEventListener("change", sync);
   }, []);
 
+  /**
+   * Move to the next phase, playing whatever that phase announces about the world.
+   *
+   * `remix.worldChange` is the twist as the world tells it — the oven works, a neighbour
+   * walks in, she asks for something. Nothing ever played it: only `onRun` was, on solve,
+   * so the customer the twist is about appeared for the first time mid-handover, and the
+   * student was asked for her order before she was on screen.
+   *
+   * Played from the click that advances rather than an effect watching the step, which is
+   * the rule the rest of this file follows: entering a phase is a gesture.
+   */
   const advance = useCallback(() => {
-    setChange(null);
+    const next = Math.min(step + 1, ORDER.length - 1);
+    const announces = ORDER[next] === "remix" ? mission.phases.remix.worldChange : null;
+    setChange(announces ?? null);
+    setPlayToken((n) => n + 1);
     setHighlight([]);
-    setStep((n) => Math.min(n + 1, ORDER.length - 1));
-  }, []);
+    setStep(next);
+  }, [step, mission.phases.remix.worldChange]);
 
   const play = useCallback((next: WorldChange | null | undefined, key: string) => {
     setChange(next ?? null);
@@ -223,6 +237,9 @@ export function MissionPlayer({ locale, mission, worldSlug, worldTitle, lessonId
    */
   const sceneLine = phaseKey === "encounter" ? phases.encounter.lineAr : change?.captionAr || null;
 
+  // Stable across renders, or the scene rebuilds its frame callback on every one.
+  const beats = useMemo(() => beatsOf(change), [change]);
+
   const sceneLabel = ar
     ? "فرن الحارة: حسن بيخبز والزباين مستنيين في الطابور."
     : "Forn El Hara: Hassan at the oven and neighbours waiting in the queue.";
@@ -281,7 +298,7 @@ export function MissionPlayer({ locale, mission, worldSlug, worldTitle, lessonId
               pickable={press && !pressed ? press : undefined}
               onPick={() => setPressed(true)}
               pickLabel={() => (ar ? "اضغط على اليافطة" : "Press the sign")}
-              beats={beatsOf(change)}
+              beats={beats}
               speech={sceneLine ? { name: speakerName, line: sceneLine } : null}
               speechAt={speechAt}
               extendLeft={ext}
