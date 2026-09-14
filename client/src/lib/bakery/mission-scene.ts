@@ -56,7 +56,7 @@ const clamp = (value: number, min: number, max: number) => Math.max(min, Math.mi
  * the only thing this mapper knew how to do, so every scene looked identical no matter who
  * the mission was about. A mission about one customer now gets one customer.
  */
-const DRAWN = new Set(["loaf", "dough", "oven", "queue", "flour-sack", "sign", "press"]);
+const DRAWN = new Set(["loaf", "dough", "oven", "queue", "flour-sack", "sign", "press", "customer"]);
 
 const toCount = (value: number | string | undefined): number | null => {
   if (typeof value === "number" && Number.isFinite(value)) return value;
@@ -115,7 +115,8 @@ export function missionSceneState({ props = {}, animate, progress = 0, queueLeng
   const litWithoutPhase = props.oven === "lit" && phase === "idle";
 
   const served: CustomerId[] = [];
-  const queue: CustomerId[] = CUSTOMER_IDS.slice(0, queueSize);
+  // A named cast wins over a count: a mission about Hoda should draw Hoda.
+  const queue: CustomerId[] = castOf(props) ?? CUSTOMER_IDS.slice(0, queueSize);
 
   return {
     phase: litWithoutPhase ? "baking" : phase,
@@ -187,6 +188,24 @@ export function beatsOf(change: { animate?: string | null; props?: MissionProps 
   const steps = (change as { steps?: unknown } | null | undefined)?.steps;
   if (!Array.isArray(steps)) return [];
   return steps.filter((step): step is WorldBeat => Boolean(step) && typeof step === "object");
+}
+
+/**
+ * Who is standing in the shop, by name.
+ *
+ * Without this a mission can only say *how many* customers, and the queue is always taken
+ * from the front of `CUSTOMER_IDS` — so every mission about one person was a mission about
+ * Mariam. `customer: "hoda"` puts Hoda there instead, and `"youssef,dina"` puts both in
+ * that order. Unknown names are dropped rather than crashing the scene.
+ */
+export function castOf(props: MissionProps = {}): CustomerId[] | null {
+  const named = props.customer;
+  if (typeof named !== "string") return null;
+  const ids = named
+    .split(",")
+    .map((name) => name.trim())
+    .filter((name): name is CustomerId => (CUSTOMER_IDS as readonly string[]).includes(name));
+  return ids.length ? ids : null;
 }
 
 /**

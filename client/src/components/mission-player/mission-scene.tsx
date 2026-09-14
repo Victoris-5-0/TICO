@@ -6,6 +6,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore
 import { BakeryScene } from "@/components/bakery/scene";
 import { flourSacks, missionSceneDuration, missionSceneState, queueLength, shopOpen, type MissionProps, type WorldBeat } from "@/lib/bakery/mission-scene";
 import { bakeryScene, frame, propAssetUrls, sceneAssetUrls, worldPropNames } from "@/lib/bakery/scene-manifest";
+import { CUSTOMER_IDS } from "@/lib/bakery/simulation";
 import type { Locale } from "@/i18n/config";
 
 import styles from "./mission-player.module.css";
@@ -83,7 +84,7 @@ export function MissionScene({ locale, props, animate, playToken = 0, caption, h
   useEffect(() => {
     let cancelled = false;
     Promise.all(
-      [...sceneAssetUrls(), ...propAssetUrls(worldPropNames), frame("angry-mariam")].map(
+      [...sceneAssetUrls(), ...propAssetUrls(worldPropNames), ...CUSTOMER_IDS.map((c) => frame(`angry-${c}`))].map(
         (src) =>
           new Promise<void>((resolve, reject) => {
             const img = new window.Image();

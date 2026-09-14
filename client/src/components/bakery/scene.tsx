@@ -55,7 +55,14 @@ function Fixture({ name, lit, onPick, pickLabel }: { name: keyof typeof fixtures
  */
 const WALL_SLICE = { x: 20, width: 90 };
 
-/** The cross frame is 128x333; this keeps that ratio at roughly the queue's own height. */
+/**
+ * The impatient frame is 128x333; this keeps that ratio at roughly the queue's own height.
+ *
+ * One per customer, named `angry-<id>` beside their walk-cycle atlas, so whoever is at the
+ * counter is the one who looks impatient. Cut from the same sheet as the walk cycles were,
+ * matched by dress — a mission about Hoda that turns into Mariam on a wrong answer would
+ * be worse than no reaction at all.
+ */
 const UPSET = { width: 100, height: 260 };
 
 export function BakeryScene({ state, reducedMotion, counterView, label, highlight, extendLeft = 0, loose, cast, pickable, onPick, pickLabel, upset = false, sign, sacks, preview }: { state: BakeryState; reducedMotion: boolean; counterView: boolean; label: string; highlight?: readonly string[]; extendLeft?: number; loose?: readonly WorldPropName[]; cast?: readonly CustomerId[]; pickable?: string; onPick?: (name: string) => void; pickLabel?: (name: string) => string;
@@ -228,7 +235,7 @@ export function BakeryScene({ state, reducedMotion, counterView, label, highligh
         <ellipse cy={-2} rx={33} ry={7} fill="#382820" opacity=".2" />
         {index === 0 && !leaving && !arriving && <ellipse cy={0} rx={40} ry={9} fill="none" stroke="#DB5B31" strokeWidth={3} />}
         {cross
-          ? <Prop name="angry-mariam" href={cutFrame("angry-mariam")} x={-UPSET.width / 2} y={-UPSET.height} width={UPSET.width} height={UPSET.height} />
+          ? <Prop name={`angry-${id}`} href={cutFrame(`angry-${id}`)} x={-UPSET.width / 2} y={-UPSET.height} width={UPSET.width} height={UPSET.height} />
           : <Sprite actor={actor} frame={frame} size={scene.queue.actorSize} />}
         {(receiving || leaving || carrying) && <>
           <Prop name="bag" x={hand.x - 20} y={hand.y - 4} width={46} height={52} />

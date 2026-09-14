@@ -1,190 +1,290 @@
 {
-  "data": {
-    "id": "cmtwkp4a4qt7801z0a156a0j4",
-    "worldId": "el_forn",
-    "sceneId": "bakery_gameplay",
-    "targetConceptId": "conditionals",
-    "carriedConceptIds": [
-      "variables"
+ "data": {
+  "id": "cmtwkp4a4qt7801z0a156a0j4",
+  "worldId": "el_forn",
+  "sceneId": "bakery_gameplay",
+  "targetConceptId": "conditionals",
+  "carriedConceptIds": [
+   "variables"
+  ],
+  "titleAr": "النصيب العادل",
+  "source": "template",
+  "validated": true,
+  "difficultyBand": 4,
+  "scaffold": {},
+  "phases": {
+   "encounter": {
+    "speaker": "hassan",
+    "speakerNameAr": "عم حسن",
+    "lineAr": "الدفعة طلعت، بس واحد اتحرق. شوف اللوح اللي قدامك — اضغط عليه عشان تعرف إحنا واقفين على كام.",
+    "world": {
+     "props": {
+      "sign": "open",
+      "oven": "lit",
+      "queue": 0,
+      "flour-sack": 1,
+      "loaf": 4,
+      "press": "bread-board"
+     }
+    }
+   },
+   "explore": {
+    "ticoIntroAr": "رغيف محروق يعني رغيف أقل. والدقيق فاضل منه شوال واحد.",
+    "rounds": [
+     {
+      "questionAr": "فاضل أربع أرغفة، وعم يوسف طالب ستة. نديله ستة؟",
+      "optionsAr": [
+       "مش هينفع — مفيش غير أربعة",
+       "أيوة، نديله ستة",
+       "نقوله يستنى بكرة"
+      ],
+      "correctIndex": 0,
+      "nudgeAr": "مش هنقدر ندّي حاجة مش موجودة. عدّ اللي على الصينية.",
+      "highlight": [
+       "tray",
+       "loaf"
+      ]
+     },
+     {
+      "questionAr": "يبقى الكود لازم يعرف يعمل إيه في الحالتين. إيه الحالتين؟",
+      "optionsAr": [
+       "فيه كفاية، ومفيش كفاية",
+       "الصبح والليل",
+       "زبون واحد وزبونين"
+      ],
+      "correctIndex": 0,
+      "nudgeAr": "الشرط بيقسم الدنيا لحالتين بس.",
+      "highlight": [
+       "bread-board"
+      ]
+     }
+    ]
+   },
+   "discover": {
+    "conceptSlug": "conditionals",
+    "conceptNameAr": "لو… وغير كده",
+    "explanationAr": "الشرط مش بس بيقول صح ولا غلط — هو كمان بيختار. لو فيه كفاية، الزبون بياخد طلبه كله. وغير كده بياخد اللي موجود. نفس الكود، ونتيجتين مختلفتين على حسب اليوم.",
+    "ticoLineAr": "ده مش ظلم — ده نصيب عادل. الكود بيدّي اللي يقدر عليه، مش اللي اتوعد بيه."
+   },
+   "understand": {
+    "introAr": "قارن الأول، وبعدين اختار على أساس المقارنة.",
+    "code": "loaves_left = 4\norder = 6\nenough = loaves_left >= order",
+    "annotations": [
+     {
+      "line": 1,
+      "textAr": "اللي فاضل بعد الرغيف المحروق.",
+      "pointsAt": "tray"
+     },
+     {
+      "line": 2,
+      "textAr": "اللي عم يوسف طالبه.",
+      "pointsAt": "loaf"
+     },
+     {
+      "line": 3,
+      "textAr": "فيه كفاية؟ أربعة أكبر من أو تساوي ستة؟ لأ.",
+      "pointsAt": "bread-board"
+     }
     ],
-    "titleAr": "حرارة الفرن المظبوطة",
-    "source": "model",
-    "validated": true,
-    "phases": {
-      "encounter": {
-        "speaker": "mariam",
-        "speakerNameAr": "مريم",
-        "lineAr": "يا حسن يا خويا، الفرن شكله لسه بارد والناس واقفة مستنية على الرصيف! لازم نتأكد إن الحرارة وصلت 200 درجة على الأقل قبل ما نرمي العجين في الفرن عشان العيش ما يهبطش مننا.",
-        "ctaAr": "يلا نبدأ",
-        "world": {
-          "props": {
-            "oven": "cold",
-            "dough": 8
-          }
-        }
+    "runLabelAr": "شغّل وشوف",
+    "onRun": {
+     "animate": null,
+     "actions": [],
+     "props": {
+      "sign": "open",
+      "oven": "lit",
+      "queue": 0,
+      "flour-sack": 1,
+      "loaf": 4
+     },
+     "captionAr": "enough = False — مفيش كفاية."
+    }
+   },
+   "guided": {
+    "steps": [
+     {
+      "code": "loaves_left = 4\norder = 6\nenough = ___ >= order",
+      "blanks": [
+       "loaves_left"
+      ],
+      "promptAr": "قارن اللي فاضل بالطلب: مين اللي المفروض يتقارن بالطلب؟",
+      "hintAr": "الاسم اللي في أول سطر — اللي فاضل على الصينية."
+     }
+    ],
+    "solutionCode": "loaves_left = 4\norder = 6\nenough = loaves_left >= order",
+    "tests": [
+     {
+      "call": "enough",
+      "expected": "False",
+      "name": null,
+      "hidden": false
+     }
+    ],
+    "onRun": {
+     "animate": null,
+     "actions": [],
+     "props": {
+      "sign": "open",
+      "oven": "lit",
+      "queue": 0,
+      "flour-sack": 1,
+      "loaf": 4
+     },
+     "captionAr": "غلط — يعني مفيش كفاية."
+    }
+   },
+   "remix": {
+    "twistAr": "عم يوسف ودينا واقفين مع بعض. الكود عرف إن مفيش كفاية، بس لسه مش عارف يعمل إيه.",
+    "newRequirementAr": "زوّد شرط: لو فيه كفاية give يبقى الطلب كله، وغير كده give يبقى اللي فاضل.",
+    "worldChange": {
+     "animate": "arriving",
+     "actions": [],
+     "props": {
+      "sign": "open",
+      "oven": "lit",
+      "queue": 2,
+      "flour-sack": 1,
+      "loaf": 4,
+      "customer": "youssef,dina"
+     },
+     "captionAr": null,
+     "steps": [
+      {
+       "animate": "arriving",
+       "props": {
+        "sign": "open",
+        "oven": "lit",
+        "queue": 2,
+        "flour-sack": 1,
+        "loaf": 4,
+        "customer": "youssef,dina"
+       },
+       "speakerNameAr": "عم حسن",
+       "lineAr": "أهلاً يا عم يوسف. أهلاً يا دينا."
       },
-      "explore": {
-        "ticoIntroAr": "تعالوا نساعد مريم وعم حسن يظبطوا الفرن البلدي قبل ما نكتب أي كود!",
-        "rounds": [
-          {
-            "questionAr": "تفتكر إيه اللي هيحصل لو عم حسن رمى العجين والفرن لسه بارد؟",
-            "optionsAr": [
-              "العيش مش هيستوي وهيطلع عجين ومهبط",
-              "العيش هيستوي بسرعة جداً",
-              "الفرن هيسخن لوحده تلقائيًا"
-            ],
-            "correctIndex": 0,
-            "nudgeAr": "لو الفرن بارد، العجين مش هيلاقي النار اللي تخليه يتنفخ ويستوي صح.",
-            "highlight": [
-              "oven"
-            ]
-          },
-          {
-            "questionAr": "وعشان العيش يطلع منفوخ ومظبوط، مريم قالت الحرارة لازم تكون كام على الأقل؟",
-            "optionsAr": [
-              "200 درجة أو أكتر",
-              "أقل من 100 درجة",
-              "مش مهم الحرارة خالص"
-            ],
-            "correctIndex": 0,
-            "nudgeAr": "بص على كلام مريم تاني، هي حددت درجة حرارة معينة عشان العيش ما يبوظش.",
-            "highlight": [
-              "oven"
-            ]
-          }
-        ]
+      {
+       "animate": null,
+       "props": {
+        "sign": "open",
+        "oven": "lit",
+        "queue": 2,
+        "flour-sack": 1,
+        "loaf": 4,
+        "customer": "youssef,dina"
+       },
+       "speakerNameAr": "عم يوسف",
+       "lineAr": "عاوز ستة يا حسن، البيت كله مستني."
       },
-      "discover": {
-        "conceptSlug": "conditionals",
-        "conceptNameAr": "اتخاذ القرار بالشروط",
-        "explanationAr": "الشرط بيتنفذ لو الجواب أيوه بس. الجزء اللي جوه الـ if مش بيشتغل كل مرة — بيشتغل لما الشرط يتحقق، والباقي بيعدي عليه عادي.",
-        "ticoLineAr": "يا سلام! الشروط دي هي اللي بتخلي الفرن بتاعنا ذكي وبيفهم."
+      {
+       "animate": null,
+       "props": {
+        "sign": "open",
+        "oven": "lit",
+        "queue": 2,
+        "flour-sack": 1,
+        "loaf": 4,
+        "customer": "youssef,dina"
+       },
+       "speakerNameAr": "عم حسن",
+       "lineAr": "والله الدفعة واحد فيها اتحرق. فاضل أربعة بس."
       },
-      "understand": {
-        "introAr": "ده الكود اللي هيخلي الفرن يقرر يخبز الـ 8 أرغفة لما الحرارة تكون مظبوطة، أو يستنى لو الفرن لسه بارد:",
-        "code": "def check_baking_temp(oven_temperature: int) -> int:\n    if oven_temperature >= 200:\n        return 8\n    else:\n        return 0",
-        "annotations": [
-          {
-            "line": 1,
-            "textAr": "هنا بنعرف الدالة وبنديها درجة الحرارة الحالية للفرن",
-            "pointsAt": "oven"
-          },
-          {
-            "line": 2,
-            "textAr": "لو درجة الحرارة أكبر من أو تساوي 200",
-            "pointsAt": "oven"
-          },
-          {
-            "line": 3,
-            "textAr": "اخبز دفعة كاملة من العيش (8 أرغفة)",
-            "pointsAt": "dough"
-          },
-          {
-            "line": 5,
-            "textAr": "وإلا (لو الحرارة أقل)، ما تخبزش حاجة ورجع صفر",
-            "pointsAt": "oven"
-          }
-        ],
-        "runLabelAr": "شغّل وشوف",
-        "onRun": {
-          "animate": "baking",
-          "props": {
-            "oven": "lit"
-          },
-          "captionAr": "الفرن سخن والعيش البلدي طالع منفوخ وجميل!"
-        }
-      },
-      "guided": {
-        "steps": [
-          {
-            "code": "def check_baking_temp(oven_temperature: int) -> int:\n    ___ oven_temperature >= 200:\n        return 8\n    else:\n        return 0",
-            "blanks": [
-              "if"
-            ],
-            "promptAr": "اكتب الكلمة اللي بنبدأ بيها الشرط في بايثون عشان نختبر درجة الحرارة.",
-            "hintAr": "بنستخدم الكلمة دي لما نكون عاوزين نقول 'لو' الشرط ده تحقق."
-          },
-          {
-            "code": "def check_baking_temp(oven_temperature: int) -> int:\n    if oven_temperature >= 200:\n        return 8\n    ___:\n        return 0",
-            "blanks": [
-              "else"
-            ],
-            "promptAr": "اكتب الكلمة اللي بنستخدمها عشان نحدد اللي هيحصل لو الشرط ما تحققش.",
-            "hintAr": "الكلمة دي معناها 'وإلا' أو 'في حال لم يتحقق الشرط السابق'."
-          }
-        ],
-        "solutionCode": "def check_baking_temp(oven_temperature: int) -> int:\n    if oven_temperature >= 200:\n        return 8\n    else:\n        return 0",
-        "tests": [
-          {
-            "call": "check_baking_temp(210)",
-            "expected": "8",
-            "name": null,
-            "hidden": false
-          },
-          {
-            "call": "check_baking_temp(150)",
-            "expected": "0",
-            "name": null,
-            "hidden": false
-          },
-          {
-            "call": "check_baking_temp(200)",
-            "expected": "8",
-            "name": null,
-            "hidden": false
-          }
-        ],
-        "onRun": {
-          "animate": "oven_fire",
-          "props": {
-            "oven": "lit"
-          },
-          "captionAr": "كده الكود شغال تمام والفرن بياخد القرار الصح لوحده!"
-        }
-      },
-      "remix": {
-        "twistAr": "الجو النهاردة برد جداً والهوا شديد في السيدة زينب!",
-        "newRequirementAr": "عم حسن بيقول عشان العيش يستوي صح في البرد ده، محتاجين الفرن يسخن أكتر ويوصل لـ 250 درجة على الأقل. عدل الشرط في الكود عشان يرجع 8 أرغفة بس لو الحرارة وصلت 250 أو أكتر.",
-        "worldChange": {
-          "animate": "steam",
-          "props": {
-            "oven": "cold"
-          },
-          "captionAr": null
-        },
-        "startingCode": "def check_baking_temp(oven_temperature: int) -> int:\n    if oven_temperature >= 200:\n        return 8\n    else:\n        return 0",
-        "solutionCode": "def check_baking_temp(oven_temperature: int) -> int:\n    if oven_temperature >= 250:\n        return 8\n    else:\n        return 0",
-        "tests": [
-          {
-            "call": "check_baking_temp(260)",
-            "expected": "8",
-            "name": null,
-            "hidden": false
-          },
-          {
-            "call": "check_baking_temp(220)",
-            "expected": "0",
-            "name": null,
-            "hidden": false
-          }
-        ],
-        "onRun": {
-          "animate": "baking",
-          "props": {
-            "oven": "lit"
-          },
-          "captionAr": null
-        }
+      {
+       "animate": null,
+       "props": {
+        "sign": "open",
+        "oven": "lit",
+        "queue": 2,
+        "flour-sack": 1,
+        "loaf": 4,
+        "customer": "youssef,dina"
+       },
+       "speakerNameAr": "تيكو",
+       "lineAr": "يبقى الكود لازم يقرر: ياخد طلبه كله، ولا ياخد اللي موجود؟"
       }
+     ]
     },
-    "scaffold": {
-      "variables": "NONE"
-    },
-    "difficultyBand": 5
-  },
-  "meta": {
-    "request_id": "pregenerated",
-    "stub": false,
-    "cached": false
+    "startingCode": "loaves_left = 4\norder = 6\nenough = loaves_left >= order",
+    "solutionCode": "loaves_left = 4\norder = 6\nenough = loaves_left >= order\nif enough:\n    give = order\nelse:\n    give = loaves_left",
+    "tests": [
+     {
+      "call": "enough",
+      "expected": "False",
+      "name": null,
+      "hidden": false
+     },
+     {
+      "call": "give",
+      "expected": "4",
+      "name": null,
+      "hidden": false
+     }
+    ],
+    "onRun": {
+     "animate": "handover",
+     "actions": [],
+     "props": {
+      "sign": "open",
+      "oven": "lit",
+      "queue": 2,
+      "flour-sack": 1,
+      "loaf": 0,
+      "customer": "youssef,dina",
+      "give": 4
+     },
+     "captionAr": null,
+     "steps": [
+      {
+       "animate": "handover",
+       "props": {
+        "sign": "open",
+        "oven": "lit",
+        "queue": 2,
+        "flour-sack": 1,
+        "loaf": 0,
+        "customer": "youssef,dina",
+        "give": 4
+       },
+       "speakerNameAr": "عم حسن",
+       "lineAr": "أربعة يا عم يوسف، وده كل اللي عندي النهاردة."
+      },
+      {
+       "animate": "paying",
+       "props": {
+        "sign": "open",
+        "oven": "lit",
+        "queue": 2,
+        "flour-sack": 1,
+        "loaf": 0,
+        "customer": "youssef,dina",
+        "give": 4,
+        "total_price": 20
+       },
+       "speakerNameAr": "عم يوسف",
+       "lineAr": "ربنا يبارك لك. اتفضل عشرين."
+      },
+      {
+       "animate": "exiting",
+       "props": {
+        "sign": "open",
+        "oven": "lit",
+        "queue": 2,
+        "flour-sack": 1,
+        "loaf": 0,
+        "customer": "youssef,dina",
+        "give": 4,
+        "total_price": 20
+       },
+       "speakerNameAr": "تيكو",
+       "lineAr": "الكود ماكدبش وما وعدش بحاجة مش موجودة. ده الشرط."
+      }
+     ]
+    }
+   }
   }
+ },
+ "meta": {
+  "request_id": "authored",
+  "stub": false,
+  "cached": false
+ }
 }

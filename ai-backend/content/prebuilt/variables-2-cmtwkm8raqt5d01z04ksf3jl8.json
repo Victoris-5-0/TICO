@@ -1,177 +1,307 @@
 {
-  "data": {
-    "id": "cmtwkm8raqt5d01z04ksf3jl8",
-    "worldId": "el_forn",
-    "sceneId": "bakery_gameplay",
-    "targetConceptId": "variables",
-    "carriedConceptIds": [],
-    "titleAr": "حساب طابور العيش",
-    "source": "model",
-    "validated": true,
-    "phases": {
-      "encounter": {
-        "speaker": "dina",
-        "speakerNameAr": "دينا",
-        "lineAr": "أنا واقفة براقِب الطابور، وكل زبون بيطلب عدد أرغفة مختلف. عم حسن بيحسب الحساب بسرعة ومن غير لغبطة، تفتكروا بيعمل كده إزاي؟",
-        "ctaAr": "يلا نبدأ",
-        "world": {
-          "props": {
-            "counter": 1,
-            "loaf": 8,
-            "oven": "lit"
-          }
-        }
+ "data": {
+  "id": "cmtwkm8raqt5d01z04ksf3jl8",
+  "worldId": "el_forn",
+  "sceneId": "bakery_gameplay",
+  "targetConceptId": "variables",
+  "carriedConceptIds": [],
+  "titleAr": "عدّ الصواني",
+  "source": "template",
+  "validated": true,
+  "difficultyBand": 2,
+  "scaffold": {},
+  "phases": {
+   "encounter": {
+    "speaker": "hassan",
+    "speakerNameAr": "عم حسن",
+    "lineAr": "رجعنا تاني. مدام مريم خدت طلبها وفضل في الصينية شوية عيش. قبل ما الزحمة تيجي لازم نعرف فاضل كام — اضغط على الصينية.",
+    "world": {
+     "props": {
+      "sign": "open",
+      "oven": "cold",
+      "queue": 0,
+      "flour-sack": 3,
+      "loaf": 3,
+      "press": "tray"
+     }
+    }
+   },
+   "explore": {
+    "ticoIntroAr": "خبزنا تمن أرغفة الصبح، ومدام مريم خدت خمسة. تعالى نحسب.",
+    "rounds": [
+     {
+      "questionAr": "خبزنا تمنية وباعنا خمسة. فاضل كام رغيف؟",
+      "optionsAr": [
+       "٣ أرغفة",
+       "٥ أرغفة",
+       "١٣ رغيف"
+      ],
+      "correctIndex": 0,
+      "nudgeAr": "تمنية ناقص خمسة. عدّ اللي على الصينية.",
+      "highlight": [
+       "tray",
+       "loaf"
+      ]
+     },
+     {
+      "questionAr": "لو بكرة خبزنا نفس الدفعة وبعنا ستة، الحسبة هتتغيّر ولا القانون هو هو؟",
+      "optionsAr": [
+       "القانون هو هو: اللي خبزناه ناقص اللي بعناه",
+       "الحسبة هتتغيّر كل يوم",
+       "مش هنحتاج نحسب تاني"
+      ],
+      "correctIndex": 0,
+      "nudgeAr": "الأرقام بتتغيّر، بس الطرح فضل زي ما هو.",
+      "highlight": [
+       "tray"
+      ]
+     }
+    ]
+   },
+   "discover": {
+    "conceptSlug": "variables",
+    "conceptNameAr": "الحساب بالمتغيّرات",
+    "explanationAr": "المتغيّر مش بس بيشيل رقم — نقدر نحسب بيه كمان. نسمّي اللي خبزناه، ونسمّي اللي بعناه، والفرق بينهم هو اللي فاضل. لو الأرقام اتغيّرت، الحسبة بتتصلّح لوحدها.",
+    "ticoLineAr": "اسم ناقص اسم. مش رقم ناقص رقم."
+   },
+   "understand": {
+    "introAr": "تلات سطور: اللي خبزناه، اللي بعناه، والفرق بينهم.",
+    "code": "baked = 8\nsold = 5\nloaves_left = baked - sold",
+    "annotations": [
+     {
+      "line": 1,
+      "textAr": "دفعة الصبح: تمن أرغفة.",
+      "pointsAt": "oven"
+     },
+     {
+      "line": 2,
+      "textAr": "اللي مدام مريم خدته.",
+      "pointsAt": "loaf"
+     },
+     {
+      "line": 3,
+      "textAr": "الفرق بينهم — وده اللي على الصينية دلوقتي.",
+      "pointsAt": "tray"
+     }
+    ],
+    "runLabelAr": "شغّل وشوف",
+    "onRun": {
+     "animate": null,
+     "actions": [],
+     "props": {
+      "sign": "open",
+      "oven": "cold",
+      "queue": 0,
+      "flour-sack": 3,
+      "loaf": 3
+     },
+     "captionAr": "تلات أرغفة على الصينية."
+    }
+   },
+   "guided": {
+    "steps": [
+     {
+      "code": "baked = 8\nsold = 5\nloaves_left = baked - ___",
+      "blanks": [
+       "sold"
+      ],
+      "promptAr": "كمّل الحسبة: الفاضل هو اللي خبزناه ناقص إيه؟",
+      "hintAr": "مش الرقم ٥ — الاسم اللي سمّيناه بيه فوق."
+     }
+    ],
+    "solutionCode": "baked = 8\nsold = 5\nloaves_left = baked - sold",
+    "tests": [
+     {
+      "call": "loaves_left",
+      "expected": "3",
+      "name": null,
+      "hidden": false
+     }
+    ],
+    "onRun": {
+     "animate": null,
+     "actions": [],
+     "props": {
+      "sign": "open",
+      "oven": "cold",
+      "queue": 0,
+      "flour-sack": 3,
+      "loaf": 3
+     },
+     "captionAr": "تلات أرغفة. الحسبة مظبوطة."
+    }
+   },
+   "remix": {
+    "twistAr": "الست هدى واصلة وعاوزة ستة، والصينية فيها تلاتة بس. عم حسن هيخبز دفعة جديدة.",
+    "newRequirementAr": "سيب اللي كتبته زي ما هو، وزوّد متغيّرين: fresh بالدفعة الجديدة (تمنية)، وtotal بمجموع الفاضل والجديد.",
+    "worldChange": {
+     "animate": "arriving",
+     "actions": [],
+     "props": {
+      "sign": "open",
+      "oven": "cold",
+      "queue": 1,
+      "customer": "hoda",
+      "flour-sack": 3,
+      "loaf": 3
+     },
+     "captionAr": null,
+     "steps": [
+      {
+       "animate": "arriving",
+       "props": {
+        "sign": "open",
+        "oven": "cold",
+        "queue": 1,
+        "customer": "hoda",
+        "flour-sack": 3,
+        "loaf": 3
+       },
+       "speakerNameAr": "عم حسن",
+       "lineAr": "أهي الست هدى. صباح الخير يا أم محمد!"
       },
-      "explore": {
-        "ticoIntroAr": "يا هلا بيك في الفرن البلدي! تعال نفكر مع بعض في الحسابات اللي بتحصل هنا.",
-        "rounds": [
-          {
-            "questionAr": "لو زبون طلب 3 أرغفة، وسعر الرغيف الواحد 120 قرش، الحساب الإجمالي هيكون كام؟",
-            "optionsAr": [
-              "360 قرش",
-              "240 قرش",
-              "120 قرش"
-            ],
-            "correctIndex": 0,
-            "nudgeAr": "فكر فيها كأننا بنكرر الـ 120 قرش 3 مرات.",
-            "highlight": [
-              "loaf"
-            ]
-          },
-          {
-            "questionAr": "لو سعر الرغيف اتغير بكرا وبقى 150 قرش، إيه اللي هيتغير في طريقة حسابنا؟",
-            "optionsAr": [
-              "سعر الرغيف الثابت بس",
-              "عدد الأرغفة اللي الزبون عايزها",
-              "مش هنغير أي حاجة"
-            ],
-            "correctIndex": 0,
-            "nudgeAr": "فكر في الرقم اللي بنضربه في عدد الأرغفة كل مرة.",
-            "highlight": [
-              "counter"
-            ]
-          }
-        ]
+      {
+       "animate": null,
+       "props": {
+        "sign": "open",
+        "oven": "cold",
+        "queue": 1,
+        "customer": "hoda",
+        "flour-sack": 3,
+        "loaf": 3
+       },
+       "speakerNameAr": "الست هدى",
+       "lineAr": "صباح النور. عاوزة ستة النهاردة، عندي عزومة."
       },
-      "discover": {
-        "conceptSlug": "variables",
-        "conceptNameAr": "استخدام المتغيرات",
-        "explanationAr": "الاسم هو اللي بيفرق. لما تسمي المتغير loaves_per_tray، الكود بيقول لوحده هو بيعمل إيه. ولو الرقم اتغير بكرة، بتغيره في مكان واحد بس والباقي كله بيمشي معاه.",
-        "ticoLineAr": "كلام سليم! المتغير بيخلي الكود مرن وجاهز لأي تغيير في الأسعار."
+      {
+       "animate": null,
+       "props": {
+        "sign": "open",
+        "oven": "cold",
+        "queue": 1,
+        "customer": "hoda",
+        "flour-sack": 3,
+        "loaf": 3
+       },
+       "speakerNameAr": "تيكو",
+       "lineAr": "بس الصينية فيها تلاتة بس. لازم دفعة جديدة."
       },
-      "understand": {
-        "introAr": "ده الكود اللي بيحسب الحساب الإجمالي لأي عدد أرغفة باستخدام متغير السعر:",
-        "code": "def calculate_order_price(loaves: int) -> int:\n    price = 120\n    return loaves * price",
-        "annotations": [
-          {
-            "line": 2,
-            "textAr": "هنا عملنا متغير اسمه price وشيلنا جواه سعر الرغيف (120 قرش).",
-            "pointsAt": "counter"
-          },
-          {
-            "line": 3,
-            "textAr": "بنضرب عدد الأرغفة المطلوبة في السعر المتخزن وبنرجع النتيجة.",
-            "pointsAt": "loaf"
-          }
-        ],
-        "runLabelAr": "شغّل وشوف",
-        "onRun": {
-          "animate": "handover",
-          "props": {
-            "bag": 1
-          },
-          "captionAr": "البرنامج حسب الحساب بدقة وعم حسن سلم العيش للزبون!"
-        }
+      {
+       "animate": "loading",
+       "props": {
+        "sign": "open",
+        "oven": "lit",
+        "queue": 1,
+        "customer": "hoda",
+        "flour-sack": 3,
+        "loaf": 0
+       },
+       "speakerNameAr": "عم حسن",
+       "lineAr": "حاضر. العجين داخل."
       },
-      "guided": {
-        "steps": [
-          {
-            "code": "def calculate_order_price(loaves: int) -> int:\n    price = ___\n    return loaves * price",
-            "blanks": [
-              "120"
-            ],
-            "promptAr": "اكتب سعر الرغيف وهو 120 قرش جوه المتغير price.",
-            "hintAr": "حط الرقم 120 مكان النقط."
-          },
-          {
-            "code": "def calculate_order_price(loaves: int) -> int:\n    price = 120\n    return loaves * ___",
-            "blanks": [
-              "price"
-            ],
-            "promptAr": "استخدم اسم المتغير price عشان تضربه في عدد الأرغفة.",
-            "hintAr": "اكتب اسم المتغير اللي لسه معرفينه بالظبط."
-          }
-        ],
-        "solutionCode": "def calculate_order_price(loaves: int) -> int:\n    price = 120\n    return loaves * price",
-        "tests": [
-          {
-            "call": "calculate_order_price(5)",
-            "expected": "600",
-            "name": null,
-            "hidden": false
-          },
-          {
-            "call": "calculate_order_price(2)",
-            "expected": "240",
-            "name": null,
-            "hidden": false
-          },
-          {
-            "call": "calculate_order_price(10)",
-            "expected": "1200",
-            "name": null,
-            "hidden": false
-          }
-        ],
-        "onRun": {
-          "animate": "handover",
-          "props": {
-            "bag": 1
-          },
-          "captionAr": "كده الكود شغال وبيحسب السعر الإجمالي لأي طلب!"
-        }
-      },
-      "remix": {
-        "twistAr": "الفرن قرر يحط العيش في أكياس ورقية جديدة، وبقى بيضيف تكلفة الكيس (50 قرش) على الحساب الإجمالي لأي طلب.",
-        "newRequirementAr": "عدل الكود عشان تضيف متغير جديد باسم bag_fee قيمته 50، وتجمعه على الحساب الإجمالي بعد ضرب الأرغفة في السعر.",
-        "worldChange": {
-          "animate": "stocking",
-          "props": {
-            "bag": 1
-          },
-          "captionAr": null
-        },
-        "startingCode": "def calculate_order_price(loaves: int) -> int:\n    price = 120\n    return loaves * price",
-        "solutionCode": "def calculate_order_price(loaves: int) -> int:\n    price = 120\n    bag_fee = 50\n    return (loaves * price) + bag_fee",
-        "tests": [
-          {
-            "call": "calculate_order_price(5)",
-            "expected": "650",
-            "name": null,
-            "hidden": false
-          },
-          {
-            "call": "calculate_order_price(2)",
-            "expected": "290",
-            "name": null,
-            "hidden": false
-          }
-        ],
-        "onRun": {
-          "animate": "handover",
-          "props": {
-            "bag": 1
-          },
-          "captionAr": null
-        }
+      {
+       "animate": "stocking",
+       "props": {
+        "sign": "open",
+        "oven": "lit",
+        "queue": 1,
+        "customer": "hoda",
+        "flour-sack": 2,
+        "loaf": 8
+       },
+       "speakerNameAr": "عم حسن",
+       "lineAr": "أهو تمنية جداد، وشوال دقيق راح."
       }
+     ]
     },
-    "scaffold": {},
-    "difficultyBand": 5
-  },
-  "meta": {
-    "request_id": "pregenerated",
-    "stub": false,
-    "cached": false
+    "startingCode": "baked = 8\nsold = 5\nloaves_left = baked - sold",
+    "solutionCode": "baked = 8\nsold = 5\nloaves_left = baked - sold\nfresh = 8\ntotal = loaves_left + fresh",
+    "tests": [
+     {
+      "call": "loaves_left",
+      "expected": "3",
+      "name": null,
+      "hidden": false
+     },
+     {
+      "call": "fresh",
+      "expected": "8",
+      "name": null,
+      "hidden": false
+     },
+     {
+      "call": "total",
+      "expected": "11",
+      "name": null,
+      "hidden": false
+     }
+    ],
+    "onRun": {
+     "animate": "handover",
+     "actions": [],
+     "props": {
+      "sign": "open",
+      "oven": "lit",
+      "queue": 1,
+      "customer": "hoda",
+      "flour-sack": 2,
+      "loaf": 5,
+      "total": 11
+     },
+     "captionAr": null,
+     "steps": [
+      {
+       "animate": "handover",
+       "props": {
+        "sign": "open",
+        "oven": "lit",
+        "queue": 1,
+        "customer": "hoda",
+        "flour-sack": 2,
+        "loaf": 5,
+        "total": 11
+       },
+       "speakerNameAr": "عم حسن",
+       "lineAr": "حداشر رغيف كلهم. اتفضلي ستة يا أم محمد."
+      },
+      {
+       "animate": "paying",
+       "props": {
+        "sign": "open",
+        "oven": "lit",
+        "queue": 1,
+        "customer": "hoda",
+        "flour-sack": 2,
+        "loaf": 5,
+        "total": 11,
+        "total_price": 30
+       },
+       "speakerNameAr": "الست هدى",
+       "lineAr": "اتفضل، تلاتين جنيه."
+      },
+      {
+       "animate": "exiting",
+       "props": {
+        "sign": "open",
+        "oven": "lit",
+        "queue": 1,
+        "customer": "hoda",
+        "flour-sack": 2,
+        "loaf": 5,
+        "total": 11,
+        "total_price": 30
+       },
+       "speakerNameAr": "تيكو",
+       "lineAr": "وفضل خمسة. الحسبة مشيت لوحدها."
+      }
+     ]
+    }
+   }
   }
+ },
+ "meta": {
+  "request_id": "authored",
+  "stub": false,
+  "cached": false
+ }
 }
