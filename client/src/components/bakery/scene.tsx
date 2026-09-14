@@ -2,14 +2,7 @@
 import { motion } from "motion/react";
 import { asset, backProps, bakeryScene as scene, fixtures, frame as cutFrame, handAt, isWorldProp, propSrc, worldProps, type ActorAsset, type WorldPropName } from "@/lib/bakery/scene-manifest";
 import { phaseProgress, type BakeryState, type CustomerId, type Loaf } from "@/lib/bakery/simulation";
-import {
-  type CustomerOrderState,
-  getCustomerOrders,
-  customerMoodLabel,
-} from "@/lib/bakery/customer-orders";
 import { NeighborhoodDetails, OvenFire } from "./neighborhood-details";
-
-import { CustomerOrderBubble } from "./customer-order-bubble";
 
 const mix = (a: number, b: number, p: number) => a + (b - a) * p;
 function Sprite({ actor, frame, size = 310, flip = false }: { actor: ActorAsset; frame: number; size?: number; flip?: boolean }) {
@@ -62,38 +55,27 @@ function Fixture({ name, lit, onPick, pickLabel }: { name: keyof typeof fixtures
  */
 const WALL_SLICE = { x: 20, width: 90 };
 
-export function BakeryScene({
-  state,
-  reducedMotion,
-  counterView,
-  label,
-  highlight,
-  extendLeft = 0,
-  customerOrders,
-  locale = "en",
-  loose,
-  cast,
-  pickable,
-  onPick,
-  pickLabel,
-  sign,
-  sacks,
-  preview,
-  showCoordinator = true,
-}: {
-  state: BakeryState;
-  reducedMotion: boolean;
-  counterView: boolean;
-  label: string;
-  highlight?: readonly string[];
-  extendLeft?: number;
-  customerOrders?: Record<CustomerId, CustomerOrderState>;
-  locale?: string;
-  loose?: readonly WorldPropName[];
-  cast?: readonly CustomerId[];
-  pickable?: string;
-  onPick?: (name: string) => void;
-  pickLabel?: (name: string) => string;
+/**
+ * The impatient frame is 128x333; this keeps that ratio at roughly the queue's own height.
+ *
+ * One per customer, named `angry-<id>` beside their walk-cycle atlas, so whoever is at the
+ * counter is the one who looks impatient. Cut from the same sheet as the walk cycles were,
+ * matched by dress — a mission about Hoda that turns into Mariam on a wrong answer would
+ * be worse than no reaction at all.
+ */
+const UPSET = { width: 100, height: 260 };
+
+export function BakeryScene({ state, reducedMotion, counterView, label, highlight, extendLeft = 0, loose, cast, pickable, onPick, pickLabel, upset = false, sign, sacks, preview, delivery }: { state: BakeryState; reducedMotion: boolean; counterView: boolean; label: string; highlight?: readonly string[]; extendLeft?: number; loose?: readonly WorldPropName[]; cast?: readonly CustomerId[]; pickable?: string; onPick?: (name: string) => void; pickLabel?: (name: string) => string;
+  delivery?: "parked" | "loaded" | "sent";
+  /**
+   * The customer at the head of the queue is out of patience.
+   *
+   * Drawn as a single front-facing frame rather than her walk-cycle sprite, because that
+   * is the only artwork of her that shows a face at all. It is a different style from the
+   * rest of the cast — thick outline, no walk — so it is only ever on screen for the
+   * moment a wrong answer is being explained, never as a scene actor.
+   */
+  upset?: boolean;
   /** The hanging shop sign. Omit it and no sign is drawn at all. */
   sign?: { open: boolean; label: string };
   /**
@@ -111,16 +93,7 @@ export function BakeryScene({
    * Run and before any Python has executed. Only honoured at rest, so it can never fight
    * an animation that is mid-flight.
    */
-  preview?: number | null;
-  /** Salma belongs in the lesson panel when she is the narrator, not duplicated on stage. */
-  showCoordinator?: boolean;
-}) {
-  const isAr = locale.startsWith("ar");
-  const resolvedOrders = customerOrders ?? getCustomerOrders(state, locale);
-  const orderSummary = state.queue.map((id) => {
-    const order = resolvedOrders[id];
-    return `${order.customerName}: ${order.loaves}, ${customerMoodLabel(order.urgency, locale)}`;
-  }).join("; ");
+  preview?: number | null; }) {
   const isLit = (name: string) => Boolean(highlight?.includes(name));
   // Exactly one thing is ever tappable, and it is always the thing wearing the ring. The
   // outline is the whole affordance — a child hunting the scene for a clickable pixel is a
@@ -134,7 +107,7 @@ export function BakeryScene({
   const ext = counterView ? 0 : Math.max(0, Math.round(extendLeft));
   const tiles = ext ? Math.ceil(ext / WALL_SLICE.width) : 0;
   const raw = phaseProgress(state);
-  const p = reducedMotion ? 0 : raw;
+  const p = reducedMotion ? 1 : raw;
   const step = reducedMotion ? 0 : Math.min(3, Math.floor(raw * 4));
   const walking = reducedMotion ? 0 : 1 + Math.floor(state.elapsed / 180) % 4;
   // `cast` narrows who is drawn without touching who is in the queue. The opening tour
@@ -143,7 +116,7 @@ export function BakeryScene({
   const onStage = (id: CustomerId) => !cast || cast.includes(id);
   const counted = typeof sacks === "number";
   const visible = counted ? loose?.filter((name) => name !== "flour-sacks") : loose;
-  const crowd = cast || !showCoordinator ? [] : [scene.actors.salma];
+  const crowd = cast ? [] : [scene.actors.salma];
   const baking = ["loading", "baking", "retrieving", "stocking"].includes(state.phase);
 
   // ------------------------------------------------ the bake, in manifest coordinates
@@ -177,13 +150,13 @@ export function BakeryScene({
     const index = state.queue.indexOf(id);
     // She walks in from the right of frame and, when she is done, straight out to the left
     // — through the shop rather than back the way she came, which is what people do.
-    if (index === 0 && state.phase === "arriving") return { x: mix(1760, scene.queue.first.x, p), y: scene.queue.first.y };
+    if ((state.active ? state.active === id : index === 0) && state.phase === "arriving") return { x: mix(1760, scene.queue.first.x + index * scene.queue.spacing, p), y: scene.queue.first.y };
     if (state.active === id && state.phase === "exiting") return { x: mix(scene.queue.first.x, -220, p), y: scene.queue.first.y + Math.sin(Math.min(1, p * 4) * Math.PI / 2) * 45 };
     return { x: scene.queue.first.x + (index + (state.phase === "advancing" ? 1 - p : 0)) * scene.queue.spacing, y: scene.queue.first.y };
   }
   // A scene with tappable props is no longer a picture, and `role="img"` would hide every
   // one of those buttons from a screen reader.
-  return <svg className="bakery-scene" viewBox={counterView ? "230 300 700 420" : `${-ext} 0 ${1600 + ext} 900`} role={onPick ? "group" : "img"} aria-label={`${label} ${isAr ? "طلبات الزباين" : "Customer loaf orders"}: ${orderSummary}`} data-phase={state.phase} data-elapsed={Math.round(state.elapsed)} data-extend={ext || undefined}>
+  return <svg className="bakery-scene" viewBox={counterView ? "230 300 700 420" : `${-ext} 0 ${1600 + ext} 900`} role={onPick ? "group" : "img"} aria-label={label} data-phase={state.phase} data-elapsed={Math.round(state.elapsed)} data-extend={ext || undefined}>
     {Array.from({ length: tiles }, (_, i) => {
       const x = -ext + i * WALL_SLICE.width;
       const mirrored = i % 2 === 1;
@@ -231,7 +204,11 @@ export function BakeryScene({
       const sprite = loaf.owner === "dough" || (inOven && raw < .6) ? "dough" : "loaf";
       return <Prop key={loaf.id} loaf={loaf} lit={isLit(sprite)} name={sprite} x={x} y={y} width={stock ? loafW : mix(20, loafW, placing ? p : 0)} height={stock ? loafH : mix(9, loafH, placing ? p : 0)} />;
     })}
-    <LooseProps names={visible} layer="front" isLit={isLit} pick={pick} pickLabel={pickLabel} />
+    <LooseProps names={delivery ? visible?.filter((name) => name !== "scooter-crate") : visible} layer="front" isLit={isLit} pick={pick} pickLabel={pickLabel} />
+    {delivery && delivery !== "sent" && <g data-delivery={delivery}>
+      <Prop name="scooter-crate" href={delivery === "loaded" ? cutFrame("delivery-load") : cutFrame("scooter-crate")}
+        {...worldProps["scooter-crate"]} {...target("scooter-crate")} />
+    </g>}
     {counted && <FlourSacks count={sacks!} {...target("flour-sacks")} />}
     {sign && <ShopSign open={sign.open} label={sign.label} {...target("sign")} />}
     {state.active && onStage(state.active) && state.phase === "paying" && (() => {
@@ -252,25 +229,23 @@ export function BakeryScene({
       const pos = customerPosition(id);
       const leaving = state.active === id && state.phase === "exiting";
       const receiving = state.active === id && state.phase === "handover";
-      const arriving = index === 0 && state.phase === "arriving";
+      const arriving = (state.active ? state.active === id : index === 0) && state.phase === "arriving";
       // Bread already handed over: she keeps holding it while she thanks him and leaves.
       const carrying = state.loaves.some((loaf) => loaf.owner === `customer:${id}`);
       const frame = leaving || arriving || state.phase === "advancing" ? walking : receiving ? 5 : 0;
+      // Out of patience: her one drawn expression, standing where she already stands.
+      const cross = upset && index === 0 && !leaving && !arriving;
       const hand = handAt(actor, frame, scene.queue.actorSize);
       return <motion.g key={id} transform={`translate(${pos.x} ${pos.y})`} data-actor={id}>
         <ellipse cy={-2} rx={33} ry={7} fill="#382820" opacity=".2" />
         {index === 0 && !leaving && !arriving && <ellipse cy={0} rx={40} ry={9} fill="none" stroke="#DB5B31" strokeWidth={3} />}
-        <Sprite actor={actor} frame={frame} size={scene.queue.actorSize} />
+        {cross
+          ? <Prop name={`angry-${id}`} href={cutFrame(`angry-${id}`)} x={-UPSET.width / 2} y={-UPSET.height} width={UPSET.width} height={UPSET.height} />
+          : <Sprite actor={actor} frame={frame} size={scene.queue.actorSize} />}
         {(receiving || leaving || carrying) && <>
           <Prop name="bag" x={hand.x - 20} y={hand.y - 4} width={46} height={52} />
           {state.loaves.filter((loaf) => loaf.owner === `customer:${id}`).map((loaf, i) => <Prop key={loaf.id} loaf={loaf} name="loaf" x={hand.x - 15 + i * 14} y={hand.y - 5} width={24} height={11} />)}
         </>}
-        <CustomerOrderBubble
-          order={resolvedOrders[id]}
-          isActive={index === 0 && !leaving}
-          reducedMotion={reducedMotion}
-          locale={locale}
-        />
       </motion.g>;
     })}
     {state.active && onStage(state.active) && state.phase === "handover" && state.loaves.filter((loaf) => loaf.owner === `handover:${state.active}`).map((loaf, i) => {
@@ -298,7 +273,34 @@ export function BakeryScene({
  * should lose that prop, not the whole bakery — the same reasoning the mission scene uses
  * for an animation it does not recognise.
  */
-function LooseProps({ names, layer, isLit, pick, pickLabel }: { names?: readonly string[]; layer: "back" | "front"; isLit: (name: string) => boolean; pick: (name: string) => (() => void) | undefined; pickLabel?: (name: string) => string }) {
+function LooseProps({ names, layer, isLit, pick, pickLabel }: { names?: readonly string[]; layer: "back" | "front"; isLit: (name: string) => boolean; pick: (name: string) => (() => void) | undefined; pickLabel?: (name: string) => string;
+  /**
+   * The customer at the head of the queue is out of patience.
+   *
+   * Drawn as a single front-facing frame rather than her walk-cycle sprite, because that
+   * is the only artwork of her that shows a face at all. It is a different style from the
+   * rest of the cast — thick outline, no walk — so it is only ever on screen for the
+   * moment a wrong answer is being explained, never as a scene actor.
+   */
+  upset?: boolean;
+  /** The hanging shop sign. Omit it and no sign is drawn at all. */
+  sign?: { open: boolean; label: string };
+  /**
+   * Draw this many single sacks instead of the painted pile.
+   *
+   * `flour-sack.webp` is one sack and `flour-sacks.webp` is a heap of six, so a count the
+   * student's code can change has to be built from the single. The pile is the scenery
+   * version; this is the countable one, and they stand in the same place.
+   */
+  sacks?: number;
+  /**
+   * Loaves to show on the tray while the bakery is at rest, ignoring what it baked.
+   *
+   * This is the live binding: the number in the editor is the number on the tray, before
+   * Run and before any Python has executed. Only honoured at rest, so it can never fight
+   * an animation that is mid-flight.
+   */
+  preview?: number | null; }) {
   if (!names?.length) return null;
   return <g data-layer={`loose-${layer}`}>
     {names.filter((name) => isWorldProp(name) && backProps.has(name) === (layer === "back")).map((name) => {
@@ -345,7 +347,9 @@ function FlourSacks({ count, lit, onPick, pickLabel }: { count: number; lit?: bo
  * change — that is the whole point of it — and a raster sign would need two files and a
  * translation of each.
  */
-const SIGN = { x: 1150, y: 236, width: 104, height: 58 };
+// Hung clear of the arch's curve and of the radio, so it reads as inside the shop rather
+// than stuck on the outside wall.
+const SIGN = { x: 1100, y: 296, width: 104, height: 58 };
 
 function ShopSign({ open, label, lit, onPick, pickLabel }: { open: boolean; label: string; lit?: boolean; onPick?: () => void; pickLabel?: string }) {
   const cx = SIGN.x + SIGN.width / 2;

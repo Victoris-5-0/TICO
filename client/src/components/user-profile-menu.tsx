@@ -133,6 +133,14 @@ export function UserProfileMenu({
 
           <div className={styles.links}>
             <Link
+              href={`/${locale}/progress`}
+              className={styles.menuLink}
+              onClick={() => setIsOpen(false)}
+            >
+              <span>📊</span>
+              <span>{ar ? "تحليل التعلّم" : "Learning Analysis"}</span>
+            </Link>
+            <Link
               href={`/${locale}/learn`}
               className={styles.menuLink}
               onClick={() => setIsOpen(false)}

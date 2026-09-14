@@ -1,7 +1,7 @@
 /* TICO stands in the page's margin, on the background, not inside the picture's frame —
    the scene gets the whole card and he gets the empty strip beside it. The `dir` attribute
    on the section decides which strip, so he is on the reading edge in both languages.
-
+   
    The block is also allowed to be wider than the 1180px page shell it sits in: the
    margin trick below re-centres an over-wide box inside its parent, which buys the scene
    back the width the rail costs and then some. */

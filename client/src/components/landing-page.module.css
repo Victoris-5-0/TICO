@@ -161,7 +161,9 @@
 .footer nav a:hover { text-decoration: underline; text-underline-offset: 4px; }
 .footer nav p { margin-block: 24px 0; font-size: 14px; }
 .page:dir(rtl) { font-family: var(--font-arabic), sans-serif; }
-.page:dir(rtl) .heroArt img { transform: scaleX(-1); }
+.page:dir(rtl) .heroArt { right: auto; left: 0; inline-size: 50%; }
+.page:dir(rtl) .heroArt img { object-position: 90%; }
+.page:dir(rtl) .heroArt::after { content: ""; position: absolute; inset: 0; background: linear-gradient(to right, transparent 85%, var(--landing-tint)); }
 .page:dir(rtl) .hero { background: var(--landing-tint); }
 .page:dir(rtl) .heroCopy { max-inline-size: 48%; margin-inline-end: 52%; }
 .page:dir(rtl) .heroCopy h1 { letter-spacing: 0; line-height: 1.4; }
@@ -218,6 +220,7 @@
   .heroArt, .page:dir(rtl) .heroArt { inset-block-start: auto; inset-block-end: 0; left: 0; inline-size: 100%; block-size: 380px; mask-image: linear-gradient(to bottom, transparent, black 12%, black 72%, transparent); }
   .heroArt img { object-position: right center; }
   .page:dir(rtl) .heroArt img { object-position: right center; }
+  .page:dir(rtl) .heroArt::after { display: none; }
   .actions { gap: 12px; margin-block-start: 24px; }
   .primary, .secondary, .tealButton { font-size: 16px; padding: 12px 22px; min-block-size: 50px; }
   .section { margin-block-end: 72px; }

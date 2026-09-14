@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { motion, useReducedMotion } from "motion/react";
 
 import { playCue } from "@/lib/sound/cues";
-import { enterLessonFullscreen } from "@/lib/browser/fullscreen";
 import type { Locale } from "@/i18n/config";
 
 import { ChallengeMap, type ChallengeNode, type ChallengeStage } from "./challenge-map";
@@ -66,12 +65,6 @@ export function ChallengeMapView({
     const mapStage = stages.find((s) => s.id === stage.id);
     const slug = mapStage?.slugs[node.id];
     if (!mapStage || !slug) return;
-    enterLessonFullscreen();
-    if (slug === "opening-message") {
-      setBusy(node.id);
-      router.push(`/${locale}/worlds/${mapStage.worldSlug}/missions/${slug}`);
-      return;
-    }
     if (onSelectLesson) {
       onSelectLesson(slug);
       return;

@@ -1,16 +1,20 @@
 "use client";
 
 import { useAnimationFrame, useReducedMotion } from "motion/react";
-import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 
 import { BakeryScene } from "@/components/bakery/scene";
-import { missionSceneDuration, missionSceneState, type MissionProps } from "@/lib/bakery/mission-scene";
-import { frame, propAssetUrls, sceneAssetUrls, worldPropNames } from "@/lib/bakery/scene-manifest";
+import { flourSacks, missionSceneDuration, missionSceneState, queueLength, shopOpen, type MissionProps, type WorldBeat } from "@/lib/bakery/mission-scene";
+import { bakeryScene, frame, propAssetUrls, sceneAssetUrls, worldPropNames } from "@/lib/bakery/scene-manifest";
+import { CUSTOMER_IDS } from "@/lib/bakery/simulation";
 import type { Locale } from "@/i18n/config";
 
 import styles from "./mission-player.module.css";
 
 const subscribeToHydration = () => () => {};
+
+/** How long a beat with no animation holds, so its line can be read. */
+const STILL_BEAT_MS = 2200;
 
 export type MissionSceneProps = {
   locale: Locale;
@@ -30,7 +34,32 @@ export type MissionSceneProps = {
    * letterbox the bakery into a strip.
    */
   extendLeft?: number;
+  /**
+   * The one prop a phase is waiting to be clicked, and what to do about it.
+   *
+   * Missions point at things with `highlight`; this makes the pointed-at thing pressable,
+   * so a phase can say "press the sign" and mean it. Only the named prop is clickable —
+   * the ring is the whole affordance.
+   */
+  /**
+   * A sequence to play instead of a single animation: bake, then she walks in, then she
+   * asks. Each beat speaks its own line over the character while it runs.
+   */
+  beats?: readonly WorldBeat[];
+  /** Who is speaking when no beat is. The opening line, usually. */
+  speech?: { name: string; line: string } | null;
+  /** Where speech sits, in the scene's own coordinates converted by the caller. */
+  speechAt?: { left: string; bottom: string };
+  /**
+   * The customer is waiting and the code is not right yet. She shows it, and says so,
+   * for as long as that is true.
+   */
+  upset?: { line: string; name: string } | null;
+  pickable?: string;
+  onPick?: (name: string) => void;
+  pickLabel?: (name: string) => string;
   label: string;
+  onSettled?: () => void;
 };
 
 /**
@@ -40,7 +69,7 @@ export type MissionSceneProps = {
  * when the phase arrives or Run is pressed, then holds on its last frame. The scene
  * never autoplays on page load, which `docs/design.md` section 11 requires.
  */
-export function MissionScene({ locale, props, animate, playToken = 0, caption, highlight, extendLeft = 0, label }: MissionSceneProps) {
+export function MissionScene({ locale, props, animate, playToken = 0, caption, highlight, extendLeft = 0, beats, speech = null, speechAt, upset = null, pickable, onPick, pickLabel, label, onSettled }: MissionSceneProps) {
   const ar = locale === "ar-EG";
   const motionPreference = useReducedMotion();
   // Match the server markup first, then apply the browser preference before playback.
@@ -49,15 +78,14 @@ export function MissionScene({ locale, props, animate, playToken = 0, caption, h
 
   const [assets, setAssets] = useState<"loading" | "ready" | "error">("loading");
   const [progress, setProgress] = useState(1);
-  const [startedHandover, setStartedHandover] = useState<string | null>(null);
   // The run currently playing. Kept in a ref and compared inside the frame callback, so
   // starting a new animation never needs a state write during render or in an effect.
-  const run = useRef({ id: "", elapsed: 0, lastFrame: null as number | null });
+  const run = useRef({ id: "", beat: 0, elapsed: 0, finished: false, lastFrame: null as number | null });
 
   useEffect(() => {
     let cancelled = false;
     Promise.all(
-      [...sceneAssetUrls(), ...propAssetUrls(worldPropNames), frame("banknotes")].map(
+      [...sceneAssetUrls(), ...propAssetUrls(worldPropNames), frame("delivery-load"), ...CUSTOMER_IDS.map((c) => frame(`angry-${c}`))].map(
         (src) =>
           new Promise<void>((resolve, reject) => {
             const img = new window.Image();
@@ -73,64 +101,118 @@ export function MissionScene({ locale, props, animate, playToken = 0, caption, h
     return () => { cancelled = true; };
   }, []);
 
-  const handoverKey = `${animate ?? "none"}:${playToken}`;
-  const waitingForHandover = animate === "handover" && startedHandover !== handoverKey;
-  const effectiveAnimate = waitingForHandover ? null : animate;
-  const duration = missionSceneDuration(effectiveAnimate);
+  // A sequence of beats, or the single animation a phase has always been able to name.
+  // Memoised so the frame callback is not rebuilt every render, which would restart the
+  // sequence on each one.
+  const timeline: readonly WorldBeat[] = useMemo(
+    () => (beats?.length ? beats : [{ animate, props }]),
+    [beats, animate, props],
+  );
+  const [beat, setBeat] = useState(0);
+  const current = timeline[Math.min(beat, timeline.length - 1)];
 
   const advance = useCallback(
     (time: number) => {
-      const id = `${effectiveAnimate ?? "none"}:${playToken}`;
+      const id = `${timeline.map((b) => b.animate ?? "none").join(">")}:${playToken}`;
       const state = run.current;
 
-      // A new animation, or Run pressed again, rewinds to the start. Under reduced
-      // motion the scene jumps straight to the resolved state rather than travelling.
+      // A new sequence, or Run pressed again, rewinds to the start. Under reduced motion
+      // the scene jumps to the resolved end rather than travelling through it.
       if (state.id !== id) {
         state.id = id;
+        // The beat counter has to rewind with the clock. Leaving it behind meant the
+        // second sequence of a phase started past its own end: the six-beat twist left
+        // it at 5, the three-beat handover clamped to its last frame, and the bread was
+        // never handed over, paid for or carried out of the shop.
+        state.beat = reduced ? timeline.length - 1 : 0;
         state.elapsed = 0;
+        state.finished = false;
         state.lastFrame = null;
-        setProgress(reduced || !duration ? 1 : 0);
+        setBeat(state.beat);
+        setProgress(reduced ? 1 : 0);
+        if (reduced) { state.finished = true; onSettled?.(); }
         return;
       }
 
-      if (!duration || reduced || assets !== "ready") return;
+      if (reduced || state.finished || assets !== "ready") return;
+      if (document.hidden) { state.lastFrame = null; return; }
 
+      const step = timeline[Math.min(state.beat, timeline.length - 1)];
+      const span = missionSceneDuration(step.animate);
       const previous = state.lastFrame;
       state.lastFrame = time;
-      if (previous === null || state.elapsed >= duration) return;
+      if (previous === null) return;
+
+      // A still beat still holds the screen, so a line has time to be read before the
+      // next one replaces it.
+      const hold = span || STILL_BEAT_MS;
+      if (state.elapsed >= hold) {
+        if (state.beat >= timeline.length - 1) { state.finished = true; onSettled?.(); return; }
+        state.beat += 1;
+        state.elapsed = 0;
+        setBeat(state.beat);
+        setProgress(0);
+        return;
+      }
 
       // Clamped the same way the demo clamps: a backgrounded tab must not finish the
       // whole animation in one frame when it comes back.
-      state.elapsed = Math.min(duration, state.elapsed + Math.min(time - previous, 1000));
-      setProgress(state.elapsed / duration);
+      state.elapsed = Math.min(hold, state.elapsed + Math.min(time - previous, 1000));
+      setProgress(span ? state.elapsed / span : 1);
     },
-    [effectiveAnimate, playToken, duration, reduced, assets],
+    [timeline, playToken, reduced, assets, onSettled],
   );
 
   useAnimationFrame(advance);
 
-  const state = missionSceneState({ props, animate: effectiveAnimate, progress });
-  const sackValue = props?.["flour-sacks"] ?? props?.sacks;
-  const sacks = typeof sackValue === "number" ? sackValue : 4;
+  const shown = { ...props, ...current.props };
+  const state = missionSceneState({ props: shown, animate: current.animate, progress });
+  const open = shopOpen(shown);
+  // Only when she is actually standing there. Nobody is impatient in an empty shop.
+  const waiting = Boolean(upset) && queueLength(shown) > 0;
+  const atWorld = (x: number, y: number) => ({
+    left: `${((x + extendLeft) / (1600 + extendLeft)) * 100}%`,
+    bottom: `${((900 - y) / 900) * 100}%`,
+  });
+  const saying = current.lineAr ? { name: current.speakerNameAr ?? "", line: current.lineAr } : speech;
 
   return (
     <figure className={styles.scene} data-ready={assets} data-animate={animate ?? "none"}>
       <div className={styles.sceneStage} dir="ltr">
+        {/* `loose` furnishes the shop the way the opening tour does — the till, the scale,
+            the bags, the order sheet. A mission drawn without them is the same bare counter
+            every time, which is what made every scene look identical. */}
         <BakeryScene
           state={state}
           reducedMotion={reduced}
           counterView={false}
           label={label}
-          highlight={waitingForHandover ? [...(highlight ?? []), "tray"] : highlight}
+          highlight={highlight}
           extendLeft={extendLeft}
-          locale={locale}
           loose={worldPropNames}
-          sacks={sacks}
-          pickable={waitingForHandover ? "tray" : undefined}
-          onPick={waitingForHandover ? () => setStartedHandover(handoverKey) : undefined}
-          pickLabel={() => ar ? "سلّم العيش للزبون" : "Give the bread to the customer"}
-          showCoordinator={false}
+          sacks={flourSacks(shown)}
+          delivery={shown.delivery === "loaded" || shown.delivery === "sent" || shown.delivery === "parked" ? shown.delivery : undefined}
+          sign={open === undefined ? undefined : { open, label: open ? (ar ? "مفتوح" : "OPEN") : (ar ? "مقفول" : "CLOSED") }}
+          upset={waiting}
+          pickable={pickable}
+          onPick={onPick}
+          pickLabel={pickLabel}
         />
+        {waiting && upset ? (
+          <div
+            className={`${styles.sceneSpeech} ${styles.sceneSpeechUrgent}`}
+            style={atWorld(bakeryScene.queue.first.x, 548)}
+            dir={ar ? "rtl" : "ltr"}
+          >
+            <span>{upset.name}</span>
+            <p aria-live="assertive">{upset.line}</p>
+          </div>
+        ) : saying?.line ? (
+          <div className={styles.sceneSpeech} style={speechAt} dir={ar ? "rtl" : "ltr"}>
+            {saying.name && <span>{saying.name}</span>}
+            <p aria-live="polite">{saying.line}</p>
+          </div>
+        ) : null}
         {assets !== "ready" && (
           <div className={styles.sceneLoading}>
             {assets === "loading"

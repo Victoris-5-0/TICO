@@ -1,190 +1,750 @@
 {
-  "data": {
-    "id": "cmtwkp4a4qt7801z0a156a0j4",
-    "worldId": "el_forn",
-    "sceneId": "bakery_gameplay",
-    "targetConceptId": "conditionals",
-    "carriedConceptIds": [
-      "variables"
-    ],
-    "titleAr": "حرارة الفرن المظبوطة",
-    "source": "model",
-    "validated": true,
-    "phases": {
-      "encounter": {
-        "speaker": "mariam",
-        "speakerNameAr": "مريم",
-        "lineAr": "يا حسن يا خويا، الفرن شكله لسه بارد والناس واقفة مستنية على الرصيف! لازم نتأكد إن الحرارة وصلت 200 درجة على الأقل قبل ما نرمي العجين في الفرن عشان العيش ما يهبطش مننا.",
-        "ctaAr": "يلا نبدأ",
-        "world": {
-          "props": {
-            "oven": "cold",
-            "dough": 8
-          }
-        }
-      },
-      "explore": {
-        "ticoIntroAr": "تعالوا نساعد مريم وعم حسن يظبطوا الفرن البلدي قبل ما نكتب أي كود!",
-        "rounds": [
-          {
-            "questionAr": "تفتكر إيه اللي هيحصل لو عم حسن رمى العجين والفرن لسه بارد؟",
-            "optionsAr": [
-              "العيش مش هيستوي وهيطلع عجين ومهبط",
-              "العيش هيستوي بسرعة جداً",
-              "الفرن هيسخن لوحده تلقائيًا"
-            ],
-            "correctIndex": 0,
-            "nudgeAr": "لو الفرن بارد، العجين مش هيلاقي النار اللي تخليه يتنفخ ويستوي صح.",
-            "highlight": [
-              "oven"
-            ]
-          },
-          {
-            "questionAr": "وعشان العيش يطلع منفوخ ومظبوط، مريم قالت الحرارة لازم تكون كام على الأقل؟",
-            "optionsAr": [
-              "200 درجة أو أكتر",
-              "أقل من 100 درجة",
-              "مش مهم الحرارة خالص"
-            ],
-            "correctIndex": 0,
-            "nudgeAr": "بص على كلام مريم تاني، هي حددت درجة حرارة معينة عشان العيش ما يبوظش.",
-            "highlight": [
-              "oven"
-            ]
-          }
-        ]
-      },
-      "discover": {
-        "conceptSlug": "conditionals",
-        "conceptNameAr": "اتخاذ القرار بالشروط",
-        "explanationAr": "الشرط بيتنفذ لو الجواب أيوه بس. الجزء اللي جوه الـ if مش بيشتغل كل مرة — بيشتغل لما الشرط يتحقق، والباقي بيعدي عليه عادي.",
-        "ticoLineAr": "يا سلام! الشروط دي هي اللي بتخلي الفرن بتاعنا ذكي وبيفهم."
-      },
-      "understand": {
-        "introAr": "ده الكود اللي هيخلي الفرن يقرر يخبز الـ 8 أرغفة لما الحرارة تكون مظبوطة، أو يستنى لو الفرن لسه بارد:",
-        "code": "def check_baking_temp(oven_temperature: int) -> int:\n    if oven_temperature >= 200:\n        return 8\n    else:\n        return 0",
-        "annotations": [
-          {
-            "line": 1,
-            "textAr": "هنا بنعرف الدالة وبنديها درجة الحرارة الحالية للفرن",
-            "pointsAt": "oven"
-          },
-          {
-            "line": 2,
-            "textAr": "لو درجة الحرارة أكبر من أو تساوي 200",
-            "pointsAt": "oven"
-          },
-          {
-            "line": 3,
-            "textAr": "اخبز دفعة كاملة من العيش (8 أرغفة)",
-            "pointsAt": "dough"
-          },
-          {
-            "line": 5,
-            "textAr": "وإلا (لو الحرارة أقل)، ما تخبزش حاجة ورجع صفر",
-            "pointsAt": "oven"
-          }
-        ],
-        "runLabelAr": "شغّل وشوف",
-        "onRun": {
-          "animate": "baking",
-          "props": {
-            "oven": "lit"
-          },
-          "captionAr": "الفرن سخن والعيش البلدي طالع منفوخ وجميل!"
-        }
-      },
-      "guided": {
-        "steps": [
-          {
-            "code": "def check_baking_temp(oven_temperature: int) -> int:\n    ___ oven_temperature >= 200:\n        return 8\n    else:\n        return 0",
-            "blanks": [
-              "if"
-            ],
-            "promptAr": "اكتب الكلمة اللي بنبدأ بيها الشرط في بايثون عشان نختبر درجة الحرارة.",
-            "hintAr": "بنستخدم الكلمة دي لما نكون عاوزين نقول 'لو' الشرط ده تحقق."
-          },
-          {
-            "code": "def check_baking_temp(oven_temperature: int) -> int:\n    if oven_temperature >= 200:\n        return 8\n    ___:\n        return 0",
-            "blanks": [
-              "else"
-            ],
-            "promptAr": "اكتب الكلمة اللي بنستخدمها عشان نحدد اللي هيحصل لو الشرط ما تحققش.",
-            "hintAr": "الكلمة دي معناها 'وإلا' أو 'في حال لم يتحقق الشرط السابق'."
-          }
-        ],
-        "solutionCode": "def check_baking_temp(oven_temperature: int) -> int:\n    if oven_temperature >= 200:\n        return 8\n    else:\n        return 0",
-        "tests": [
-          {
-            "call": "check_baking_temp(210)",
-            "expected": "8",
-            "name": null,
-            "hidden": false
-          },
-          {
-            "call": "check_baking_temp(150)",
-            "expected": "0",
-            "name": null,
-            "hidden": false
-          },
-          {
-            "call": "check_baking_temp(200)",
-            "expected": "8",
-            "name": null,
-            "hidden": false
-          }
-        ],
-        "onRun": {
-          "animate": "oven_fire",
-          "props": {
-            "oven": "lit"
-          },
-          "captionAr": "كده الكود شغال تمام والفرن بياخد القرار الصح لوحده!"
-        }
-      },
-      "remix": {
-        "twistAr": "الجو النهاردة برد جداً والهوا شديد في السيدة زينب!",
-        "newRequirementAr": "عم حسن بيقول عشان العيش يستوي صح في البرد ده، محتاجين الفرن يسخن أكتر ويوصل لـ 250 درجة على الأقل. عدل الشرط في الكود عشان يرجع 8 أرغفة بس لو الحرارة وصلت 250 أو أكتر.",
-        "worldChange": {
-          "animate": "steam",
-          "props": {
-            "oven": "cold"
-          },
-          "captionAr": null
+ "data": {
+  "id": "cmtwkp4a4qt7801z0a156a0j4",
+  "worldId": "el_forn",
+  "sceneId": "bakery_gameplay",
+  "targetConceptId": "conditionals",
+  "carriedConceptIds": [
+   "variables"
+  ],
+  "titleAr": "النصيب العادي",
+  "source": "template",
+  "validated": true,
+  "difficultyBand": 4,
+  "scaffold": {},
+  "phases": {
+   "encounter": {
+    "speaker": "hassan",
+    "speakerNameAr": "عم حسن",
+    "lineAr": "بعد ما قرارك هدّى الفرن، أمينة ونور ودينا لسه مستنيين. لقينا رغيف من الدفعة القديمة محروق. استبعده من لوح العيش قبل ما نوزّع الطلبات.",
+    "world": {
+     "props": {
+      "sign": "open",
+      "oven": "cold",
+      "loaf": 8,
+      "flour-sack": 1,
+      "total_price": 80,
+      "queue": 3,
+      "customer": "amina,nour,dina",
+      "delivery": "sent",
+      "press": "bread-board"
+     },
+     "interactions": [
+      {
+       "target": "bread-board",
+       "promptAr": "اضغط على اللوح عشان تستبعد الرغيف المحروق من المخزون.",
+       "onPress": {
+        "animate": null,
+        "actions": [],
+        "props": {
+         "sign": "open",
+         "oven": "cold",
+         "loaf": 7,
+         "flour-sack": 1,
+         "total_price": 80,
+         "queue": 3,
+         "customer": "amina,nour,dina",
+         "burnt": 1,
+         "delivery": "sent"
         },
-        "startingCode": "def check_baking_temp(oven_temperature: int) -> int:\n    if oven_temperature >= 200:\n        return 8\n    else:\n        return 0",
-        "solutionCode": "def check_baking_temp(oven_temperature: int) -> int:\n    if oven_temperature >= 250:\n        return 8\n    else:\n        return 0",
-        "tests": [
-          {
-            "call": "check_baking_temp(260)",
-            "expected": "8",
-            "name": null,
-            "hidden": false
-          },
-          {
-            "call": "check_baking_temp(220)",
-            "expected": "0",
-            "name": null,
-            "hidden": false
-          }
-        ],
-        "onRun": {
-          "animate": "baking",
+        "captionAr": "استبعدنا رغيف واحد. بقى سبعة صالحين للبيع.",
+        "steps": []
+       }
+      },
+      {
+       "target": "ticket-stand",
+       "promptAr": "اضغط على حامل الدور عشان ينضم فريد آخر الطابور.",
+       "onPress": {
+        "animate": null,
+        "actions": [],
+        "props": {
+         "sign": "open",
+         "oven": "cold",
+         "loaf": 7,
+         "flour-sack": 1,
+         "total_price": 80,
+         "queue": 4,
+         "customer": "amina,nour,dina,farid",
+         "burnt": 1,
+         "delivery": "sent",
+         "order": 9
+        },
+        "captionAr": "الطابور بقى أربعة. أمينة أول واحدة وطلبها تسعة.",
+        "steps": [
+         {
+          "animate": "arriving",
           "props": {
-            "oven": "lit"
+           "sign": "open",
+           "oven": "cold",
+           "loaf": 7,
+           "flour-sack": 1,
+           "total_price": 80,
+           "queue": 4,
+           "customer": "amina,nour,dina,farid",
+           "burnt": 1,
+           "delivery": "sent",
+           "order": 9
           },
-          "captionAr": null
-        }
+          "speakerNameAr": "عم حسن",
+          "lineAr": "فريد دخل آخر الطابور."
+         },
+         {
+          "animate": null,
+          "props": {
+           "sign": "open",
+           "oven": "cold",
+           "loaf": 7,
+           "flour-sack": 1,
+           "total_price": 80,
+           "queue": 4,
+           "customer": "amina,nour,dina,farid",
+           "burnt": 1,
+           "delivery": "sent",
+           "order": 9
+          },
+          "speakerNameAr": "عم حسن",
+          "lineAr": "أمينة طالبة تسعة وموجود سبعة بس."
+         }
+        ]
+       }
       }
+     ]
+    }
+   },
+   "explore": {
+    "ticoIntroAr": "المتاح سبعة، وطلب أمينة تسعة. لازم نختار كمية موجودة فعلاً.",
+    "rounds": [
+     {
+      "questionAr": "معانا سبعة وطلب أمينة تسعة. نقدر نسلم تسعة؟",
+      "optionsAr": [
+       "لأ، نسلم المتاح: سبعة",
+       "أيوة، تسعة",
+       "نسلم الرغيف المحروق"
+      ],
+      "correctIndex": 0,
+      "nudgeAr": "عدّ العيش الصالح بس؛ المحروق مش ضمن المخزون.",
+      "highlight": [
+       "tray",
+       "loaf"
+      ]
+     },
+     {
+      "questionAr": "يبقى الكود لازم يعرف يعمل إيه في الحالتين. إيه الحالتين؟",
+      "optionsAr": [
+       "فيه كفاية، ومفيش كفاية",
+       "الصبح والليل",
+       "زبون واحد وزبونين"
+      ],
+      "correctIndex": 0,
+      "nudgeAr": "الشرط بيقسم الدنيا لحالتين بس.",
+      "highlight": [
+       "bread-board"
+      ]
+     }
+    ]
+   },
+   "discover": {
+    "conceptSlug": "conditionals",
+    "conceptNameAr": "لو… وغير كده",
+    "explanationAr": "الشرط مش بس بيقول صح ولا غلط — هو كمان بيختار. لو فيه كفاية، الزبون بياخد طلبه كله. وغير كده بياخد اللي موجود. نفس الكود، ونتيجتين مختلفتين على حسب اليوم.",
+    "ticoLineAr": "ده مش ظلم — ده نصيب عادل. الكود بيدّي اللي يقدر عليه، مش اللي اتوعد بيه."
+   },
+   "understand": {
+    "introAr": "لو المخزون يكفي نسلّم الطلب. else تختار المتاح، وبعدها نحسب الباقي.",
+    "code": "stock = 7\norder = 9\nif stock >= order:\n    give = order\nelse:\n    give = stock\nremaining = stock - give",
+    "annotations": [
+     {
+      "line": 3,
+      "textAr": "هل المخزون يكفي؟",
+      "pointsAt": "tray"
+     },
+     {
+      "line": 6,
+      "textAr": "هنا بنختار المتاح لما الطلب أكبر منه.",
+      "pointsAt": "bread-board"
+     }
+    ],
+    "runLabelAr": "شغّل وشوف",
+    "onRun": {
+     "animate": null,
+     "actions": [],
+     "props": {
+      "sign": "open",
+      "oven": "cold",
+      "loaf": 7,
+      "flour-sack": 1,
+      "total_price": 80,
+      "queue": 4,
+      "customer": "amina,nour,dina,farid",
+      "burnt": 1,
+      "delivery": "sent",
+      "order": 9,
+      "give": 7
+     },
+     "captionAr": "القرار: سبعة لأمينة. التسليم هيحصل لما تكتب إنت.",
+     "steps": []
+    }
+   },
+   "guided": {
+    "steps": [
+     {
+      "code": "stock = 7\norder = 9\n___\nremaining = stock - give",
+      "blanks": [
+       "if stock >= order:\n    give = order\nelse:\n    give = stock"
+      ],
+      "promptAr": "اكتب الفرعين كاملين لمتغيّر اسمه give: لو المخزون يكفي خزّن فيه الطلب، وغير كده خزّن فيه المخزون المتاح.",
+      "hintAr": "الكمية لازم تكون موجودة. اكتب if وelse مع المسافات.",
+      "tests": [
+       {
+        "call": "give",
+        "expected": "7",
+        "hidden": false,
+        "name": null
+       },
+       {
+        "call": "remaining",
+        "expected": "0",
+        "hidden": false,
+        "name": null
+       }
+      ],
+      "onRun": {
+       "animate": null,
+       "actions": [],
+       "props": {
+        "sign": "open",
+        "oven": "cold",
+        "loaf": 0,
+        "flour-sack": 1,
+        "total_price": 115,
+        "queue": 3,
+        "customer": "nour,dina,farid",
+        "delivery": "sent"
+       },
+       "captionAr": "أمينة خدت السبعة المتاحين. ثلاثة جيران لسه مستنيين.",
+       "steps": [
+        {
+         "animate": "handover",
+         "props": {
+          "sign": "open",
+          "oven": "cold",
+          "loaf": 0,
+          "flour-sack": 1,
+          "total_price": 80,
+          "queue": 4,
+          "customer": "amina,nour,dina,farid",
+          "burnt": 1,
+          "delivery": "sent",
+          "order": 9,
+          "give": 7
+         },
+         "speakerNameAr": "عم حسن",
+         "lineAr": "اتفضل طلبك يا أمينة."
+        },
+        {
+         "animate": "paying",
+         "props": {
+          "sign": "open",
+          "oven": "cold",
+          "loaf": 0,
+          "flour-sack": 1,
+          "total_price": 115,
+          "queue": 4,
+          "customer": "amina,nour,dina,farid",
+          "burnt": 1,
+          "delivery": "sent",
+          "order": 9,
+          "give": 7
+         },
+         "speakerNameAr": "عم حسن",
+         "lineAr": "الطلب اتدفع واتسجّل في الدرج."
+        },
+        {
+         "animate": "exiting",
+         "props": {
+          "sign": "open",
+          "oven": "cold",
+          "loaf": 0,
+          "flour-sack": 1,
+          "total_price": 115,
+          "queue": 4,
+          "customer": "amina,nour,dina,farid",
+          "burnt": 1,
+          "delivery": "sent",
+          "order": 9,
+          "give": 7
+         },
+         "speakerNameAr": "عم حسن",
+         "lineAr": "شكراً، واللي بعده يتفضل."
+        },
+        {
+         "animate": null,
+         "props": {
+          "sign": "open",
+          "oven": "cold",
+          "loaf": 0,
+          "flour-sack": 1,
+          "total_price": 115,
+          "queue": 3,
+          "customer": "nour,dina,farid",
+          "delivery": "sent"
+         },
+         "speakerNameAr": "عم حسن",
+         "lineAr": "الطابور اتحرك والعيش اللي فاضل واضح."
+        }
+       ]
+      },
+      "onEnter": null
+     },
+     {
+      "code": "stock = 7\norder = 9\nif stock >= order:\n    give = order\nelse:\n    give = stock\nremaining = stock - give\nstock = 8\norder = 3\n___\nnext_remaining = stock - next_give",
+      "blanks": [
+       "if stock >= order:\n    next_give = order\nelse:\n    next_give = stock"
+      ],
+      "promptAr": "نور طلب تلاتة من دفعة جديدة فيها تمنية. اكتب if وelse لمتغيّر اسمه next_give عشان تختار الكمية اللي هتستلمها.",
+      "hintAr": "المرة دي المخزون يكفي: الفرع الأول هو اللي هيتنفذ.",
+      "tests": [
+       {
+        "call": "give",
+        "expected": "7",
+        "hidden": false,
+        "name": null
+       },
+       {
+        "call": "remaining",
+        "expected": "0",
+        "hidden": false,
+        "name": null
+       },
+       {
+        "call": "next_give",
+        "expected": "3",
+        "hidden": false,
+        "name": null
+       },
+       {
+        "call": "next_remaining",
+        "expected": "5",
+        "hidden": false,
+        "name": null
+       }
+      ],
+      "onRun": {
+       "animate": null,
+       "actions": [],
+       "props": {
+        "sign": "open",
+        "oven": "cold",
+        "loaf": 5,
+        "flour-sack": 0,
+        "total_price": 130,
+        "queue": 2,
+        "customer": "dina,farid",
+        "delivery": "parked"
+       },
+       "captionAr": "نور خدت تلاتة. فاضل خمسة ودينا وفريد في الدور.",
+       "steps": [
+        {
+         "animate": "handover",
+         "props": {
+          "sign": "open",
+          "oven": "cold",
+          "loaf": 5,
+          "flour-sack": 0,
+          "total_price": 115,
+          "queue": 3,
+          "customer": "nour,dina,farid",
+          "delivery": "parked",
+          "give": 3
+         },
+         "speakerNameAr": "عم حسن",
+         "lineAr": "اتفضل طلبك يا نور."
+        },
+        {
+         "animate": "paying",
+         "props": {
+          "sign": "open",
+          "oven": "cold",
+          "loaf": 5,
+          "flour-sack": 0,
+          "total_price": 130,
+          "queue": 3,
+          "customer": "nour,dina,farid",
+          "delivery": "parked",
+          "give": 3
+         },
+         "speakerNameAr": "عم حسن",
+         "lineAr": "الطلب اتدفع واتسجّل في الدرج."
+        },
+        {
+         "animate": "exiting",
+         "props": {
+          "sign": "open",
+          "oven": "cold",
+          "loaf": 5,
+          "flour-sack": 0,
+          "total_price": 130,
+          "queue": 3,
+          "customer": "nour,dina,farid",
+          "delivery": "parked",
+          "give": 3
+         },
+         "speakerNameAr": "عم حسن",
+         "lineAr": "شكراً، واللي بعده يتفضل."
+        },
+        {
+         "animate": null,
+         "props": {
+          "sign": "open",
+          "oven": "cold",
+          "loaf": 5,
+          "flour-sack": 0,
+          "total_price": 130,
+          "queue": 2,
+          "customer": "dina,farid",
+          "delivery": "parked"
+         },
+         "speakerNameAr": "عم حسن",
+         "lineAr": "الطابور اتحرك والعيش اللي فاضل واضح."
+        }
+       ]
+      },
+      "onEnter": {
+       "animate": null,
+       "actions": [],
+       "props": {
+        "sign": "open",
+        "oven": "cold",
+        "loaf": 8,
+        "flour-sack": 0,
+        "total_price": 115,
+        "queue": 3,
+        "customer": "nour,dina,farid",
+        "delivery": "parked"
+       },
+       "captionAr": "خبزنا آخر شوال عشان نكمل خدمة الطابور.",
+       "steps": [
+        {
+         "animate": "loading",
+         "props": {
+          "sign": "open",
+          "oven": "lit",
+          "loaf": 8,
+          "flour-sack": 1,
+          "total_price": 115,
+          "queue": 3,
+          "customer": "nour,dina,farid",
+          "delivery": "sent"
+         },
+         "speakerNameAr": "عم حسن",
+         "lineAr": "العجين دخل الفرن."
+        },
+        {
+         "animate": "baking",
+         "props": {
+          "sign": "open",
+          "oven": "lit",
+          "loaf": 8,
+          "flour-sack": 1,
+          "total_price": 115,
+          "queue": 3,
+          "customer": "nour,dina,farid",
+          "delivery": "sent"
+         },
+         "speakerNameAr": "عم حسن",
+         "lineAr": "الدفعة بتستوي."
+        },
+        {
+         "animate": "stocking",
+         "props": {
+          "sign": "open",
+          "oven": "cold",
+          "loaf": 8,
+          "flour-sack": 0,
+          "total_price": 115,
+          "queue": 3,
+          "customer": "nour,dina,farid",
+          "delivery": "parked"
+         },
+         "speakerNameAr": "عم حسن",
+         "lineAr": "تمن أرغفة جاهزين، واستخدمنا شوال دقيق."
+        },
+        {
+         "animate": null,
+         "props": {
+          "sign": "open",
+          "oven": "cold",
+          "loaf": 8,
+          "flour-sack": 0,
+          "total_price": 115,
+          "queue": 3,
+          "customer": "nour,dina,farid",
+          "delivery": "parked"
+         },
+         "speakerNameAr": "عم حسن",
+         "lineAr": "الدفعة على الصينية. دي نتيجة الكود."
+        }
+       ]
+      }
+     }
+    ],
+    "solutionCode": "stock = 7\norder = 9\nif stock >= order:\n    give = order\nelse:\n    give = stock\nremaining = stock - give\nstock = 8\norder = 3\nif stock >= order:\n    next_give = order\nelse:\n    next_give = stock\nnext_remaining = stock - next_give",
+    "tests": [
+     {
+      "call": "give",
+      "expected": "7",
+      "hidden": false,
+      "name": null
+     },
+     {
+      "call": "remaining",
+      "expected": "0",
+      "hidden": false,
+      "name": null
+     },
+     {
+      "call": "next_give",
+      "expected": "3",
+      "hidden": false,
+      "name": null
+     },
+     {
+      "call": "next_remaining",
+      "expected": "5",
+      "hidden": false,
+      "name": null
+     }
+    ],
+    "onRun": {
+     "animate": null,
+     "actions": [],
+     "props": {
+      "sign": "open",
+      "oven": "cold",
+      "loaf": 5,
+      "flour-sack": 0,
+      "total_price": 130,
+      "queue": 2,
+      "customer": "dina,farid",
+      "delivery": "parked"
+     },
+     "captionAr": "نور خدت تلاتة. فاضل خمسة ودينا وفريد في الدور.",
+     "steps": [
+      {
+       "animate": "handover",
+       "props": {
+        "sign": "open",
+        "oven": "cold",
+        "loaf": 5,
+        "flour-sack": 0,
+        "total_price": 115,
+        "queue": 3,
+        "customer": "nour,dina,farid",
+        "delivery": "parked",
+        "give": 3
+       },
+       "speakerNameAr": "عم حسن",
+       "lineAr": "اتفضل طلبك يا نور."
+      },
+      {
+       "animate": "paying",
+       "props": {
+        "sign": "open",
+        "oven": "cold",
+        "loaf": 5,
+        "flour-sack": 0,
+        "total_price": 130,
+        "queue": 3,
+        "customer": "nour,dina,farid",
+        "delivery": "parked",
+        "give": 3
+       },
+       "speakerNameAr": "عم حسن",
+       "lineAr": "الطلب اتدفع واتسجّل في الدرج."
+      },
+      {
+       "animate": "exiting",
+       "props": {
+        "sign": "open",
+        "oven": "cold",
+        "loaf": 5,
+        "flour-sack": 0,
+        "total_price": 130,
+        "queue": 3,
+        "customer": "nour,dina,farid",
+        "delivery": "parked",
+        "give": 3
+       },
+       "speakerNameAr": "عم حسن",
+       "lineAr": "شكراً، واللي بعده يتفضل."
+      },
+      {
+       "animate": null,
+       "props": {
+        "sign": "open",
+        "oven": "cold",
+        "loaf": 5,
+        "flour-sack": 0,
+        "total_price": 130,
+        "queue": 2,
+        "customer": "dina,farid",
+        "delivery": "parked"
+       },
+       "speakerNameAr": "عم حسن",
+       "lineAr": "الطابور اتحرك والعيش اللي فاضل واضح."
+      }
+     ]
+    }
+   },
+   "remix": {
+    "twistAr": "هدى رجعت آخر الطابور. وفيه طلب توصيل باتنين، لكن لازم نسيب تلاتة على الأقل للمستنيين.",
+    "newRequirementAr": "اكتب متغيّر اسمه delivery_order وقيمته 2. بعده اكتب if لمتغيّر اسمه dispatch: لو next_remaining ناقص الطلب يسيب 3 أو أكتر خزّن فيه الطلب، وغير كده صفر. بعدها اكتب متغيّر اسمه shelf_left واحسب فيه الباقي.",
+    "worldChange": {
+     "animate": null,
+     "actions": [],
+     "props": {
+      "sign": "open",
+      "oven": "cold",
+      "loaf": 5,
+      "flour-sack": 0,
+      "total_price": 130,
+      "queue": 3,
+      "customer": "dina,farid,hoda",
+      "delivery": "parked",
+      "delivery_order": 2
+     },
+     "captionAr": "خمسة موجودين: اتنين للتوصيل وتلاتة محفوظين للطابور.",
+     "steps": [
+      {
+       "animate": "arriving",
+       "props": {
+        "sign": "open",
+        "oven": "cold",
+        "loaf": 5,
+        "flour-sack": 0,
+        "total_price": 130,
+        "queue": 3,
+        "customer": "dina,farid,hoda",
+        "delivery": "parked",
+        "delivery_order": 2
+       },
+       "speakerNameAr": "عم حسن",
+       "lineAr": "هدى وصلت آخر الطابور."
+      },
+      {
+       "animate": null,
+       "props": {
+        "sign": "open",
+        "oven": "cold",
+        "loaf": 5,
+        "flour-sack": 0,
+        "total_price": 130,
+        "queue": 3,
+        "customer": "dina,farid,hoda",
+        "delivery": "parked",
+        "delivery_order": 2
+       },
+       "speakerNameAr": "الست هدى",
+       "lineAr": "خدوا دوركم، أنا وراكم."
+      },
+      {
+       "animate": null,
+       "props": {
+        "sign": "open",
+        "oven": "cold",
+        "loaf": 5,
+        "flour-sack": 0,
+        "total_price": 130,
+        "queue": 3,
+        "customer": "dina,farid,hoda",
+        "delivery": "parked",
+        "delivery_order": 2
+       },
+       "speakerNameAr": "عم حسن",
+       "lineAr": "مش هنطلّع توصيل يسيب الطابور من غير عيش."
+      }
+     ]
     },
-    "scaffold": {
-      "variables": "NONE"
-    },
-    "difficultyBand": 5
-  },
-  "meta": {
-    "request_id": "pregenerated",
-    "stub": false,
-    "cached": false
+    "startingCode": "stock = 7\norder = 9\nif stock >= order:\n    give = order\nelse:\n    give = stock\nremaining = stock - give\nstock = 8\norder = 3\nif stock >= order:\n    next_give = order\nelse:\n    next_give = stock\nnext_remaining = stock - next_give",
+    "solutionCode": "stock = 7\norder = 9\nif stock >= order:\n    give = order\nelse:\n    give = stock\nremaining = stock - give\nstock = 8\norder = 3\nif stock >= order:\n    next_give = order\nelse:\n    next_give = stock\nnext_remaining = stock - next_give\ndelivery_order = 2\nafter_delivery = next_remaining - delivery_order\nif after_delivery >= 3:\n    dispatch = delivery_order\nelse:\n    dispatch = 0\nshelf_left = next_remaining - dispatch",
+    "tests": [
+     {
+      "call": "give",
+      "expected": "7",
+      "hidden": false,
+      "name": null
+     },
+     {
+      "call": "remaining",
+      "expected": "0",
+      "hidden": false,
+      "name": null
+     },
+     {
+      "call": "next_give",
+      "expected": "3",
+      "hidden": false,
+      "name": null
+     },
+     {
+      "call": "next_remaining",
+      "expected": "5",
+      "hidden": false,
+      "name": null
+     },
+     {
+      "call": "dispatch",
+      "expected": "2",
+      "hidden": false,
+      "name": null
+     },
+     {
+      "call": "shelf_left",
+      "expected": "3",
+      "hidden": false,
+      "name": null
+     }
+    ],
+    "onRun": {
+     "animate": null,
+     "actions": [],
+     "props": {
+      "sign": "open",
+      "oven": "cold",
+      "loaf": 3,
+      "flour-sack": 0,
+      "total_price": 140,
+      "queue": 3,
+      "customer": "dina,farid,hoda",
+      "delivery": "loaded",
+      "delivery_loaves": 2
+     },
+     "captionAr": "الشرط سمح باتنين للتوصيل وترك تلاتة للمستنيين.",
+     "steps": [
+      {
+       "animate": null,
+       "props": {
+        "sign": "open",
+        "oven": "cold",
+        "loaf": 3,
+        "flour-sack": 0,
+        "total_price": 140,
+        "queue": 3,
+        "customer": "dina,farid,hoda",
+        "delivery": "loaded",
+        "delivery_loaves": 2
+       },
+       "speakerNameAr": "عم حسن",
+       "lineAr": "الصندوق اتحمّل من نتيجة قرارك، والطابور لسه له عيش."
+      }
+     ]
+    }
+   }
   }
+ },
+ "meta": {
+  "request_id": "authored",
+  "stub": false,
+  "cached": false
+ }
 }

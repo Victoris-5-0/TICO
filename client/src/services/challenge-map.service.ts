@@ -218,7 +218,7 @@ export async function buildChallengeMap({
         standing[index].status === "completed"
           ? (ar ? "خلّصت العالم ده!" : "World complete!")
           : completed.size
-            ? undefined
+            ? (ar ? "دورك هنا!" : "You're up next!")
             : (ar ? "مين عايز يبدأ؟" : "Who's starting?"),
     };
   }

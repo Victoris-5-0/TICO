@@ -1,177 +1,603 @@
 {
-  "data": {
-    "id": "cmtwkm8raqt5d01z04ksf3jl8",
-    "worldId": "el_forn",
-    "sceneId": "bakery_gameplay",
-    "targetConceptId": "variables",
-    "carriedConceptIds": [],
-    "titleAr": "حساب طابور العيش",
-    "source": "model",
-    "validated": true,
-    "phases": {
-      "encounter": {
-        "speaker": "dina",
-        "speakerNameAr": "دينا",
-        "lineAr": "أنا واقفة براقِب الطابور، وكل زبون بيطلب عدد أرغفة مختلف. عم حسن بيحسب الحساب بسرعة ومن غير لغبطة، تفتكروا بيعمل كده إزاي؟",
-        "ctaAr": "يلا نبدأ",
-        "world": {
-          "props": {
-            "counter": 1,
-            "loaf": 8,
-            "oven": "lit"
-          }
-        }
-      },
-      "explore": {
-        "ticoIntroAr": "يا هلا بيك في الفرن البلدي! تعال نفكر مع بعض في الحسابات اللي بتحصل هنا.",
-        "rounds": [
-          {
-            "questionAr": "لو زبون طلب 3 أرغفة، وسعر الرغيف الواحد 120 قرش، الحساب الإجمالي هيكون كام؟",
-            "optionsAr": [
-              "360 قرش",
-              "240 قرش",
-              "120 قرش"
-            ],
-            "correctIndex": 0,
-            "nudgeAr": "فكر فيها كأننا بنكرر الـ 120 قرش 3 مرات.",
-            "highlight": [
-              "loaf"
-            ]
-          },
-          {
-            "questionAr": "لو سعر الرغيف اتغير بكرا وبقى 150 قرش، إيه اللي هيتغير في طريقة حسابنا؟",
-            "optionsAr": [
-              "سعر الرغيف الثابت بس",
-              "عدد الأرغفة اللي الزبون عايزها",
-              "مش هنغير أي حاجة"
-            ],
-            "correctIndex": 0,
-            "nudgeAr": "فكر في الرقم اللي بنضربه في عدد الأرغفة كل مرة.",
-            "highlight": [
-              "counter"
-            ]
-          }
-        ]
-      },
-      "discover": {
-        "conceptSlug": "variables",
-        "conceptNameAr": "استخدام المتغيرات",
-        "explanationAr": "الاسم هو اللي بيفرق. لما تسمي المتغير loaves_per_tray، الكود بيقول لوحده هو بيعمل إيه. ولو الرقم اتغير بكرة، بتغيره في مكان واحد بس والباقي كله بيمشي معاه.",
-        "ticoLineAr": "كلام سليم! المتغير بيخلي الكود مرن وجاهز لأي تغيير في الأسعار."
-      },
-      "understand": {
-        "introAr": "ده الكود اللي بيحسب الحساب الإجمالي لأي عدد أرغفة باستخدام متغير السعر:",
-        "code": "def calculate_order_price(loaves: int) -> int:\n    price = 120\n    return loaves * price",
-        "annotations": [
-          {
-            "line": 2,
-            "textAr": "هنا عملنا متغير اسمه price وشيلنا جواه سعر الرغيف (120 قرش).",
-            "pointsAt": "counter"
-          },
-          {
-            "line": 3,
-            "textAr": "بنضرب عدد الأرغفة المطلوبة في السعر المتخزن وبنرجع النتيجة.",
-            "pointsAt": "loaf"
-          }
-        ],
-        "runLabelAr": "شغّل وشوف",
-        "onRun": {
-          "animate": "handover",
-          "props": {
-            "bag": 1
-          },
-          "captionAr": "البرنامج حسب الحساب بدقة وعم حسن سلم العيش للزبون!"
-        }
-      },
-      "guided": {
-        "steps": [
-          {
-            "code": "def calculate_order_price(loaves: int) -> int:\n    price = ___\n    return loaves * price",
-            "blanks": [
-              "120"
-            ],
-            "promptAr": "اكتب سعر الرغيف وهو 120 قرش جوه المتغير price.",
-            "hintAr": "حط الرقم 120 مكان النقط."
-          },
-          {
-            "code": "def calculate_order_price(loaves: int) -> int:\n    price = 120\n    return loaves * ___",
-            "blanks": [
-              "price"
-            ],
-            "promptAr": "استخدم اسم المتغير price عشان تضربه في عدد الأرغفة.",
-            "hintAr": "اكتب اسم المتغير اللي لسه معرفينه بالظبط."
-          }
-        ],
-        "solutionCode": "def calculate_order_price(loaves: int) -> int:\n    price = 120\n    return loaves * price",
-        "tests": [
-          {
-            "call": "calculate_order_price(5)",
-            "expected": "600",
-            "name": null,
-            "hidden": false
-          },
-          {
-            "call": "calculate_order_price(2)",
-            "expected": "240",
-            "name": null,
-            "hidden": false
-          },
-          {
-            "call": "calculate_order_price(10)",
-            "expected": "1200",
-            "name": null,
-            "hidden": false
-          }
-        ],
-        "onRun": {
-          "animate": "handover",
-          "props": {
-            "bag": 1
-          },
-          "captionAr": "كده الكود شغال وبيحسب السعر الإجمالي لأي طلب!"
-        }
-      },
-      "remix": {
-        "twistAr": "الفرن قرر يحط العيش في أكياس ورقية جديدة، وبقى بيضيف تكلفة الكيس (50 قرش) على الحساب الإجمالي لأي طلب.",
-        "newRequirementAr": "عدل الكود عشان تضيف متغير جديد باسم bag_fee قيمته 50، وتجمعه على الحساب الإجمالي بعد ضرب الأرغفة في السعر.",
-        "worldChange": {
-          "animate": "stocking",
-          "props": {
-            "bag": 1
-          },
-          "captionAr": null
+ "data": {
+  "id": "cmtwkm8raqt5d01z04ksf3jl8",
+  "worldId": "el_forn",
+  "sceneId": "bakery_gameplay",
+  "targetConceptId": "variables",
+  "carriedConceptIds": [],
+  "titleAr": "عدّ الصواني",
+  "source": "template",
+  "validated": true,
+  "difficultyBand": 2,
+  "scaffold": {},
+  "phases": {
+   "encounter": {
+    "speaker": "hassan",
+    "speakerNameAr": "عم حسن",
+    "lineAr": "مريم خدت طلبها وفضل تلاتة. هدى وصلت، وعمر جاي وراها. اضغط على الصينية عشان نسجّل المخزون.",
+    "world": {
+     "props": {
+      "sign": "open",
+      "oven": "cold",
+      "loaf": 3,
+      "flour-sack": 3,
+      "total_price": 25,
+      "queue": 1,
+      "customer": "hoda",
+      "press": "tray"
+     },
+     "interactions": [
+      {
+       "target": "tray",
+       "promptAr": "اضغط على الصينية عشان تسجّل الأرغفة المتبقية.",
+       "onPress": {
+        "animate": null,
+        "actions": [],
+        "props": {
+         "sign": "open",
+         "oven": "cold",
+         "loaf": 3,
+         "flour-sack": 3,
+         "total_price": 25,
+         "queue": 1,
+         "customer": "hoda",
+         "stock_count": 3
         },
-        "startingCode": "def calculate_order_price(loaves: int) -> int:\n    price = 120\n    return loaves * price",
-        "solutionCode": "def calculate_order_price(loaves: int) -> int:\n    price = 120\n    bag_fee = 50\n    return (loaves * price) + bag_fee",
-        "tests": [
-          {
-            "call": "calculate_order_price(5)",
-            "expected": "650",
-            "name": null,
-            "hidden": false
-          },
-          {
-            "call": "calculate_order_price(2)",
-            "expected": "290",
-            "name": null,
-            "hidden": false
-          }
-        ],
-        "onRun": {
-          "animate": "handover",
+        "captionAr": "اتسجّل تلات أرغفة على لوحة المخزون.",
+        "steps": []
+       }
+      },
+      {
+       "target": "ticket-stand",
+       "promptAr": "اضغط على حامل الدور عشان يدخل عمر ورا هدى.",
+       "onPress": {
+        "animate": null,
+        "actions": [],
+        "props": {
+         "sign": "open",
+         "oven": "cold",
+         "loaf": 3,
+         "flour-sack": 3,
+         "total_price": 25,
+         "queue": 2,
+         "customer": "hoda,omar"
+        },
+        "captionAr": "عمر دخل والطابور بقى اتنين.",
+        "steps": [
+         {
+          "animate": "arriving",
           "props": {
-            "bag": 1
+           "sign": "open",
+           "oven": "cold",
+           "loaf": 3,
+           "flour-sack": 3,
+           "total_price": 25,
+           "queue": 2,
+           "customer": "hoda,omar"
           },
-          "captionAr": null
-        }
+          "speakerNameAr": "عم حسن",
+          "lineAr": "عمر بيلحق دوره."
+         },
+         {
+          "animate": null,
+          "props": {
+           "sign": "open",
+           "oven": "cold",
+           "loaf": 3,
+           "flour-sack": 3,
+           "total_price": 25,
+           "queue": 2,
+           "customer": "hoda,omar"
+          },
+          "speakerNameAr": "عم حسن",
+          "lineAr": "هدى الأول، وعمر بعدها."
+         }
+        ]
+       }
       }
+     ]
+    }
+   },
+   "explore": {
+    "ticoIntroAr": "خبزنا تمن أرغفة الصبح، ومدام مريم خدت خمسة. تعالى نحسب.",
+    "rounds": [
+     {
+      "questionAr": "خبزنا تمنية وباعنا خمسة. فاضل كام رغيف؟",
+      "optionsAr": [
+       "٣ أرغفة",
+       "٥ أرغفة",
+       "١٣ رغيف"
+      ],
+      "correctIndex": 0,
+      "nudgeAr": "تمنية ناقص خمسة. عدّ اللي على الصينية.",
+      "highlight": [
+       "tray",
+       "loaf"
+      ]
+     },
+     {
+      "questionAr": "لو بكرة خبزنا نفس الدفعة وبعنا ستة، الحسبة هتتغيّر ولا القانون هو هو؟",
+      "optionsAr": [
+       "القانون هو هو: اللي خبزناه ناقص اللي بعناه",
+       "الحسبة هتتغيّر كل يوم",
+       "مش هنحتاج نحسب تاني"
+      ],
+      "correctIndex": 0,
+      "nudgeAr": "الأرقام بتتغيّر، بس الطرح فضل زي ما هو.",
+      "highlight": [
+       "tray"
+      ]
+     }
+    ]
+   },
+   "discover": {
+    "conceptSlug": "variables",
+    "conceptNameAr": "الحساب بالمتغيّرات",
+    "explanationAr": "المتغيّر مش بس بيشيل رقم — نقدر نحسب بيه كمان. نسمّي اللي خبزناه، ونسمّي اللي بعناه، والفرق بينهم هو اللي فاضل. لو الأرقام اتغيّرت، الحسبة بتتصلّح لوحدها.",
+    "ticoLineAr": "اسم ناقص اسم. مش رقم ناقص رقم."
+   },
+   "understand": {
+    "introAr": "تلات سطور: اللي خبزناه، اللي بعناه، والفرق بينهم.",
+    "code": "baked = 8\nsold = 5\nloaves_left = baked - sold",
+    "annotations": [
+     {
+      "line": 1,
+      "textAr": "دفعة الصبح: تمن أرغفة.",
+      "pointsAt": "oven"
+     },
+     {
+      "line": 2,
+      "textAr": "اللي مدام مريم خدته.",
+      "pointsAt": "loaf"
+     },
+     {
+      "line": 3,
+      "textAr": "الفرق بينهم — وده اللي على الصينية دلوقتي.",
+      "pointsAt": "tray"
+     }
+    ],
+    "runLabelAr": "شغّل وشوف",
+    "onRun": {
+     "animate": null,
+     "actions": [],
+     "props": {
+      "sign": "open",
+      "oven": "cold",
+      "loaf": 3,
+      "flour-sack": 3,
+      "total_price": 25,
+      "queue": 2,
+      "customer": "hoda,omar",
+      "stock_count": 3
+     },
+     "captionAr": "المخزون المتبقي تلاتة. هدى طالبة التلاتة.",
+     "steps": []
+    }
+   },
+   "guided": {
+    "steps": [
+     {
+      "code": "baked = 8\nsold = 5\nloaves_left = ___",
+      "blanks": [
+       "baked - sold"
+      ],
+      "promptAr": "عندنا متغيّر اسمه loaves_left. اكتب له عملية baked ناقص sold عشان تحدّث لوحة المخزون.",
+      "hintAr": "اطرح اللي اتباع من اللي اتخبز.",
+      "tests": [
+       {
+        "call": "loaves_left",
+        "expected": "3",
+        "hidden": false,
+        "name": null
+       }
+      ],
+      "onRun": {
+       "animate": null,
+       "actions": [],
+       "props": {
+        "sign": "open",
+        "oven": "cold",
+        "loaf": 3,
+        "flour-sack": 3,
+        "total_price": 25,
+        "queue": 2,
+        "customer": "hoda,omar",
+        "stock_count": "= loaves_left"
+       },
+       "captionAr": "لوحة المخزون بتعرض نتيجة حسابك.",
+       "steps": []
+      },
+      "onEnter": null
+     },
+     {
+      "code": "baked = 8\nsold = 5\nloaves_left = baked - sold\norder = 3\nremaining = ___",
+      "blanks": [
+       "loaves_left - order"
+      ],
+      "promptAr": "هدى طلبت تلاتة. اكتب متغيّر اسمه remaining، وخزّن فيه loaves_left ناقص order.",
+      "hintAr": "اطرح الطلب من المخزون اللي حسبته.",
+      "tests": [
+       {
+        "call": "loaves_left",
+        "expected": "3",
+        "hidden": false,
+        "name": null
+       },
+       {
+        "call": "remaining",
+        "expected": "0",
+        "hidden": false,
+        "name": null
+       }
+      ],
+      "onRun": {
+       "animate": null,
+       "actions": [],
+       "props": {
+        "sign": "open",
+        "oven": "cold",
+        "loaf": 0,
+        "flour-sack": 3,
+        "total_price": 40,
+        "queue": 1,
+        "customer": "omar"
+       },
+       "captionAr": "هدى خدت طلبها. عمر مستني والصينية فضيت.",
+       "steps": [
+        {
+         "animate": "handover",
+         "props": {
+          "sign": "open",
+          "oven": "cold",
+          "loaf": 0,
+          "flour-sack": 3,
+          "total_price": 25,
+          "queue": 2,
+          "customer": "hoda,omar",
+          "give": 3
+         },
+         "speakerNameAr": "عم حسن",
+         "lineAr": "اتفضل طلبك يا هدى."
+        },
+        {
+         "animate": "paying",
+         "props": {
+          "sign": "open",
+          "oven": "cold",
+          "loaf": 0,
+          "flour-sack": 3,
+          "total_price": 40,
+          "queue": 2,
+          "customer": "hoda,omar",
+          "give": 3
+         },
+         "speakerNameAr": "عم حسن",
+         "lineAr": "الطلب اتدفع واتسجّل في الدرج."
+        },
+        {
+         "animate": "exiting",
+         "props": {
+          "sign": "open",
+          "oven": "cold",
+          "loaf": 0,
+          "flour-sack": 3,
+          "total_price": 40,
+          "queue": 2,
+          "customer": "hoda,omar",
+          "give": 3
+         },
+         "speakerNameAr": "عم حسن",
+         "lineAr": "شكراً، واللي بعده يتفضل."
+        },
+        {
+         "animate": null,
+         "props": {
+          "sign": "open",
+          "oven": "cold",
+          "loaf": 0,
+          "flour-sack": 3,
+          "total_price": 40,
+          "queue": 1,
+          "customer": "omar"
+         },
+         "speakerNameAr": "عم حسن",
+         "lineAr": "الطابور اتحرك والعيش اللي فاضل واضح."
+        }
+       ]
+      },
+      "onEnter": null
+     }
+    ],
+    "solutionCode": "baked = 8\nsold = 5\nloaves_left = baked - sold\norder = 3\nremaining = loaves_left - order",
+    "tests": [
+     {
+      "call": "loaves_left",
+      "expected": "3",
+      "hidden": false,
+      "name": null
+     },
+     {
+      "call": "remaining",
+      "expected": "0",
+      "hidden": false,
+      "name": null
+     }
+    ],
+    "onRun": {
+     "animate": null,
+     "actions": [],
+     "props": {
+      "sign": "open",
+      "oven": "cold",
+      "loaf": 0,
+      "flour-sack": 3,
+      "total_price": 40,
+      "queue": 1,
+      "customer": "omar"
+     },
+     "captionAr": "هدى خدت طلبها. عمر مستني والصينية فضيت.",
+     "steps": [
+      {
+       "animate": "handover",
+       "props": {
+        "sign": "open",
+        "oven": "cold",
+        "loaf": 0,
+        "flour-sack": 3,
+        "total_price": 25,
+        "queue": 2,
+        "customer": "hoda,omar",
+        "give": 3
+       },
+       "speakerNameAr": "عم حسن",
+       "lineAr": "اتفضل طلبك يا هدى."
+      },
+      {
+       "animate": "paying",
+       "props": {
+        "sign": "open",
+        "oven": "cold",
+        "loaf": 0,
+        "flour-sack": 3,
+        "total_price": 40,
+        "queue": 2,
+        "customer": "hoda,omar",
+        "give": 3
+       },
+       "speakerNameAr": "عم حسن",
+       "lineAr": "الطلب اتدفع واتسجّل في الدرج."
+      },
+      {
+       "animate": "exiting",
+       "props": {
+        "sign": "open",
+        "oven": "cold",
+        "loaf": 0,
+        "flour-sack": 3,
+        "total_price": 40,
+        "queue": 2,
+        "customer": "hoda,omar",
+        "give": 3
+       },
+       "speakerNameAr": "عم حسن",
+       "lineAr": "شكراً، واللي بعده يتفضل."
+      },
+      {
+       "animate": null,
+       "props": {
+        "sign": "open",
+        "oven": "cold",
+        "loaf": 0,
+        "flour-sack": 3,
+        "total_price": 40,
+        "queue": 1,
+        "customer": "omar"
+       },
+       "speakerNameAr": "عم حسن",
+       "lineAr": "الطابور اتحرك والعيش اللي فاضل واضح."
+      }
+     ]
+    }
+   },
+   "remix": {
+    "twistAr": "أمينة دخلت ورا عمر، ووصل طلب توصيل بخمسة أرغفة. لازم نخبز قبل ما نحمّل السكوتر.",
+    "newRequirementAr": "اكتب متغيّر اسمه fresh وقيمته 8، ومتغيّر اسمه delivery_order وقيمته 5. بعدهم اكتب متغيّر اسمه delivery_left واحسب فيه الفرق. الكود هيخبز ويحمّل الطلب ويترك الباقي للطابور.",
+    "worldChange": {
+     "animate": null,
+     "actions": [],
+     "props": {
+      "sign": "open",
+      "oven": "cold",
+      "loaf": 0,
+      "flour-sack": 3,
+      "total_price": 40,
+      "queue": 2,
+      "customer": "omar,amina",
+      "delivery": "parked"
+     },
+     "captionAr": "طلب توصيل خمسة، والطابور بقى اتنين.",
+     "steps": [
+      {
+       "animate": "arriving",
+       "props": {
+        "sign": "open",
+        "oven": "cold",
+        "loaf": 0,
+        "flour-sack": 3,
+        "total_price": 40,
+        "queue": 2,
+        "customer": "omar,amina",
+        "delivery": "parked"
+       },
+       "speakerNameAr": "عم حسن",
+       "lineAr": "أمينة دخلت بعد عمر."
+      },
+      {
+       "animate": null,
+       "props": {
+        "sign": "open",
+        "oven": "cold",
+        "loaf": 0,
+        "flour-sack": 3,
+        "total_price": 40,
+        "queue": 2,
+        "customer": "omar,amina",
+        "delivery": "parked"
+       },
+       "speakerNameAr": "أمينة",
+       "lineAr": "أنا مستنية دوري."
+      },
+      {
+       "animate": null,
+       "props": {
+        "sign": "open",
+        "oven": "cold",
+        "loaf": 0,
+        "flour-sack": 3,
+        "total_price": 40,
+        "queue": 2,
+        "customer": "omar,amina",
+        "delivery": "parked"
+       },
+       "speakerNameAr": "عم حسن",
+       "lineAr": "السكوتر مستني خمسة، ومش هنحمّله قبل ما نحسب."
+      }
+     ]
     },
-    "scaffold": {},
-    "difficultyBand": 5
-  },
-  "meta": {
-    "request_id": "pregenerated",
-    "stub": false,
-    "cached": false
+    "startingCode": "baked = 8\nsold = 5\nloaves_left = baked - sold\norder = 3\nremaining = loaves_left - order",
+    "solutionCode": "baked = 8\nsold = 5\nloaves_left = baked - sold\norder = 3\nremaining = loaves_left - order\nfresh = 8\ndelivery_order = 5\ndelivery_left = fresh - delivery_order",
+    "tests": [
+     {
+      "call": "loaves_left",
+      "expected": "3",
+      "hidden": false,
+      "name": null
+     },
+     {
+      "call": "remaining",
+      "expected": "0",
+      "hidden": false,
+      "name": null
+     },
+     {
+      "call": "fresh",
+      "expected": "8",
+      "hidden": false,
+      "name": null
+     },
+     {
+      "call": "delivery_order",
+      "expected": "5",
+      "hidden": false,
+      "name": null
+     },
+     {
+      "call": "delivery_left",
+      "expected": "3",
+      "hidden": false,
+      "name": null
+     }
+    ],
+    "onRun": {
+     "animate": null,
+     "actions": [],
+     "props": {
+      "sign": "open",
+      "oven": "cold",
+      "loaf": 3,
+      "flour-sack": 2,
+      "total_price": 65,
+      "queue": 2,
+      "customer": "omar,amina",
+      "delivery": "loaded",
+      "delivery_loaves": 5
+     },
+     "captionAr": "اتحمّل طلب التوصيل بخمسة وفاضل تلاتة للطابور.",
+     "steps": [
+      {
+       "animate": "loading",
+       "props": {
+        "sign": "open",
+        "oven": "lit",
+        "loaf": 8,
+        "flour-sack": 3,
+        "total_price": 40,
+        "queue": 2,
+        "customer": "omar,amina",
+        "delivery": "parked"
+       },
+       "speakerNameAr": "عم حسن",
+       "lineAr": "العجين دخل الفرن."
+      },
+      {
+       "animate": "baking",
+       "props": {
+        "sign": "open",
+        "oven": "lit",
+        "loaf": 8,
+        "flour-sack": 3,
+        "total_price": 40,
+        "queue": 2,
+        "customer": "omar,amina",
+        "delivery": "parked"
+       },
+       "speakerNameAr": "عم حسن",
+       "lineAr": "الدفعة بتستوي."
+      },
+      {
+       "animate": "stocking",
+       "props": {
+        "sign": "open",
+        "oven": "cold",
+        "loaf": 8,
+        "flour-sack": 2,
+        "total_price": 40,
+        "queue": 2,
+        "customer": "omar,amina",
+        "delivery": "parked"
+       },
+       "speakerNameAr": "عم حسن",
+       "lineAr": "تمن أرغفة جاهزين، واستخدمنا شوال دقيق."
+      },
+      {
+       "animate": null,
+       "props": {
+        "sign": "open",
+        "oven": "cold",
+        "loaf": 8,
+        "flour-sack": 2,
+        "total_price": 40,
+        "queue": 2,
+        "customer": "omar,amina",
+        "delivery": "parked"
+       },
+       "speakerNameAr": "عم حسن",
+       "lineAr": "الدفعة على الصينية. دي نتيجة الكود."
+      },
+      {
+       "animate": null,
+       "props": {
+        "sign": "open",
+        "oven": "cold",
+        "loaf": 3,
+        "flour-sack": 2,
+        "total_price": 65,
+        "queue": 2,
+        "customer": "omar,amina",
+        "delivery": "loaded",
+        "delivery_loaves": 5
+       },
+       "speakerNameAr": "عم حسن",
+       "lineAr": "الحمولة اتحطت في صندوق السكوتر. الفاضل للطابور تلاتة."
+      }
+     ]
+    }
+   }
   }
+ },
+ "meta": {
+  "request_id": "authored",
+  "stub": false,
+  "cached": false
+ }
 }

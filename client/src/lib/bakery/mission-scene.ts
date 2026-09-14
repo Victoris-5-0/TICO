@@ -13,12 +13,16 @@
  */
 
 import { CUSTOMER_IDS, DURATIONS, type BakeryState, type CustomerId, type Loaf, type LoafOwner, type Phase } from "./simulation";
+import type { SceneInteraction, WorldChange, WorldState } from "@/lib/ai/types";
 
 /** The props a mission may set, as the manifest's `visual.sprites` keys. */
 export type MissionProps = Record<string, number | string>;
 
+// Every phase the reducer can be in. `arriving` and `paying` were added for the scripted
+// encounter and belong here too, or a mission naming one gets a still frame and no error.
 const PHASES: readonly Phase[] = [
-  "idle", "loading", "baking", "retrieving", "stocking", "handover", "paying", "exiting", "advancing", "complete",
+  "idle", "arriving", "loading", "baking", "retrieving", "stocking",
+  "handover", "paying", "exiting", "advancing", "complete",
 ];
 
 export const isScenePhase = (name: string): name is Phase => (PHASES as readonly string[]).includes(name);
@@ -45,6 +49,15 @@ function ownerForPhase(phase: Phase): LoafOwner {
 }
 
 const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
+
+/**
+ * World keys the scene draws rather than reports as a readout.
+ *
+ * `queue` matters most: every mission used to render all eight neighbours because that was
+ * the only thing this mapper knew how to do, so every scene looked identical no matter who
+ * the mission was about. A mission about one customer now gets one customer.
+ */
+const DRAWN = new Set(["loaf", "dough", "oven", "queue", "flour-sack", "sign", "press", "customer", "delivery"]);
 
 const toCount = (value: number | string | undefined): number | null => {
   if (typeof value === "number" && Number.isFinite(value)) return value;
@@ -83,26 +96,12 @@ export type MissionSceneOptions = {
  * two trays would be the same class of lie the manifest's `simulation` block exists to
  * prevent.
  */
-export function missionSceneState({ props = {}, animate, progress = 0, queueLength = CUSTOMER_IDS.length }: MissionSceneOptions): BakeryState {
-  // A generated handover is the same physical beat as the authored introduction:
-  // bread first, then the customer's banknote travels into the till.
-  const handoverShare = DURATIONS.handover / (DURATIONS.handover + DURATIONS.paying);
-  const phase: Phase = animate === "handover" && progress > handoverShare
-    ? "paying"
-    : animate && isScenePhase(animate) ? animate : "idle";
-  const phaseProgress = animate === "handover"
-    ? phase === "handover"
-      ? progress / handoverShare
-      : (progress - handoverShare) / (1 - handoverShare)
-    : progress;
+export function missionSceneState({ props = {}, animate, progress = 0, queueLength: shown }: MissionSceneOptions): BakeryState {
+  const queueSize = shown ?? queueLength(props);
+  const phase: Phase = animate && isScenePhase(animate) ? animate : "idle";
 
   const loafCount = toCount(props.loaf) ?? toCount(props.dough) ?? 0;
-  const active = phase === "handover" || phase === "paying" || phase === "exiting" ? CUSTOMER_IDS[0] : null;
-  const owner: LoafOwner = phase === "handover" && active
-    ? `handover:${active}`
-    : phase === "paying" && active
-      ? `customer:${active}`
-      : ownerForPhase(phase);
+  const owner = ownerForPhase(phase);
 
   // `max_shown: 8` in the manifest is what the tray has slots for. Beyond that the scene
   // silently drops loaves, so clamp here and let the caller report the real number.
@@ -117,29 +116,38 @@ export function missionSceneState({ props = {}, animate, progress = 0, queueLeng
   const litWithoutPhase = props.oven === "lit" && phase === "idle";
 
   const served: CustomerId[] = [];
-  const queue: CustomerId[] = CUSTOMER_IDS.slice(0, clamp(Math.round(queueLength), 0, CUSTOMER_IDS.length));
+  // A named cast wins over a count: a mission about Hoda should draw Hoda.
+  const queue: CustomerId[] = (castOf(props) ?? CUSTOMER_IDS).slice(0, queueSize);
+  const active = phase === "arriving" ? queue.at(-1) ?? null
+    : ["handover", "paying", "exiting"].includes(phase) ? queue[0] ?? null : null;
+  if (active && ["handover", "paying", "exiting"].includes(phase)) {
+    const give = clamp(Math.round(toCount(props.give) ?? 0), 0, 8);
+    for (let n = 0; n < give; n += 1) {
+      loaves.push({ id: 8 + n, owner: phase === "handover" ? `handover:${active}` : `customer:${active}` });
+    }
+  }
 
   return {
     phase: litWithoutPhase ? "baking" : phase,
-    elapsed: (DURATIONS[phase] || 0) * clamp(phaseProgress, 0, 1),
+    elapsed: (DURATIONS[phase] || 0) * clamp(progress, 0, 1),
     queue,
     served,
     loaves,
     batches: loaves.length ? 1 : 0,
+    // `paying` needs one too: the banknote is drawn from the active customer's hand.
     active,
     auto: false,
     paused: false,
     hidden: false,
     notice: "phase",
     // A mission draws a still frame of the world; nobody is buying anything in it.
-    money: 0,
-    charge: 0,
+    money: toCount(props.total_price) ?? 0,
+    charge: toCount(props.charge) ?? 0,
   };
 }
 
 /** How long the scene will spend on this animation, in ms. 0 for a still scene. */
 export function missionSceneDuration(animate?: string | null): number {
-  if (animate === "handover") return DURATIONS.handover + DURATIONS.paying;
   return animate && isScenePhase(animate) ? DURATIONS[animate] : 0;
 }
 
@@ -150,5 +158,105 @@ export function missionSceneDuration(animate?: string | null): number {
  * needs — it just is not something the artwork can express.
  */
 export function undrawnProps(props: MissionProps = {}): Array<[string, number | string]> {
-  return Object.entries(props).filter(([key]) => key !== "loaf" && key !== "dough" && key !== "oven");
+  return Object.entries(props).filter(([key]) => !DRAWN.has(key));
+}
+
+/** How many of the eight customers to draw. Omitted keeps the old all-eight behaviour. */
+export function queueLength(props: MissionProps = {}): number {
+  return clamp(Math.round(toCount(props.queue) ?? CUSTOMER_IDS.length), 0, CUSTOMER_IDS.length);
+}
+
+/** Sacks of flour, drawn one per unit. Undefined leaves the painted pile alone. */
+export function flourSacks(props: MissionProps = {}): number | undefined {
+  const count = toCount(props["flour-sack"]);
+  return count === null ? undefined : clamp(Math.round(count), 0, 4);
+}
+
+/**
+ * One beat of a phase's world change: an animation, the world it runs against, and who
+ * says what while it plays.
+ *
+ * A phase used to be able to play exactly one animation, which is why a customer could
+ * only ever appear — there was no way to say "bake, then she walks in, then she asks".
+ * Missions that need a sequence carry `steps` on their `WorldChange` and the scene plays
+ * them back to back, speaking each one's line over the character as it goes.
+ *
+ * The backend exposes typed steps. Older stored missions can still omit them and use
+ * a single animation.
+ */
+export type WorldBeat = {
+  animate?: string | null;
+  props?: MissionProps;
+  speakerNameAr?: string | null;
+  lineAr?: string | null;
+};
+
+export function beatsOf(change: { animate?: string | null; props?: MissionProps } | null | undefined): WorldBeat[] {
+  const steps = (change as { steps?: unknown } | null | undefined)?.steps;
+  if (!Array.isArray(steps)) return [];
+  return steps.filter((step): step is WorldBeat => Boolean(step) && typeof step === "object");
+}
+
+/**
+ * Who is standing in the shop, by name.
+ *
+ * Without this a mission can only say *how many* customers, and the queue is always taken
+ * from the front of `CUSTOMER_IDS` — so every mission about one person was a mission about
+ * Mariam. `customer: "hoda"` puts Hoda there instead, and `"youssef,dina"` puts both in
+ * that order. Unknown names are dropped rather than crashing the scene.
+ */
+export function castOf(props: MissionProps = {}): CustomerId[] | null {
+  const named = props.customer;
+  if (typeof named !== "string") return null;
+  const ids = named
+    .split(",")
+    .map((name) => name.trim())
+    .filter((name): name is CustomerId => (CUSTOMER_IDS as readonly string[]).includes(name));
+  return ids.length ? ids : null;
+}
+
+/**
+ * The one thing in the scene this phase wants pressed before it will move on.
+ *
+ * Compatibility for stored missions predating WorldState.interactions.
+ */
+export function pressTarget(props: MissionProps = {}): string | null {
+  const value = props.press;
+  return typeof value === "string" && value.trim() ? value : null;
+}
+
+export function interactionsOf(world: WorldState | null | undefined): SceneInteraction[] {
+  if (world?.interactions?.length) return world.interactions;
+  const target = pressTarget(world?.props);
+  return target ? [{ target, promptAr: "", onPress: { props: target === "sign" ? { sign: "open" } : {} } }] : [];
+}
+
+/** Persist the last frame when the next task starts; never rewind the queue or stock. */
+export function settledProps(change: WorldChange | null | undefined, base: MissionProps = {}): MissionProps {
+  return Object.assign({}, base, change?.props, ...beatsOf(change).map((beat) => beat.props));
+}
+
+/** The only inputs to a code binding are values returned by the Python worker. */
+export function resolveChange(change: WorldChange, values: Record<string, string>): WorldChange {
+  const resolve = (props: MissionProps = {}): MissionProps => Object.fromEntries(Object.entries(props).map(([key, value]) => {
+    if (typeof value !== "string" || !value.startsWith("= ")) return [key, value];
+    const actual = values[value.slice(2).trim()];
+    if (actual === undefined) return [key, value];
+    return [key, /^-?\d+$/.test(actual) ? Number(actual) : actual.replace(/^['"]|['"]$/g, "")];
+  }));
+  return { ...change, props: resolve(change.props), steps: change.steps?.map((beat) => ({ ...beat, props: resolve(beat.props) })) };
+}
+
+/**
+ * The hanging sign, if the mission has an opinion about it.
+ *
+ * This is the manifest's `write` action in its simplest form: a value out of the student's
+ * code becomes text on a surface in the shop. The first variable a child ever writes turns
+ * this from مقفول to مفتوح, which is the whole lesson in one line.
+ */
+export function shopOpen(props: MissionProps = {}): boolean | undefined {
+  const value = props.sign;
+  if (value === "open" || value === "مفتوح" || value === 1) return true;
+  if (value === "closed" || value === "مقفول" || value === 0) return false;
+  return undefined;
 }

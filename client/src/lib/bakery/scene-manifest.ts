@@ -105,8 +105,8 @@ export function sceneAssetUrls() {
  * All of it is inside the shop, and all of it is small. The new arch is a real room and
  * the old sizes read as doll furniture in it, so everything was cut down against the
  * baker: a sack of flour comes to his knee, the scale is a thing he can lift. The one
- * exception is the delivery scooter, which is parked out on the pavement at the far left
- * where it belongs, because it is the only prop that is not bakery equipment.
+ * exception is the delivery scooter, parked on the right pavement so the mission panel
+ * cannot cover its click target.
  *
  * Everything on the counter has its bottom edge at y=554, which is the worktop's painted
  * surface. Everything standing on the shop floor sits between y=640 and y=648, which is
@@ -138,7 +138,7 @@ export const worldProps = {
   "tray-stack": { x: 1255, y: 598, width: 76, height: 46 },
   "paper-bag-stack": { x: 1336, y: 612, width: 54, height: 29 },
   // --- outside, parked at the very left of the street
-  "scooter-crate": { x: 10, y: 700, width: 230, height: 121 },
+  "scooter-crate": { x: 1050, y: 690, width: 285, height: 150 },
 } as const satisfies Record<string, PropPlacement>;
 
 export type WorldPropName = keyof typeof worldProps;

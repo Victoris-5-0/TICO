@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 
 import { AnalysisDashboard } from "@/components/analysis/analysis-dashboard";
+import { MarketingHeader } from "@/components/marketing-chrome";
 import { isLocale } from "@/i18n/config";
 import { getCurrentUser } from "@/lib/auth";
 import { getAnalysis } from "@/services/analysis.service";
@@ -27,8 +28,22 @@ export default async function Page({ params }: { params: Promise<{ locale: strin
   const analysis = await getAnalysis(user.id);
 
   return (
-    <main className="shell">
-      <AnalysisDashboard analysis={analysis} locale={locale} />
-    </main>
+    <>
+      <MarketingHeader
+        locale={locale}
+        currentPage="progress"
+        user={{
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          avatarUrl: user.avatarUrl,
+          xp: user.xp,
+          streak: user.streak,
+        }}
+      />
+      <main className="shell">
+        <AnalysisDashboard analysis={analysis} locale={locale} />
+      </main>
+    </>
   );
 }

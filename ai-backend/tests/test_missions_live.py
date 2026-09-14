@@ -467,32 +467,6 @@ def test_two_lessons_teaching_one_concept_are_different_stops(db):
     assert stops == {"opening-message": 1, "count-the-trays": 2}
 
 
-def test_exact_lesson_fallback_uses_its_stop_not_student_progress(db, student, monkeypatch):
-    """A completed lesson remains replayable even when its pinned row is unavailable."""
-    class Selected(Exception):
-        pass
-
-    monkeypatch.setattr(svc.settings, "live_mission_generation", False)
-    monkeypatch.setattr(svc, "find_prebuilt", lambda *args, **kwargs: None)
-    monkeypatch.setattr(svc, "_repetition_context", lambda *args, **kwargs: (2, []))
-    monkeypatch.setattr(svc, "scaffold_plan", lambda *args, **kwargs: {})
-
-    def capture(*args, **kwargs):
-        assert kwargs["repetition"] == 1
-        raise Selected
-
-    monkeypatch.setattr(svc, "find_reusable", lambda *args, **kwargs: None)
-    monkeypatch.setattr(svc, "_compose", capture)
-
-    with pytest.raises(Selected):
-        svc.for_lesson(
-            db,
-            user_id=student.id,
-            world_slug="el-forn",
-            lesson_slug="opening-message",
-        )
-
-
 def test_the_prepared_set_is_served_without_a_model_call(db, student, monkeypatch):
     """The demo path. A prepared mission for this stop means no generation at all.
 

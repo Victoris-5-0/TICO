@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { bakeryReducer as reduce, initialBakeryState, CUSTOMER_IDS, customerOrderSize, isBusy, readyLoaves, type BakeryState, type Phase } from "./simulation";
+import { bakeryReducer as reduce, initialBakeryState, CUSTOMER_IDS, isBusy, readyLoaves, type BakeryState, type Phase } from "./simulation";
 
 function until(state: BakeryState, phase: Phase): BakeryState {
   for (let i = 0; i < 2000; i++) {
@@ -15,7 +15,7 @@ function assertInventory(state: BakeryState) {
   assert.equal(state.loaves.length, state.batches * 8);
   assert.equal(state.queue.length + state.served.length, 8);
   assert.deepEqual([...state.served, ...state.queue], CUSTOMER_IDS);
-  for (const id of state.served) assert.equal(state.loaves.filter((loaf) => loaf.owner === `customer:${id}`).length, customerOrderSize(state, id));
+  for (const id of state.served) assert.equal(state.loaves.filter((loaf) => loaf.owner === `customer:${id}`).length, 2);
 }
 test("starts with eight distinct customers, an empty tray and no automatic playback", () => {
   const state = initialBakeryState();

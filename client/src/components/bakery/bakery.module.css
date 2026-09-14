@@ -28,99 +28,6 @@
 .controls button { min-block-size: 64px; }
 .controls button.primary { background: #DB5B31; border-color: #DB5B31; color: #1F1820; }
 .controls small { display: block; font-size: 11px; margin-block-start: 4px; font-weight: 500; }
-.orderTicket {
-  grid-column: 1 / -1;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 12px 18px;
-  border: 1.5px solid #E5DDD5;
-  border-radius: 16px;
-  background: #FFFDF9;
-  box-shadow: 0 4px 14px #38282008;
-  transition: border-color 0.25s ease, background-color 0.25s ease;
-}
-.orderTicket[data-urgency="rush"] {
-  border-color: #D9383A;
-  background: #FFF7F7;
-}
-.orderTicket[data-urgency="hurry"] {
-  border-color: #E9992F;
-  background: #FFFDF5;
-}
-.orderTicket[data-urgency="served"] {
-  border-color: #2E7D32;
-  background: #F4FBF5;
-}
-.ticketCustomer {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-}
-.ticketEmote {
-  font-size: 26px;
-  line-height: 1;
-}
-.ticketInfo strong {
-  display: block;
-  font-size: 14px;
-  color: #1F1820;
-}
-.ticketInfo span {
-  font-size: 12px;
-  color: #716A72;
-}
-.ticketOrder {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-.ticketLoaves {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13.5px;
-  font-weight: 750;
-  color: #245E5C;
-  background: #DDF1F0;
-  padding: 6px 12px;
-  border-radius: 8px;
-  white-space: nowrap;
-}
-.ticketPatience {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 4px;
-}
-.ticketPatienceLabel {
-  font-size: 11px;
-  font-weight: 750;
-  color: #716A72;
-  white-space: nowrap;
-}
-.ticketPatienceBar {
-  inline-size: 110px;
-  block-size: 6px;
-  border-radius: 3px;
-  background: #E5DDD5;
-  overflow: hidden;
-}
-.ticketPatienceFill {
-  block-size: 100%;
-  border-radius: 3px;
-  background: #267977;
-  transform-origin: left;
-  transition: background-color 0.25s ease;
-}
-[dir="rtl"] .ticketPatienceFill { transform-origin: right; }
-.ticketPatienceFill[data-urgency="hurry"] {
-  background: #E9992F;
-}
-.ticketPatienceFill[data-urgency="rush"] {
-  background: #D9383A;
-}
 .note { margin: 0; padding: 0 24px 20px; color: #716A72; font-size: 12px; line-height: 1.7; }
 @media (max-width: 760px) {
   .topbar { padding: 8px 12px; gap: 8px; }
@@ -128,17 +35,9 @@
   .views button { padding: 8px; font-size: 11px; }
   .desk { grid-template-columns: 1fr; padding: 16px; gap: 16px; }
   .companion img { width: 38px; }
-  .orderTicket { flex-direction: column; align-items: stretch; gap: 10px; padding: 12px; }
-  .ticketOrder { justify-content: space-between; }
-  .ticketOrder { flex-wrap: wrap; gap: 10px; }
-  .ticketPatience { align-items: flex-start; }
-  .ticketPatienceBar { inline-size: 100%; }
   .controls { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
   .controls button:nth-child(3) { grid-column: 1 / -1; grid-row: 2; }
   .controls button { padding-inline: 8px; }
   .counterView { aspect-ratio: 1.25; }
   .note { padding-inline: 16px; }
-}
-@media (prefers-reduced-motion: reduce) {
-  .orderTicket, .ticketPatienceFill { transition: none; }
 }

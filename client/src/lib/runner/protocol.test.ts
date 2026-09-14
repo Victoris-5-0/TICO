@@ -53,7 +53,7 @@ test("a message from anywhere else is rejected", () => {
 
 test("limits match docs/07 and the Pyodide version is pinned", () => {
   // docs/07 "Limits" — these are the published numbers, not preferences.
-  assert.equal(LIMITS.runMs, 3_000);
+  assert.equal(LIMITS.runMs, 5_000);
   assert.equal(LIMITS.outputBytes, 65_536);
   assert.equal(LIMITS.sourceBytes, 64 * 1024);
   assert.equal(LIMITS.maxCases, 30);

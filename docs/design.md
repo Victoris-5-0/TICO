@@ -711,27 +711,6 @@ states; successful live authentication depends on the configured Better Auth and
 
 ## 21. About and Pricing
 
-### Interactive landing mascot (2026-09-13)
-
-The hero now uses a clean background derived from the supplied landing reference and
-an independently layered canonical TICO. `InteractiveTico` is a small client island;
-the landing page remains a Server Component. The generated transparent atlas contains
-head, torso/feet, relaxed arm, greeting arm, pupil, and antenna light. SVG viewports
-isolate the raster parts; Motion springs drive gaze, slight head tilt, body lean, and
-a bounded greeting. No 3D or video runtime is required.
-
-Fine pointers control gaze within the hero. Hovering or focusing its primary start
-link triggers a greeting. The mascot is also a native, localized button for touch and
-keyboard activation. Reduced motion disables tracking and replaces the greeting with
-a brief light-opacity change. Leaving the hero returns the pose to neutral; leaving
-the viewport, hiding the tab, or unmounting stops pending animation and timers. There
-is no idle loop. Pointer coordinates stay local to the component.
-
-Sources live in `client/assets/source/tico-hero/`; optimized runtime artwork lives in
-`client/public/assets/landing/tico/`. The exact built-in image-generation prompts and
-transparency correction are recorded in [tico-hero-prompts.json](tico-hero-prompts.json).
-The original flattened hero remains available as an asset rollback reference.
-
 `/[locale]/about` implements Figma `2:797`: three peach panels for About Us, Our
 Mission, and Our Vision, with the exported orange SVG icons and a 4 px orange lower
 edge. `marketing-pages.module.css` owns the layout; English uses Inter and Arabic

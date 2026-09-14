@@ -22,7 +22,8 @@ The source is executed once in fresh globals. Each case names an allowlisted fun
 
 ## Limits
 
-- Default wall-clock limit: 3,000 ms per run, including all cases.
+- Default wall-clock limit: 5,000 ms per run, including all cases. Run stays disabled
+  until the interpreter reports ready, so startup time is never blamed on learner code.
 - Output cap: 65,536 UTF-8 bytes across stdout and stderr.
 - Maximum source size: 64 KiB.
 - Maximum test cases: 30.

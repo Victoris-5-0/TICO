@@ -4,6 +4,9 @@
 **Rebased on `origin/main` @ `7efd27b`** — includes the lessons-from-AI-backend work, the
 worlds map, the landing bakery demo and the generation loading overlay.
 
+**For writing a mission, read [`15-mission-authoring.md`](15-mission-authoring.md) instead.**
+This document is the architecture and the longer plan; 15 is the recipe.
+
 This document exists so the work can be handed to a different agent mid-flight. It says
 what is true right now, what was already built, what the architecture has to become, and
 in what order. Read it before `AGENTS.md` §7 — that section describes the asset lane and
