@@ -872,3 +872,8 @@ html[lang="ar-EG"] .testsTitle { letter-spacing: 0; }
   .sceneSpeech { position: static; inline-size: auto; transform: none; margin: 10px 0 0; }
   .sceneSpeech::after { display: none; }
 }
+
+/* Her line while she is waiting on a run that did not pass. Warmer than the neutral
+   bubble and no more than that: she is in a hurry, not angry at the child. */
+.sceneSpeechUrgent { border-color: #B9401E; }
+.sceneSpeechUrgent > span { color: #B9401E; }

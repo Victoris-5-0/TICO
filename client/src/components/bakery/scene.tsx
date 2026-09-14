@@ -55,7 +55,19 @@ function Fixture({ name, lit, onPick, pickLabel }: { name: keyof typeof fixtures
  */
 const WALL_SLICE = { x: 20, width: 90 };
 
-export function BakeryScene({ state, reducedMotion, counterView, label, highlight, extendLeft = 0, loose, cast, pickable, onPick, pickLabel, sign, sacks, preview }: { state: BakeryState; reducedMotion: boolean; counterView: boolean; label: string; highlight?: readonly string[]; extendLeft?: number; loose?: readonly WorldPropName[]; cast?: readonly CustomerId[]; pickable?: string; onPick?: (name: string) => void; pickLabel?: (name: string) => string;
+/** The cross frame is 128x333; this keeps that ratio at roughly the queue's own height. */
+const UPSET = { width: 100, height: 260 };
+
+export function BakeryScene({ state, reducedMotion, counterView, label, highlight, extendLeft = 0, loose, cast, pickable, onPick, pickLabel, upset = false, sign, sacks, preview }: { state: BakeryState; reducedMotion: boolean; counterView: boolean; label: string; highlight?: readonly string[]; extendLeft?: number; loose?: readonly WorldPropName[]; cast?: readonly CustomerId[]; pickable?: string; onPick?: (name: string) => void; pickLabel?: (name: string) => string;
+  /**
+   * The customer at the head of the queue is out of patience.
+   *
+   * Drawn as a single front-facing frame rather than her walk-cycle sprite, because that
+   * is the only artwork of her that shows a face at all. It is a different style from the
+   * rest of the cast — thick outline, no walk — so it is only ever on screen for the
+   * moment a wrong answer is being explained, never as a scene actor.
+   */
+  upset?: boolean;
   /** The hanging shop sign. Omit it and no sign is drawn at all. */
   sign?: { open: boolean; label: string };
   /**
@@ -209,11 +221,15 @@ export function BakeryScene({ state, reducedMotion, counterView, label, highligh
       // Bread already handed over: she keeps holding it while she thanks him and leaves.
       const carrying = state.loaves.some((loaf) => loaf.owner === `customer:${id}`);
       const frame = leaving || arriving || state.phase === "advancing" ? walking : receiving ? 5 : 0;
+      // Out of patience: her one drawn expression, standing where she already stands.
+      const cross = upset && index === 0 && !leaving && !arriving;
       const hand = handAt(actor, frame, scene.queue.actorSize);
       return <motion.g key={id} transform={`translate(${pos.x} ${pos.y})`} data-actor={id}>
         <ellipse cy={-2} rx={33} ry={7} fill="#382820" opacity=".2" />
         {index === 0 && !leaving && !arriving && <ellipse cy={0} rx={40} ry={9} fill="none" stroke="#DB5B31" strokeWidth={3} />}
-        <Sprite actor={actor} frame={frame} size={scene.queue.actorSize} />
+        {cross
+          ? <Prop name="angry-mariam" href={cutFrame("angry-mariam")} x={-UPSET.width / 2} y={-UPSET.height} width={UPSET.width} height={UPSET.height} />
+          : <Sprite actor={actor} frame={frame} size={scene.queue.actorSize} />}
         {(receiving || leaving || carrying) && <>
           <Prop name="bag" x={hand.x - 20} y={hand.y - 4} width={46} height={52} />
           {state.loaves.filter((loaf) => loaf.owner === `customer:${id}`).map((loaf, i) => <Prop key={loaf.id} loaf={loaf} name="loaf" x={hand.x - 15 + i * 14} y={hand.y - 5} width={24} height={11} />)}
@@ -246,6 +262,15 @@ export function BakeryScene({ state, reducedMotion, counterView, label, highligh
  * for an animation it does not recognise.
  */
 function LooseProps({ names, layer, isLit, pick, pickLabel }: { names?: readonly string[]; layer: "back" | "front"; isLit: (name: string) => boolean; pick: (name: string) => (() => void) | undefined; pickLabel?: (name: string) => string;
+  /**
+   * The customer at the head of the queue is out of patience.
+   *
+   * Drawn as a single front-facing frame rather than her walk-cycle sprite, because that
+   * is the only artwork of her that shows a face at all. It is a different style from the
+   * rest of the cast — thick outline, no walk — so it is only ever on screen for the
+   * moment a wrong answer is being explained, never as a scene actor.
+   */
+  upset?: boolean;
   /** The hanging shop sign. Omit it and no sign is drawn at all. */
   sign?: { open: boolean; label: string };
   /**

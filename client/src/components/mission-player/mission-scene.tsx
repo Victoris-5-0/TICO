@@ -4,8 +4,8 @@ import { useAnimationFrame, useReducedMotion } from "motion/react";
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 
 import { BakeryScene } from "@/components/bakery/scene";
-import { flourSacks, missionSceneDuration, missionSceneState, shopOpen, type MissionProps, type WorldBeat } from "@/lib/bakery/mission-scene";
-import { propAssetUrls, sceneAssetUrls, worldPropNames } from "@/lib/bakery/scene-manifest";
+import { flourSacks, missionSceneDuration, missionSceneState, queueLength, shopOpen, type MissionProps, type WorldBeat } from "@/lib/bakery/mission-scene";
+import { bakeryScene, frame, propAssetUrls, sceneAssetUrls, worldPropNames } from "@/lib/bakery/scene-manifest";
 import type { Locale } from "@/i18n/config";
 
 import styles from "./mission-player.module.css";
@@ -49,6 +49,11 @@ export type MissionSceneProps = {
   speech?: { name: string; line: string } | null;
   /** Where speech sits, in the scene's own coordinates converted by the caller. */
   speechAt?: { left: string; bottom: string };
+  /**
+   * The customer is waiting and the code is not right yet. She shows it, and says so,
+   * for as long as that is true.
+   */
+  upset?: { line: string; name: string } | null;
   pickable?: string;
   onPick?: (name: string) => void;
   pickLabel?: (name: string) => string;
@@ -62,7 +67,7 @@ export type MissionSceneProps = {
  * when the phase arrives or Run is pressed, then holds on its last frame. The scene
  * never autoplays on page load, which `docs/design.md` section 11 requires.
  */
-export function MissionScene({ locale, props, animate, playToken = 0, caption, highlight, extendLeft = 0, beats, speech = null, speechAt, pickable, onPick, pickLabel, label }: MissionSceneProps) {
+export function MissionScene({ locale, props, animate, playToken = 0, caption, highlight, extendLeft = 0, beats, speech = null, speechAt, upset = null, pickable, onPick, pickLabel, label }: MissionSceneProps) {
   const ar = locale === "ar-EG";
   const motionPreference = useReducedMotion();
   // Match the server markup first, then apply the browser preference before playback.
@@ -78,7 +83,7 @@ export function MissionScene({ locale, props, animate, playToken = 0, caption, h
   useEffect(() => {
     let cancelled = false;
     Promise.all(
-      [...sceneAssetUrls(), ...propAssetUrls(worldPropNames)].map(
+      [...sceneAssetUrls(), ...propAssetUrls(worldPropNames), frame("angry-mariam")].map(
         (src) =>
           new Promise<void>((resolve, reject) => {
             const img = new window.Image();
@@ -158,6 +163,12 @@ export function MissionScene({ locale, props, animate, playToken = 0, caption, h
   const shown = { ...props, ...current.props };
   const state = missionSceneState({ props: shown, animate: current.animate, progress });
   const open = shopOpen(shown);
+  // Only when she is actually standing there. Nobody is impatient in an empty shop.
+  const waiting = Boolean(upset) && queueLength(shown) > 0;
+  const atWorld = (x: number, y: number) => ({
+    left: `${((x + extendLeft) / (1600 + extendLeft)) * 100}%`,
+    bottom: `${((900 - y) / 900) * 100}%`,
+  });
   const saying = current.lineAr ? { name: current.speakerNameAr ?? "", line: current.lineAr } : speech;
 
   return (
@@ -176,16 +187,26 @@ export function MissionScene({ locale, props, animate, playToken = 0, caption, h
           loose={worldPropNames}
           sacks={flourSacks(shown)}
           sign={open === undefined ? undefined : { open, label: open ? (ar ? "مفتوح" : "OPEN") : (ar ? "مقفول" : "CLOSED") }}
+          upset={waiting}
           pickable={pickable}
           onPick={onPick}
           pickLabel={pickLabel}
         />
-        {saying?.line && (
+        {waiting && upset ? (
+          <div
+            className={`${styles.sceneSpeech} ${styles.sceneSpeechUrgent}`}
+            style={atWorld(bakeryScene.queue.first.x, 548)}
+            dir={ar ? "rtl" : "ltr"}
+          >
+            <span>{upset.name}</span>
+            <p aria-live="assertive">{upset.line}</p>
+          </div>
+        ) : saying?.line ? (
           <div className={styles.sceneSpeech} style={speechAt} dir={ar ? "rtl" : "ltr"}>
             {saying.name && <span>{saying.name}</span>}
             <p aria-live="polite">{saying.line}</p>
           </div>
-        )}
+        ) : null}
         {assets !== "ready" && (
           <div className={styles.sceneLoading}>
             {assets === "loading"

@@ -85,6 +85,15 @@ export function MissionPlayer({ locale, mission, worldSlug, worldTitle, lessonId
   const [playToken, setPlayToken] = useState(0);
   const [ran, setRan] = useState<Record<string, boolean>>({});
   const [change, setChange] = useState<WorldChange | null>(null);
+  /**
+   * A run that did not pass, while a customer is standing at the counter waiting for it.
+   *
+   * She shows it and says so until the next run. Impatience rather than anger at the
+   * child: `el_forn.yaml` documents `puzzled`/`pleased` and says never anger, and a
+   * customer furious at a ten-year-old's first attempt punishes the attempt. Being in a
+   * hurry is about her morning, not about them, and it clears the moment they run again.
+   */
+  const [missed, setMissed] = useState(false);
   const [narrow, setNarrow] = useState(false);
 
   const sessionId = useRef<string | null>(null);
@@ -133,6 +142,7 @@ export function MissionPlayer({ locale, mission, worldSlug, worldTitle, lessonId
     const announces = ORDER[next] === "remix" ? mission.phases.remix.worldChange : null;
     setChange(announces ?? null);
     setPlayToken((n) => n + 1);
+    setMissed(false);
     setHighlight([]);
     setStep(next);
   }, [step, mission.phases.remix.worldChange]);
@@ -146,10 +156,12 @@ export function MissionPlayer({ locale, mission, worldSlug, worldTitle, lessonId
   /** Run the student's code, and record the attempt. */
   const runCode = useCallback(
     async (source: string, tests: MissionTest[]): Promise<RunResult> => {
+      setMissed(false);
       const result = await runner.run({
         source,
         cases: tests.map((t) => ({ call: t.call, expected: t.expected, hidden: t.hidden })),
       });
+      setMissed(!result.allPassed);
       telemetry.reportSubmission(sessionId.current, {
         code: source,
         status: result.allPassed ? "PASSED" : result.outcome === "TIMEOUT" ? "TIMEOUT"
@@ -299,6 +311,7 @@ export function MissionPlayer({ locale, mission, worldSlug, worldTitle, lessonId
               onPick={() => setPressed(true)}
               pickLabel={() => (ar ? "اضغط على اليافطة" : "Press the sign")}
               beats={beats}
+              upset={missed ? { name: ar ? "مدام مريم" : "Madam Mariam", line: ar ? "بسرعة عشان مستعجلة" : "Quickly please, I'm in a hurry" } : null}
               speech={sceneLine ? { name: speakerName, line: sceneLine } : null}
               speechAt={speechAt}
               extendLeft={ext}
