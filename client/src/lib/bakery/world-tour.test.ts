@@ -171,11 +171,11 @@ test("nothing is parked outside the shop except the delivery scooter", () => {
   // The instruction on the 2026-09-13 background was explicit: everything belongs to the
   // bakery, so it goes inside the arch. The arch runs from x=210 to x=1390 and its floor
   // from y=640 to y=690; the scooter is the one thing that is not bakery equipment, and it
-  // is parked at the very left of the street.
+  // is parked on the right, clear of the mission panel on the left.
   for (const name of worldPropNames) {
     const at = worldProps[name];
     if (name === "scooter-crate") {
-      assert.ok(at.x < 250, "the scooter is parked at the far left of the street");
+      assert.ok(at.x >= 1000 && at.x + at.width <= 1600, "the scooter stays visible to the right of the mission panel");
       assert.ok(at.y >= 690, "the scooter stands on the pavement, not in the shop");
       continue;
     }

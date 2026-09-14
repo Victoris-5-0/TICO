@@ -5,7 +5,7 @@
  * except the two semantic ones below, which carry meaning the brand colours cannot.
  */
 
-.page { display: grid; gap: 28px; padding-block: 32px 72px; }
+.page { display: grid; gap: 28px; padding-block: clamp(112px, 10vw, 132px) 72px; }
 
 /* ------------------------------------------------------------------- masthead */
 .head { display: flex; align-items: flex-end; gap: 24px; flex-wrap: wrap; }

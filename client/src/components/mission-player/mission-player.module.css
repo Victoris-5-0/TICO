@@ -253,7 +253,11 @@ html[lang="ar-EG"] .world { letter-spacing: 0; }
  * is mid-sentence and the furniture moves. So the width is fixed at one that holds a
  * 45-character signature at the editor's size, and long lines scroll inside the editor.
  */
-.panelDockWide { inline-size: var(--panel-w); }
+.panelDockWide {
+  inline-size: var(--panel-w);
+  /* Leave room for the speaker who rises above the coding card. */
+  block-size: calc(100% - var(--scene-band) - clamp(88px, 9vw, 124px));
+}
 
 @media (prefers-reduced-motion: reduce) { .panelDock { transition: none; } }
 
@@ -286,10 +290,13 @@ html[lang="ar-EG"] .world { letter-spacing: 0; }
   overflow-y: auto;
   overscroll-behavior: contain;
   padding-block-end: 6px;
+  scrollbar-color: rgba(255, 255, 255, 0.42) rgba(0, 0, 0, 0.18);
+  scrollbar-width: thin;
 }
 
-.panelBody::-webkit-scrollbar { width: 8px; }
-.panelBody::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.16); border-radius: 8px; }
+.panelBody::-webkit-scrollbar { width: 10px; }
+.panelBody::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.18); border-radius: 10px; }
+.panelBody::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.42); border: 2px solid transparent; border-radius: 10px; background-clip: padding-box; }
 
 /* Thrown across the whole screen, not just the card.
    `fixed` inside a <dialog> still paints in the top layer, so this sits over the backdrop
@@ -674,17 +681,17 @@ html[lang="ar-EG"] .testsTitle { letter-spacing: 0; }
   display: flex;
   align-items: baseline;
   gap: 7px;
-  padding: 7px 12px;
-  border: 1px solid var(--glass-line);
+  padding: 9px 14px;
+  border: 2px solid rgba(255, 255, 255, 0.7);
   border-radius: 11px;
-  background: rgba(26, 20, 24, 0.72);
+  background: rgba(20, 15, 18, 0.92);
   backdrop-filter: blur(10px);
   color: var(--on-glass);
   transition: border-color 0.2s ease, background 0.2s ease;
 }
 
-.readouts dt { color: var(--on-glass-muted); font-size: 0.72rem; font-weight: 800; }
-.readouts dd { margin: 0; font-weight: 900; font-variant-numeric: tabular-nums; }
+.readouts dt { color: #fff; font-size: 0.78rem; font-weight: 900; }
+.readouts dd { margin: 0; color: #ffd58f; font-size: 1.08rem; font-weight: 950; font-variant-numeric: tabular-nums; text-shadow: 0 1px 2px #000; }
 
 .readoutLit {
   border-color: var(--gold);
@@ -812,6 +819,7 @@ html[lang="ar-EG"] .testsTitle { letter-spacing: 0; }
     inset: auto;
     left: auto;
     inline-size: auto;
+    block-size: auto;
     max-block-size: none;
     margin: 0 12px 14px;
   }

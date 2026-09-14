@@ -59,6 +59,7 @@ export type MissionSceneProps = {
   onPick?: (name: string) => void;
   pickLabel?: (name: string) => string;
   label: string;
+  onSettled?: () => void;
 };
 
 /**
@@ -68,7 +69,7 @@ export type MissionSceneProps = {
  * when the phase arrives or Run is pressed, then holds on its last frame. The scene
  * never autoplays on page load, which `docs/design.md` section 11 requires.
  */
-export function MissionScene({ locale, props, animate, playToken = 0, caption, highlight, extendLeft = 0, beats, speech = null, speechAt, upset = null, pickable, onPick, pickLabel, label }: MissionSceneProps) {
+export function MissionScene({ locale, props, animate, playToken = 0, caption, highlight, extendLeft = 0, beats, speech = null, speechAt, upset = null, pickable, onPick, pickLabel, label, onSettled }: MissionSceneProps) {
   const ar = locale === "ar-EG";
   const motionPreference = useReducedMotion();
   // Match the server markup first, then apply the browser preference before playback.
@@ -79,12 +80,12 @@ export function MissionScene({ locale, props, animate, playToken = 0, caption, h
   const [progress, setProgress] = useState(1);
   // The run currently playing. Kept in a ref and compared inside the frame callback, so
   // starting a new animation never needs a state write during render or in an effect.
-  const run = useRef({ id: "", beat: 0, elapsed: 0, lastFrame: null as number | null });
+  const run = useRef({ id: "", beat: 0, elapsed: 0, finished: false, lastFrame: null as number | null });
 
   useEffect(() => {
     let cancelled = false;
     Promise.all(
-      [...sceneAssetUrls(), ...propAssetUrls(worldPropNames), ...CUSTOMER_IDS.map((c) => frame(`angry-${c}`))].map(
+      [...sceneAssetUrls(), ...propAssetUrls(worldPropNames), frame("delivery-load"), ...CUSTOMER_IDS.map((c) => frame(`angry-${c}`))].map(
         (src) =>
           new Promise<void>((resolve, reject) => {
             const img = new window.Image();
@@ -125,13 +126,16 @@ export function MissionScene({ locale, props, animate, playToken = 0, caption, h
         // never handed over, paid for or carried out of the shop.
         state.beat = reduced ? timeline.length - 1 : 0;
         state.elapsed = 0;
+        state.finished = false;
         state.lastFrame = null;
         setBeat(state.beat);
         setProgress(reduced ? 1 : 0);
+        if (reduced) { state.finished = true; onSettled?.(); }
         return;
       }
 
-      if (reduced || assets !== "ready") return;
+      if (reduced || state.finished || assets !== "ready") return;
+      if (document.hidden) { state.lastFrame = null; return; }
 
       const step = timeline[Math.min(state.beat, timeline.length - 1)];
       const span = missionSceneDuration(step.animate);
@@ -143,7 +147,7 @@ export function MissionScene({ locale, props, animate, playToken = 0, caption, h
       // next one replaces it.
       const hold = span || STILL_BEAT_MS;
       if (state.elapsed >= hold) {
-        if (state.beat >= timeline.length - 1) return;
+        if (state.beat >= timeline.length - 1) { state.finished = true; onSettled?.(); return; }
         state.beat += 1;
         state.elapsed = 0;
         setBeat(state.beat);
@@ -156,7 +160,7 @@ export function MissionScene({ locale, props, animate, playToken = 0, caption, h
       state.elapsed = Math.min(hold, state.elapsed + Math.min(time - previous, 1000));
       setProgress(span ? state.elapsed / span : 1);
     },
-    [timeline, playToken, reduced, assets],
+    [timeline, playToken, reduced, assets, onSettled],
   );
 
   useAnimationFrame(advance);
@@ -187,6 +191,7 @@ export function MissionScene({ locale, props, animate, playToken = 0, caption, h
           extendLeft={extendLeft}
           loose={worldPropNames}
           sacks={flourSacks(shown)}
+          delivery={shown.delivery === "loaded" || shown.delivery === "sent" || shown.delivery === "parked" ? shown.delivery : undefined}
           sign={open === undefined ? undefined : { open, label: open ? (ar ? "مفتوح" : "OPEN") : (ar ? "مقفول" : "CLOSED") }}
           upset={waiting}
           pickable={pickable}

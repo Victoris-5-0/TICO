@@ -28,7 +28,7 @@ export const WORKER_URL = "/runner/python-worker.js";
 /** docs/07 "Limits". Enforced in the worker, and again in the client before sending. */
 export const LIMITS = {
   /** Wall clock for one run, covering every case in it. */
-  runMs: 3_000,
+  runMs: 5_000,
   /** Bytes of UTF-8 across stdout and stderr. */
   outputBytes: 65_536,
   /** Bytes of source. */

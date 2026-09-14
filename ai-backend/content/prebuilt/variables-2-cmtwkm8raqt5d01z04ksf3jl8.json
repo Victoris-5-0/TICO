@@ -14,16 +14,88 @@
    "encounter": {
     "speaker": "hassan",
     "speakerNameAr": "عم حسن",
-    "lineAr": "رجعنا تاني. مدام مريم خدت طلبها وفضل في الصينية شوية عيش. قبل ما الزحمة تيجي لازم نعرف فاضل كام — اضغط على الصينية.",
+    "lineAr": "مريم خدت طلبها وفضل تلاتة. هدى وصلت، وعمر جاي وراها. اضغط على الصينية عشان نسجّل المخزون.",
     "world": {
      "props": {
       "sign": "open",
       "oven": "cold",
-      "queue": 0,
-      "flour-sack": 3,
       "loaf": 3,
+      "flour-sack": 3,
+      "total_price": 25,
+      "queue": 1,
+      "customer": "hoda",
       "press": "tray"
-     }
+     },
+     "interactions": [
+      {
+       "target": "tray",
+       "promptAr": "اضغط على الصينية عشان تسجّل الأرغفة المتبقية.",
+       "onPress": {
+        "animate": null,
+        "actions": [],
+        "props": {
+         "sign": "open",
+         "oven": "cold",
+         "loaf": 3,
+         "flour-sack": 3,
+         "total_price": 25,
+         "queue": 1,
+         "customer": "hoda",
+         "stock_count": 3
+        },
+        "captionAr": "اتسجّل تلات أرغفة على لوحة المخزون.",
+        "steps": []
+       }
+      },
+      {
+       "target": "ticket-stand",
+       "promptAr": "اضغط على حامل الدور عشان يدخل عمر ورا هدى.",
+       "onPress": {
+        "animate": null,
+        "actions": [],
+        "props": {
+         "sign": "open",
+         "oven": "cold",
+         "loaf": 3,
+         "flour-sack": 3,
+         "total_price": 25,
+         "queue": 2,
+         "customer": "hoda,omar"
+        },
+        "captionAr": "عمر دخل والطابور بقى اتنين.",
+        "steps": [
+         {
+          "animate": "arriving",
+          "props": {
+           "sign": "open",
+           "oven": "cold",
+           "loaf": 3,
+           "flour-sack": 3,
+           "total_price": 25,
+           "queue": 2,
+           "customer": "hoda,omar"
+          },
+          "speakerNameAr": "عم حسن",
+          "lineAr": "عمر بيلحق دوره."
+         },
+         {
+          "animate": null,
+          "props": {
+           "sign": "open",
+           "oven": "cold",
+           "loaf": 3,
+           "flour-sack": 3,
+           "total_price": 25,
+           "queue": 2,
+           "customer": "hoda,omar"
+          },
+          "speakerNameAr": "عم حسن",
+          "lineAr": "هدى الأول، وعمر بعدها."
+         }
+        ]
+       }
+      }
+     ]
     }
    },
    "explore": {
@@ -91,31 +163,164 @@
      "props": {
       "sign": "open",
       "oven": "cold",
-      "queue": 0,
+      "loaf": 3,
       "flour-sack": 3,
-      "loaf": 3
+      "total_price": 25,
+      "queue": 2,
+      "customer": "hoda,omar",
+      "stock_count": 3
      },
-     "captionAr": "تلات أرغفة على الصينية."
+     "captionAr": "المخزون المتبقي تلاتة. هدى طالبة التلاتة.",
+     "steps": []
     }
    },
    "guided": {
     "steps": [
      {
-      "code": "baked = 8\nsold = 5\nloaves_left = baked - ___",
+      "code": "baked = 8\nsold = 5\nloaves_left = ___",
       "blanks": [
-       "sold"
+       "baked - sold"
       ],
-      "promptAr": "كمّل الحسبة: الفاضل هو اللي خبزناه ناقص إيه؟",
-      "hintAr": "مش الرقم ٥ — الاسم اللي سمّيناه بيه فوق."
+      "promptAr": "عندنا متغيّر اسمه loaves_left. اكتب له عملية baked ناقص sold عشان تحدّث لوحة المخزون.",
+      "hintAr": "اطرح اللي اتباع من اللي اتخبز.",
+      "tests": [
+       {
+        "call": "loaves_left",
+        "expected": "3",
+        "hidden": false,
+        "name": null
+       }
+      ],
+      "onRun": {
+       "animate": null,
+       "actions": [],
+       "props": {
+        "sign": "open",
+        "oven": "cold",
+        "loaf": 3,
+        "flour-sack": 3,
+        "total_price": 25,
+        "queue": 2,
+        "customer": "hoda,omar",
+        "stock_count": "= loaves_left"
+       },
+       "captionAr": "لوحة المخزون بتعرض نتيجة حسابك.",
+       "steps": []
+      },
+      "onEnter": null
+     },
+     {
+      "code": "baked = 8\nsold = 5\nloaves_left = baked - sold\norder = 3\nremaining = ___",
+      "blanks": [
+       "loaves_left - order"
+      ],
+      "promptAr": "هدى طلبت تلاتة. اكتب متغيّر اسمه remaining، وخزّن فيه loaves_left ناقص order.",
+      "hintAr": "اطرح الطلب من المخزون اللي حسبته.",
+      "tests": [
+       {
+        "call": "loaves_left",
+        "expected": "3",
+        "hidden": false,
+        "name": null
+       },
+       {
+        "call": "remaining",
+        "expected": "0",
+        "hidden": false,
+        "name": null
+       }
+      ],
+      "onRun": {
+       "animate": null,
+       "actions": [],
+       "props": {
+        "sign": "open",
+        "oven": "cold",
+        "loaf": 0,
+        "flour-sack": 3,
+        "total_price": 40,
+        "queue": 1,
+        "customer": "omar"
+       },
+       "captionAr": "هدى خدت طلبها. عمر مستني والصينية فضيت.",
+       "steps": [
+        {
+         "animate": "handover",
+         "props": {
+          "sign": "open",
+          "oven": "cold",
+          "loaf": 0,
+          "flour-sack": 3,
+          "total_price": 25,
+          "queue": 2,
+          "customer": "hoda,omar",
+          "give": 3
+         },
+         "speakerNameAr": "عم حسن",
+         "lineAr": "اتفضل طلبك يا هدى."
+        },
+        {
+         "animate": "paying",
+         "props": {
+          "sign": "open",
+          "oven": "cold",
+          "loaf": 0,
+          "flour-sack": 3,
+          "total_price": 40,
+          "queue": 2,
+          "customer": "hoda,omar",
+          "give": 3
+         },
+         "speakerNameAr": "عم حسن",
+         "lineAr": "الطلب اتدفع واتسجّل في الدرج."
+        },
+        {
+         "animate": "exiting",
+         "props": {
+          "sign": "open",
+          "oven": "cold",
+          "loaf": 0,
+          "flour-sack": 3,
+          "total_price": 40,
+          "queue": 2,
+          "customer": "hoda,omar",
+          "give": 3
+         },
+         "speakerNameAr": "عم حسن",
+         "lineAr": "شكراً، واللي بعده يتفضل."
+        },
+        {
+         "animate": null,
+         "props": {
+          "sign": "open",
+          "oven": "cold",
+          "loaf": 0,
+          "flour-sack": 3,
+          "total_price": 40,
+          "queue": 1,
+          "customer": "omar"
+         },
+         "speakerNameAr": "عم حسن",
+         "lineAr": "الطابور اتحرك والعيش اللي فاضل واضح."
+        }
+       ]
+      },
+      "onEnter": null
      }
     ],
-    "solutionCode": "baked = 8\nsold = 5\nloaves_left = baked - sold",
+    "solutionCode": "baked = 8\nsold = 5\nloaves_left = baked - sold\norder = 3\nremaining = loaves_left - order",
     "tests": [
      {
       "call": "loaves_left",
       "expected": "3",
-      "name": null,
-      "hidden": false
+      "hidden": false,
+      "name": null
+     },
+     {
+      "call": "remaining",
+      "expected": "0",
+      "hidden": false,
+      "name": null
      }
     ],
     "onRun": {
@@ -124,175 +329,266 @@
      "props": {
       "sign": "open",
       "oven": "cold",
-      "queue": 0,
+      "loaf": 0,
       "flour-sack": 3,
-      "loaf": 3
+      "total_price": 40,
+      "queue": 1,
+      "customer": "omar"
      },
-     "captionAr": "تلات أرغفة. الحسبة مظبوطة."
+     "captionAr": "هدى خدت طلبها. عمر مستني والصينية فضيت.",
+     "steps": [
+      {
+       "animate": "handover",
+       "props": {
+        "sign": "open",
+        "oven": "cold",
+        "loaf": 0,
+        "flour-sack": 3,
+        "total_price": 25,
+        "queue": 2,
+        "customer": "hoda,omar",
+        "give": 3
+       },
+       "speakerNameAr": "عم حسن",
+       "lineAr": "اتفضل طلبك يا هدى."
+      },
+      {
+       "animate": "paying",
+       "props": {
+        "sign": "open",
+        "oven": "cold",
+        "loaf": 0,
+        "flour-sack": 3,
+        "total_price": 40,
+        "queue": 2,
+        "customer": "hoda,omar",
+        "give": 3
+       },
+       "speakerNameAr": "عم حسن",
+       "lineAr": "الطلب اتدفع واتسجّل في الدرج."
+      },
+      {
+       "animate": "exiting",
+       "props": {
+        "sign": "open",
+        "oven": "cold",
+        "loaf": 0,
+        "flour-sack": 3,
+        "total_price": 40,
+        "queue": 2,
+        "customer": "hoda,omar",
+        "give": 3
+       },
+       "speakerNameAr": "عم حسن",
+       "lineAr": "شكراً، واللي بعده يتفضل."
+      },
+      {
+       "animate": null,
+       "props": {
+        "sign": "open",
+        "oven": "cold",
+        "loaf": 0,
+        "flour-sack": 3,
+        "total_price": 40,
+        "queue": 1,
+        "customer": "omar"
+       },
+       "speakerNameAr": "عم حسن",
+       "lineAr": "الطابور اتحرك والعيش اللي فاضل واضح."
+      }
+     ]
     }
    },
    "remix": {
-    "twistAr": "الست هدى واصلة وعاوزة ستة، والصينية فيها تلاتة بس. عم حسن هيخبز دفعة جديدة.",
-    "newRequirementAr": "سيب اللي كتبته زي ما هو، وزوّد متغيّرين: fresh بالدفعة الجديدة (تمنية)، وtotal بمجموع الفاضل والجديد.",
+    "twistAr": "أمينة دخلت ورا عمر، ووصل طلب توصيل بخمسة أرغفة. لازم نخبز قبل ما نحمّل السكوتر.",
+    "newRequirementAr": "اكتب متغيّر اسمه fresh وقيمته 8، ومتغيّر اسمه delivery_order وقيمته 5. بعدهم اكتب متغيّر اسمه delivery_left واحسب فيه الفرق. الكود هيخبز ويحمّل الطلب ويترك الباقي للطابور.",
     "worldChange": {
-     "animate": "arriving",
+     "animate": null,
      "actions": [],
      "props": {
       "sign": "open",
       "oven": "cold",
-      "queue": 1,
-      "customer": "hoda",
+      "loaf": 0,
       "flour-sack": 3,
-      "loaf": 3
+      "total_price": 40,
+      "queue": 2,
+      "customer": "omar,amina",
+      "delivery": "parked"
      },
-     "captionAr": null,
+     "captionAr": "طلب توصيل خمسة، والطابور بقى اتنين.",
      "steps": [
       {
        "animate": "arriving",
        "props": {
         "sign": "open",
         "oven": "cold",
-        "queue": 1,
-        "customer": "hoda",
+        "loaf": 0,
         "flour-sack": 3,
-        "loaf": 3
+        "total_price": 40,
+        "queue": 2,
+        "customer": "omar,amina",
+        "delivery": "parked"
        },
        "speakerNameAr": "عم حسن",
-       "lineAr": "أهي الست هدى. صباح الخير يا أم محمد!"
+       "lineAr": "أمينة دخلت بعد عمر."
       },
       {
        "animate": null,
        "props": {
         "sign": "open",
         "oven": "cold",
-        "queue": 1,
-        "customer": "hoda",
+        "loaf": 0,
         "flour-sack": 3,
-        "loaf": 3
+        "total_price": 40,
+        "queue": 2,
+        "customer": "omar,amina",
+        "delivery": "parked"
        },
-       "speakerNameAr": "الست هدى",
-       "lineAr": "صباح النور. عاوزة ستة النهاردة، عندي عزومة."
+       "speakerNameAr": "أمينة",
+       "lineAr": "أنا مستنية دوري."
       },
       {
        "animate": null,
        "props": {
         "sign": "open",
         "oven": "cold",
-        "queue": 1,
-        "customer": "hoda",
+        "loaf": 0,
         "flour-sack": 3,
-        "loaf": 3
+        "total_price": 40,
+        "queue": 2,
+        "customer": "omar,amina",
+        "delivery": "parked"
        },
-       "speakerNameAr": "تيكو",
-       "lineAr": "بس الصينية فيها تلاتة بس. لازم دفعة جديدة."
-      },
+       "speakerNameAr": "عم حسن",
+       "lineAr": "السكوتر مستني خمسة، ومش هنحمّله قبل ما نحسب."
+      }
+     ]
+    },
+    "startingCode": "baked = 8\nsold = 5\nloaves_left = baked - sold\norder = 3\nremaining = loaves_left - order",
+    "solutionCode": "baked = 8\nsold = 5\nloaves_left = baked - sold\norder = 3\nremaining = loaves_left - order\nfresh = 8\ndelivery_order = 5\ndelivery_left = fresh - delivery_order",
+    "tests": [
+     {
+      "call": "loaves_left",
+      "expected": "3",
+      "hidden": false,
+      "name": null
+     },
+     {
+      "call": "remaining",
+      "expected": "0",
+      "hidden": false,
+      "name": null
+     },
+     {
+      "call": "fresh",
+      "expected": "8",
+      "hidden": false,
+      "name": null
+     },
+     {
+      "call": "delivery_order",
+      "expected": "5",
+      "hidden": false,
+      "name": null
+     },
+     {
+      "call": "delivery_left",
+      "expected": "3",
+      "hidden": false,
+      "name": null
+     }
+    ],
+    "onRun": {
+     "animate": null,
+     "actions": [],
+     "props": {
+      "sign": "open",
+      "oven": "cold",
+      "loaf": 3,
+      "flour-sack": 2,
+      "total_price": 65,
+      "queue": 2,
+      "customer": "omar,amina",
+      "delivery": "loaded",
+      "delivery_loaves": 5
+     },
+     "captionAr": "اتحمّل طلب التوصيل بخمسة وفاضل تلاتة للطابور.",
+     "steps": [
       {
        "animate": "loading",
        "props": {
         "sign": "open",
         "oven": "lit",
-        "queue": 1,
-        "customer": "hoda",
+        "loaf": 8,
         "flour-sack": 3,
-        "loaf": 0
+        "total_price": 40,
+        "queue": 2,
+        "customer": "omar,amina",
+        "delivery": "parked"
        },
        "speakerNameAr": "عم حسن",
-       "lineAr": "حاضر. العجين داخل."
+       "lineAr": "العجين دخل الفرن."
+      },
+      {
+       "animate": "baking",
+       "props": {
+        "sign": "open",
+        "oven": "lit",
+        "loaf": 8,
+        "flour-sack": 3,
+        "total_price": 40,
+        "queue": 2,
+        "customer": "omar,amina",
+        "delivery": "parked"
+       },
+       "speakerNameAr": "عم حسن",
+       "lineAr": "الدفعة بتستوي."
       },
       {
        "animate": "stocking",
        "props": {
         "sign": "open",
-        "oven": "lit",
-        "queue": 1,
-        "customer": "hoda",
+        "oven": "cold",
+        "loaf": 8,
         "flour-sack": 2,
-        "loaf": 8
+        "total_price": 40,
+        "queue": 2,
+        "customer": "omar,amina",
+        "delivery": "parked"
        },
        "speakerNameAr": "عم حسن",
-       "lineAr": "أهو تمنية جداد، وشوال دقيق راح."
-      }
-     ]
-    },
-    "startingCode": "baked = 8\nsold = 5\nloaves_left = baked - sold",
-    "solutionCode": "baked = 8\nsold = 5\nloaves_left = baked - sold\nfresh = 8\ntotal = loaves_left + fresh",
-    "tests": [
-     {
-      "call": "loaves_left",
-      "expected": "3",
-      "name": null,
-      "hidden": false
-     },
-     {
-      "call": "fresh",
-      "expected": "8",
-      "name": null,
-      "hidden": false
-     },
-     {
-      "call": "total",
-      "expected": "11",
-      "name": null,
-      "hidden": false
-     }
-    ],
-    "onRun": {
-     "animate": "handover",
-     "actions": [],
-     "props": {
-      "sign": "open",
-      "oven": "lit",
-      "queue": 1,
-      "customer": "hoda",
-      "flour-sack": 2,
-      "loaf": 5,
-      "total": 11
-     },
-     "captionAr": null,
-     "steps": [
+       "lineAr": "تمن أرغفة جاهزين، واستخدمنا شوال دقيق."
+      },
       {
-       "animate": "handover",
+       "animate": null,
        "props": {
         "sign": "open",
-        "oven": "lit",
-        "queue": 1,
-        "customer": "hoda",
+        "oven": "cold",
+        "loaf": 8,
         "flour-sack": 2,
-        "loaf": 5,
-        "total": 11
+        "total_price": 40,
+        "queue": 2,
+        "customer": "omar,amina",
+        "delivery": "parked"
        },
        "speakerNameAr": "عم حسن",
-       "lineAr": "حداشر رغيف كلهم. اتفضلي ستة يا أم محمد."
+       "lineAr": "الدفعة على الصينية. دي نتيجة الكود."
       },
       {
-       "animate": "paying",
+       "animate": null,
        "props": {
         "sign": "open",
-        "oven": "lit",
-        "queue": 1,
-        "customer": "hoda",
+        "oven": "cold",
+        "loaf": 3,
         "flour-sack": 2,
-        "loaf": 5,
-        "total": 11,
-        "total_price": 30
+        "total_price": 65,
+        "queue": 2,
+        "customer": "omar,amina",
+        "delivery": "loaded",
+        "delivery_loaves": 5
        },
-       "speakerNameAr": "الست هدى",
-       "lineAr": "اتفضل، تلاتين جنيه."
-      },
-      {
-       "animate": "exiting",
-       "props": {
-        "sign": "open",
-        "oven": "lit",
-        "queue": 1,
-        "customer": "hoda",
-        "flour-sack": 2,
-        "loaf": 5,
-        "total": 11,
-        "total_price": 30
-       },
-       "speakerNameAr": "تيكو",
-       "lineAr": "وفضل خمسة. الحسبة مشيت لوحدها."
+       "speakerNameAr": "عم حسن",
+       "lineAr": "الحمولة اتحطت في صندوق السكوتر. الفاضل للطابور تلاتة."
       }
      ]
     }

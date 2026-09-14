@@ -51,6 +51,13 @@ class WorldState(Schema):
         default_factory=dict,
         description='e.g. {"tray": 5, "loaf": 0, "oven": "cold"}',
     )
+    interactions: list[SceneInteraction] = Field(default_factory=list, max_length=4)
+
+
+class SceneInteraction(Schema):
+    target: str = Field(min_length=1)
+    prompt_ar: str
+    on_press: WorldChange
 
 
 class WorldAction(Schema):
@@ -83,6 +90,15 @@ class WorldAction(Schema):
         '"return" for the function\'s result.',
     )
 
+class WorldBeat(Schema):
+    """One scene animation and line in an authored mission sequence."""
+
+    animate: str | None = None
+    props: dict[str, int | str] = Field(default_factory=dict)
+    speaker_name_ar: str | None = None
+    line_ar: str | None = None
+
+
 class WorldChange(Schema):
     """What happens to the scene when the student's code runs.
 
@@ -112,6 +128,7 @@ class WorldChange(Schema):
     caption_ar: str | None = Field(
         default=None, description="Optional floating label, e.g. '١٠٠ رغيف'."
     )
+    steps: list[WorldBeat] = Field(default_factory=list, max_length=24)
 
 
 # ------------------------------------------------------------------------- phase 1
@@ -219,6 +236,9 @@ class GuidedStep(Schema):
     hint_ar: str | None = Field(
         default=None, description="A first nudge before the hint ladder is called."
     )
+    tests: list[MissionTest] | None = Field(default=None, min_length=1)
+    on_enter: WorldChange | None = None
+    on_run: WorldChange | None = None
 
     @model_validator(mode="after")
     def _blanks_match_placeholders(self) -> GuidedStep:
@@ -244,7 +264,7 @@ class PhaseGuided(Schema):
 
     steps: list[GuidedStep] = Field(min_length=1, max_length=3)
     solution_code: str = Field(description="Used to check their attempt, never shown.")
-    tests: list[MissionTest] = Field(min_length=2)
+    tests: list[MissionTest] = Field(min_length=1)
     on_run: WorldChange
 
 

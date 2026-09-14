@@ -286,6 +286,12 @@ visual:
     loaf:        { asset: bakery-v2/loaf.webp,       countable: true, max_shown: 8 }
     dough:       { asset: bakery-v2/dough.webp,      countable: true, max_shown: 8 }
     bag:         { asset: bakery-v2/bag.webp,        countable: true, max_shown: 1 }
+    scooter-crate: { asset: bakery-v2/frames/scooter-crate.webp }
+    delivery-load: { asset: bakery-v2/frames/delivery-load.webp }
+    bread-board: { asset: bakery-v2/frames/bread-board.webp }
+    ticket-stand: { asset: bakery-v2/frames/ticket-stand.webp }
+    oven-gauge: { asset: bakery-v2/frames/oven-gauge.webp }
+    dough-table: { asset: bakery-v2/frames/dough-table.webp }
   states:
     oven: [cold, lit]
 
@@ -295,6 +301,8 @@ visual:
   # implemented, and `tray_burns` has no artwork in bakery-v2 at all — which is why the
   # burnt-tray state is gone from `states` above.
   animations:
+    - arriving            # a neighbour joins the back of the queue
+    - paying              # payment travels from the customer to the till
     - loading             # Hassan slides the dough into the oven on the peel (1800ms)
     - baking              # the oven works; dough becomes bread 60% through (2800ms)
     - retrieving          # he draws the hot bread out on the peel (1800ms)

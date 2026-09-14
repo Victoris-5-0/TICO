@@ -213,6 +213,9 @@ export interface GuidedStep {
   promptAr: string;
   /** A first nudge before the hint ladder is called. */
   hintAr?: string | null;
+  tests?: Array<MissionTest> | null;
+  onEnter?: WorldChange | null;
+  onRun?: WorldChange | null;
 }
 
 export interface HealthResponse {
@@ -552,6 +555,12 @@ export interface RefreshResponse {
 /** How much of a carried concept is pre-filled in the starter code. */
 export type ScaffoldLevel = "NONE" | "PARTIAL" | "FULL";
 
+export interface SceneInteraction {
+  target: string;
+  promptAr: string;
+  onPress: WorldChange;
+}
+
 export interface SessionClose {
   outcome: SessionOutcome;
   timeSpentMs: number;
@@ -663,6 +672,16 @@ export interface WorldAction {
 }
 
 /**
+ * One scene animation and line in an authored mission sequence.
+ */
+export interface WorldBeat {
+  animate?: string | null;
+  props?: Record<string, number | string>;
+  speakerNameAr?: string | null;
+  lineAr?: string | null;
+}
+
+/**
  * What happens to the scene when the student's code runs.
  *
  * `animate` names one motion from the world manifest's closed list. If the client has
@@ -678,6 +697,7 @@ export interface WorldChange {
   props?: Record<string, number | string>;
   /** Optional floating label, e.g. '١٠٠ رغيف'. */
   captionAr?: string | null;
+  steps?: Array<WorldBeat>;
 }
 
 /**
@@ -690,4 +710,5 @@ export interface WorldChange {
 export interface WorldState {
   /** e.g. {"tray": 5, "loaf": 0, "oven": "cold"} */
   props?: Record<string, number | string>;
+  interactions?: Array<SceneInteraction>;
 }

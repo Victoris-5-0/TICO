@@ -14,29 +14,73 @@
    "encounter": {
     "speaker": "hassan",
     "speakerNameAr": "عم حسن",
-    "lineAr": "صباح الخير يا صحابي. أنا عم حسن، وده فرني. بس المحل لسه مقفول — شايف اليافطة المضوّية جوّه؟ اضغط عليها الأول عشان نفتح، وبعدين أوريك إزاي تخلّي الكود هو اللي يفتحها.",
+    "lineAr": "صباح الخير! أنا عم حسن. أنا لسه جاي حالًا وعاوز أفتح الفرن. اليافطة لسه بتقول مقفول، وهنفتحها سوا وبعدين نجهّز أول عيش لزبائن الصبح.",
     "world": {
      "props": {
       "sign": "closed",
       "oven": "cold",
-      "queue": 0,
+      "loaf": 0,
       "flour-sack": 4,
+      "total_price": 0,
+      "queue": 0,
+      "customer": "",
       "press": "sign"
-     }
+     },
+     "interactions": [
+      {
+       "target": "sign",
+       "promptAr": "اضغط على اليافطة عشان نبدأ يومنا ونفتح الفرن.",
+       "onPress": {
+        "animate": null,
+        "actions": [],
+        "props": {
+         "sign": "open",
+         "oven": "cold",
+         "loaf": 0,
+         "flour-sack": 4,
+         "total_price": 0,
+         "queue": 0,
+         "customer": ""
+        },
+        "captionAr": "المحل فتح، واليافطة بتقول مفتوح.",
+        "steps": []
+       }
+      },
+      {
+       "target": "dough-table",
+       "promptAr": "اضغط على ترابيزة العجين عشان نجهّز أول دفعة.",
+       "onPress": {
+        "animate": null,
+        "actions": [],
+        "props": {
+         "sign": "open",
+         "oven": "cold",
+         "loaf": 0,
+         "flour-sack": 4,
+         "total_price": 0,
+         "queue": 0,
+         "customer": "",
+         "dough_ready": 8
+        },
+        "captionAr": "جهّزنا عجين تمن أرغفة. الكود هيحدد الدفعة اللي تدخل الفرن.",
+        "steps": []
+       }
+      }
+     ]
     }
    },
    "explore": {
     "ticoIntroAr": "قبل ما نعمل أي حاجة، بصّ على اليافطة المعلّقة جوّه المحل.",
     "rounds": [
      {
-      "questionAr": "اليافطة دلوقتي مكتوب عليها إيه؟",
+      "questionAr": "بعد ما ضغطت على اليافطة، بقت بتقول إيه؟",
       "optionsAr": [
        "مقفول",
        "مفتوح",
        "عيش بلدي"
       ],
-      "correctIndex": 0,
-      "nudgeAr": "بصّ على اليافطة المضوّية جوّه المحل واقرا الكلمة اللي عليها.",
+      "correctIndex": 1,
+      "nudgeAr": "بص على الكلمة اللي اتغيّرت بعد ضغطتك.",
       "highlight": [
        "sign"
       ]
@@ -63,12 +107,12 @@
     "ticoLineAr": "الفرن كله كده: اليافطة كلمة، وعدد الأرغفة رقم، والفلوس رقم. كلهم متغيّرات."
    },
    "understand": {
-    "introAr": "أهو السطر كله. اسم اليافطة، علامة يساوي، والكلمة اللي هتتكتب عليها. اضغط «شغّل» وبصّ على اليافطة.",
-    "code": "sign = \"open\"",
+    "introAr": "الكود يقدر يقفل اليافطة كمان. جرّب السطر، وبعده دورك تفتحها وتخبز.",
+    "code": "sign = \"closed\"",
     "annotations": [
      {
       "line": 1,
-      "textAr": "sign هو اسم اليافطة، و«open» هي الكلمة اللي هتظهر عليها.",
+      "textAr": "الكلمة دي بتقفل اليافطة.",
       "pointsAt": "sign"
      }
     ],
@@ -77,32 +121,161 @@
      "animate": null,
      "actions": [],
      "props": {
-      "sign": "open",
+      "sign": "closed",
       "oven": "cold",
+      "loaf": 0,
+      "flour-sack": 4,
+      "total_price": 0,
       "queue": 0,
-      "flour-sack": 4
+      "customer": ""
      },
-     "captionAr": "اليافطة اتقلبت. المحل بقى مفتوح."
+     "captionAr": "الكود قفل اليافطة. افتحها إنت في الخطوة الجاية.",
+     "steps": []
     }
    },
    "guided": {
     "steps": [
      {
-      "code": "sign = \"___\"",
+      "code": "sign = ___",
       "blanks": [
-       "open"
+       "\"open\""
       ],
-      "promptAr": "اكتب الكلمة اللي هتخلّي اليافطة تقول للناس إن المحل فتح.",
-      "hintAr": "كلمة واحدة بالإنجليزي، عكس closed."
+      "promptAr": "عندنا متغيّر اسمه sign. اكتب له القيمة النصية \"open\" كاملة بعلامات التنصيص عشان تفتح المحل.",
+      "hintAr": "النص في بايثون لازم يبقى بين علامتي تنصيص.",
+      "tests": [
+       {
+        "call": "sign",
+        "expected": "open",
+        "hidden": false,
+        "name": null
+       }
+      ],
+      "onRun": {
+       "animate": null,
+       "actions": [],
+       "props": {
+        "sign": "open",
+        "oven": "cold",
+        "loaf": 0,
+        "flour-sack": 4,
+        "total_price": 0,
+        "queue": 0,
+        "customer": ""
+       },
+       "captionAr": "إنت فتحت المحل بالكود.",
+       "steps": []
+      },
+      "onEnter": null
+     },
+     {
+      "code": "sign = \"open\"\n___",
+      "blanks": [
+       "batch = 8"
+      ],
+      "promptAr": "اكتب متغيّر اسمه batch، وخزّن فيه عدد أرغفة أول دفعة: 8.",
+      "hintAr": "السطر محتاج اسم، وعلامة تخزين، وعدد الأرغفة.",
+      "tests": [
+       {
+        "call": "sign",
+        "expected": "open",
+        "hidden": false,
+        "name": null
+       },
+       {
+        "call": "batch",
+        "expected": "8",
+        "hidden": false,
+        "name": null
+       }
+      ],
+      "onRun": {
+       "animate": null,
+       "actions": [],
+       "props": {
+        "sign": "open",
+        "oven": "cold",
+        "loaf": 8,
+        "flour-sack": 3,
+        "total_price": 0,
+        "queue": 0,
+        "customer": ""
+       },
+       "captionAr": "الدفعة اتخبزت بالكود، وفاضل تلات شوالات.",
+       "steps": [
+        {
+         "animate": "loading",
+         "props": {
+          "sign": "open",
+          "oven": "lit",
+          "loaf": 8,
+          "flour-sack": 4,
+          "total_price": 0,
+          "queue": 0,
+          "customer": ""
+         },
+         "speakerNameAr": "عم حسن",
+         "lineAr": "العجين دخل الفرن."
+        },
+        {
+         "animate": "baking",
+         "props": {
+          "sign": "open",
+          "oven": "lit",
+          "loaf": 8,
+          "flour-sack": 4,
+          "total_price": 0,
+          "queue": 0,
+          "customer": ""
+         },
+         "speakerNameAr": "عم حسن",
+         "lineAr": "الدفعة بتستوي."
+        },
+        {
+         "animate": "stocking",
+         "props": {
+          "sign": "open",
+          "oven": "cold",
+          "loaf": 8,
+          "flour-sack": 3,
+          "total_price": 0,
+          "queue": 0,
+          "customer": ""
+         },
+         "speakerNameAr": "عم حسن",
+         "lineAr": "تمن أرغفة جاهزين، واستخدمنا شوال دقيق."
+        },
+        {
+         "animate": null,
+         "props": {
+          "sign": "open",
+          "oven": "cold",
+          "loaf": 8,
+          "flour-sack": 3,
+          "total_price": 0,
+          "queue": 0,
+          "customer": ""
+         },
+         "speakerNameAr": "عم حسن",
+         "lineAr": "الدفعة على الصينية. دي نتيجة الكود."
+        }
+       ]
+      },
+      "onEnter": null
      }
     ],
-    "solutionCode": "sign = \"open\"",
+    "solutionCode": "sign = \"open\"\nbatch = 8",
     "tests": [
      {
       "call": "sign",
       "expected": "open",
-      "name": null,
-      "hidden": false
+      "hidden": false,
+      "name": null
+     },
+     {
+      "call": "batch",
+      "expected": "8",
+      "hidden": false,
+      "name": null
      }
     ],
     "onRun": {
@@ -111,168 +284,228 @@
      "props": {
       "sign": "open",
       "oven": "cold",
-      "queue": 0,
-      "flour-sack": 4
-     },
-     "captionAr": "أهو إنت اللي فتحت المحل النهاردة."
-    }
-   },
-   "remix": {
-    "twistAr": "عم حسن هيخبز أول دفعة، وأول زبونة هتدخل وتطلب. اتفرّج الأول — وبعدين اكتب طلبها في متغيّر.",
-    "newRequirementAr": "سيب سطر اليافطة زي ما هو، وزوّد تحته متغيّر اسمه loaves فيه عدد الأرغفة اللي مدام مريم طلبتها.",
-    "worldChange": {
-     "animate": "loading",
-     "actions": [],
-     "props": {
-      "sign": "open",
-      "queue": 1,
+      "loaf": 8,
       "flour-sack": 3,
-      "oven": "lit",
-      "loaf": 8
+      "total_price": 0,
+      "queue": 0,
+      "customer": ""
      },
-     "captionAr": null,
+     "captionAr": "الدفعة اتخبزت بالكود، وفاضل تلات شوالات.",
      "steps": [
       {
        "animate": "loading",
        "props": {
         "sign": "open",
-        "queue": 0,
+        "oven": "lit",
+        "loaf": 8,
         "flour-sack": 4,
-        "oven": "lit"
+        "total_price": 0,
+        "queue": 0,
+        "customer": ""
        },
        "speakerNameAr": "عم حسن",
-       "lineAr": "قبل ما ييجي حد، لازم نخبز. أهو العجين داخل الفرن."
+       "lineAr": "العجين دخل الفرن."
       },
       {
        "animate": "baking",
        "props": {
         "sign": "open",
-        "queue": 0,
+        "oven": "lit",
+        "loaf": 8,
         "flour-sack": 4,
-        "oven": "lit"
-       },
-       "speakerNameAr": "عم حسن",
-       "lineAr": "العيش بيستوي… وشوال دقيق راح في الدفعة دي."
-      },
-      {
-       "animate": "retrieving",
-       "props": {
-        "sign": "open",
+        "total_price": 0,
         "queue": 0,
-        "flour-sack": 3,
-        "oven": "lit"
+        "customer": ""
        },
        "speakerNameAr": "عم حسن",
-       "lineAr": "وأهو طالع سخن."
+       "lineAr": "الدفعة بتستوي."
       },
       {
        "animate": "stocking",
        "props": {
         "sign": "open",
+        "oven": "cold",
+        "loaf": 8,
+        "flour-sack": 3,
+        "total_price": 0,
         "queue": 0,
-        "flour-sack": 3,
-        "oven": "lit",
-        "loaf": 8
+        "customer": ""
        },
        "speakerNameAr": "عم حسن",
-       "lineAr": "تمن أرغفة على الصينية."
-      },
-      {
-       "animate": "arriving",
-       "props": {
-        "sign": "open",
-        "queue": 1,
-        "flour-sack": 3,
-        "oven": "lit",
-        "loaf": 8
-       },
-       "speakerNameAr": "عم حسن",
-       "lineAr": "أهو أول زبونة! صباح الخير يا مدام مريم."
+       "lineAr": "تمن أرغفة جاهزين، واستخدمنا شوال دقيق."
       },
       {
        "animate": null,
        "props": {
         "sign": "open",
-        "queue": 1,
+        "oven": "cold",
+        "loaf": 8,
         "flour-sack": 3,
-        "oven": "lit",
-        "loaf": 8
+        "total_price": 0,
+        "queue": 0,
+        "customer": ""
+       },
+       "speakerNameAr": "عم حسن",
+       "lineAr": "الدفعة على الصينية. دي نتيجة الكود."
+      }
+     ]
+    }
+   },
+   "remix": {
+    "twistAr": "أول دفعة جاهزة، ومدام مريم وصلت وطلبت خمسة.",
+    "newRequirementAr": "احتفظ بسطر اليافطة والدفعة. اكتب متغيّر اسمه loaves، وخزّن فيه طلب مريم: 5.",
+    "worldChange": {
+     "animate": null,
+     "actions": [],
+     "props": {
+      "sign": "open",
+      "oven": "cold",
+      "loaf": 8,
+      "flour-sack": 3,
+      "total_price": 0,
+      "queue": 1,
+      "customer": "mariam"
+     },
+     "captionAr": "مريم مستنية خمسة أرغفة.",
+     "steps": [
+      {
+       "animate": "arriving",
+       "props": {
+        "sign": "open",
+        "oven": "cold",
+        "loaf": 8,
+        "flour-sack": 3,
+        "total_price": 0,
+        "queue": 1,
+        "customer": "mariam"
+       },
+       "speakerNameAr": "عم حسن",
+       "lineAr": "أول زبونة وصلت."
+      },
+      {
+       "animate": null,
+       "props": {
+        "sign": "open",
+        "oven": "cold",
+        "loaf": 8,
+        "flour-sack": 3,
+        "total_price": 0,
+        "queue": 1,
+        "customer": "mariam"
        },
        "speakerNameAr": "مدام مريم",
-       "lineAr": "صباح النور يا عم حسن. عاوزة خمس أرغفة النهاردة، البيت مليان ضيوف."
+       "lineAr": "عاوزة خمسة أرغفة لو سمحت."
+      },
+      {
+       "animate": null,
+       "props": {
+        "sign": "open",
+        "oven": "cold",
+        "loaf": 8,
+        "flour-sack": 3,
+        "total_price": 0,
+        "queue": 1,
+        "customer": "mariam"
+       },
+       "speakerNameAr": "عم حسن",
+       "lineAr": "اكتب الطلب وبعدين شغّل."
       }
      ]
     },
-    "startingCode": "sign = \"open\"",
-    "solutionCode": "sign = \"open\"\nloaves = 5",
+    "startingCode": "sign = \"open\"\nbatch = 8",
+    "solutionCode": "sign = \"open\"\nbatch = 8\nloaves = 5",
     "tests": [
      {
       "call": "sign",
       "expected": "open",
-      "name": null,
-      "hidden": false
+      "hidden": false,
+      "name": null
+     },
+     {
+      "call": "batch",
+      "expected": "8",
+      "hidden": false,
+      "name": null
      },
      {
       "call": "loaves",
       "expected": "5",
-      "name": null,
-      "hidden": false
+      "hidden": false,
+      "name": null
      }
     ],
     "onRun": {
-     "animate": "handover",
+     "animate": null,
      "actions": [],
      "props": {
       "sign": "open",
-      "queue": 1,
-      "flour-sack": 3,
-      "oven": "lit",
+      "oven": "cold",
       "loaf": 3,
-      "loaves": 5,
-      "total_price": 25
+      "flour-sack": 3,
+      "total_price": 25,
+      "queue": 0,
+      "customer": ""
      },
-     "captionAr": null,
+     "captionAr": "مريم خدت خمسة، وفاضل تلاتة و٢٥ جنيه في الدرج.",
      "steps": [
       {
        "animate": "handover",
        "props": {
         "sign": "open",
-        "queue": 1,
-        "flour-sack": 3,
-        "oven": "lit",
+        "oven": "cold",
         "loaf": 3,
-        "loaves": 5
+        "flour-sack": 3,
+        "total_price": 0,
+        "queue": 1,
+        "customer": "mariam",
+        "give": 5
        },
        "speakerNameAr": "عم حسن",
-       "lineAr": "اتفضلي يا ستي — خمس أرغفة بالظبط."
+       "lineAr": "اتفضل طلبك يا مريم."
       },
       {
        "animate": "paying",
        "props": {
         "sign": "open",
-        "queue": 1,
-        "flour-sack": 3,
-        "oven": "lit",
+        "oven": "cold",
         "loaf": 3,
-        "loaves": 5,
-        "total_price": 25
+        "flour-sack": 3,
+        "total_price": 25,
+        "queue": 1,
+        "customer": "mariam",
+        "give": 5
        },
-       "speakerNameAr": "مدام مريم",
-       "lineAr": "اتفضل الحساب، خمسة وعشرين جنيه."
+       "speakerNameAr": "عم حسن",
+       "lineAr": "الطلب اتدفع واتسجّل في الدرج."
       },
       {
        "animate": "exiting",
        "props": {
         "sign": "open",
-        "queue": 1,
-        "flour-sack": 3,
-        "oven": "lit",
+        "oven": "cold",
         "loaf": 3,
-        "loaves": 5,
-        "total_price": 25
+        "flour-sack": 3,
+        "total_price": 25,
+        "queue": 1,
+        "customer": "mariam",
+        "give": 5
        },
        "speakerNameAr": "عم حسن",
-       "lineAr": "مع السلامة يا ستي، وحشتينا!"
+       "lineAr": "شكراً، واللي بعده يتفضل."
+      },
+      {
+       "animate": null,
+       "props": {
+        "sign": "open",
+        "oven": "cold",
+        "loaf": 3,
+        "flour-sack": 3,
+        "total_price": 25,
+        "queue": 0,
+        "customer": ""
+       },
+       "speakerNameAr": "عم حسن",
+       "lineAr": "الطابور اتحرك والعيش اللي فاضل واضح."
       }
      ]
     }

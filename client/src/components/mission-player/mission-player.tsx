@@ -8,7 +8,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { MissionDialog, MissionExitPanel } from "@/components/mission-ui/mission-panels";
 import { SiteLogo } from "@/components/site-logo";
 import type { MissionTest, PhasedMissionOut, WorldChange } from "@/lib/ai/types";
-import { beatsOf, pressTarget, undrawnProps, type MissionProps } from "@/lib/bakery/mission-scene";
+import { beatsOf, interactionsOf, settledProps, resolveChange, undrawnProps, type MissionProps } from "@/lib/bakery/mission-scene";
 import { bakeryScene } from "@/lib/bakery/scene-manifest";
 import * as telemetry from "@/lib/mission/telemetry";
 import { usePythonRunner, type RunResult } from "@/lib/runner/use-python-runner";
@@ -42,6 +42,16 @@ const NARRATION: Record<PhaseKey, readonly string[]> = {
 
 /** Phases that need a real editor, and therefore a real screen. */
 const CODING: ReadonlySet<PhaseKey> = new Set(["understand", "guided", "remix"]);
+
+const READOUT_LABELS: Record<string, { ar: string; en: string; unitAr?: string; unitEn?: string }> = {
+  total_price: { ar: "الفلوس", en: "Takings", unitAr: "جنيه", unitEn: "EGP" },
+  dough_ready: { ar: "العجين الجاهز", en: "Dough ready" },
+  stock_count: { ar: "الأرغفة المتاحة", en: "Loaves available" },
+  temperature: { ar: "حرارة الفرن", en: "Oven temperature", unitAr: "درجة", unitEn: "°" },
+  delivery_order: { ar: "طلب التوصيل", en: "Delivery order" },
+  delivery_left: { ar: "الباقي بعد التوصيل", en: "After delivery" },
+  shelf_left: { ar: "الباقي للطابور", en: "Left for queue" },
+};
 
 const STEP_LABELS: Record<Locale, Record<PhaseKey, string>> = {
   "ar-EG": {
@@ -85,6 +95,13 @@ export function MissionPlayer({ locale, mission, worldSlug, worldTitle, lessonId
   const [playToken, setPlayToken] = useState(0);
   const [ran, setRan] = useState<Record<string, boolean>>({});
   const [change, setChange] = useState<WorldChange | null>(null);
+  const [world, setWorld] = useState<MissionProps>(mission.phases.encounter.world?.props ?? {});
+  const [interactionIndex, setInteractionIndex] = useState(0);
+  const [encounterStarted, setEncounterStarted] = useState(false);
+  const [sceneBusy, setSceneBusy] = useState(false);
+  const values = useRef<Record<string, string>>({});
+  const interactions = interactionsOf(mission.phases.encounter.world);
+  const settleScene = useCallback(() => setSceneBusy(false), []);
   /**
    * A run that did not pass, while a customer is standing at the counter waiting for it.
    *
@@ -139,19 +156,24 @@ export function MissionPlayer({ locale, mission, worldSlug, worldTitle, lessonId
    */
   const advance = useCallback(() => {
     const next = Math.min(step + 1, ORDER.length - 1);
-    const announces = ORDER[next] === "remix" ? mission.phases.remix.worldChange : null;
+    const announces = ORDER[next] === "remix" ? mission.phases.remix.worldChange
+      : ORDER[next] === "guided" ? mission.phases.guided.steps[0]?.onEnter : null;
+    setWorld((current) => settledProps(change, current));
     setChange(announces ?? null);
+    setSceneBusy(Boolean(announces?.steps?.length));
     setPlayToken((n) => n + 1);
     setMissed(false);
     setHighlight([]);
     setStep(next);
-  }, [step, mission.phases.remix.worldChange]);
+  }, [step, mission.phases, change]);
 
   const play = useCallback((next: WorldChange | null | undefined, key: string) => {
-    setChange(next ?? null);
+    setWorld((current) => settledProps(change, current));
+    setChange(next ? resolveChange(next, values.current) : null);
+    setSceneBusy(Boolean(next?.steps?.length));
     setPlayToken((n) => n + 1);
     setRan((seen) => ({ ...seen, [key]: true }));
-  }, []);
+  }, [change]);
 
   /** Run the student's code, and record the attempt. */
   const runCode = useCallback(
@@ -162,6 +184,13 @@ export function MissionPlayer({ locale, mission, worldSlug, worldTitle, lessonId
         cases: tests.map((t) => ({ call: t.call, expected: t.expected, hidden: t.hidden })),
       });
       setMissed(!result.allPassed);
+      values.current = Object.fromEntries(result.cases.filter((row) => row.actual !== undefined).map((row) => [row.call, row.actual!]));
+      if (!result.allPassed) {
+        const actuals: MissionProps = Object.fromEntries(Object.entries(values.current).map(([key, value]) => [key, value.replace(/^['"]|['"]$/g, "")]));
+        setWorld((current) => ({ ...settledProps(change, current), ...actuals }));
+        setChange(null);
+        setPlayToken((n) => n + 1);
+      }
       telemetry.reportSubmission(sessionId.current, {
         code: source,
         status: result.allPassed ? "PASSED" : result.outcome === "TIMEOUT" ? "TIMEOUT"
@@ -171,7 +200,7 @@ export function MissionPlayer({ locale, mission, worldSlug, worldTitle, lessonId
       });
       return result;
     },
-    [runner],
+    [runner, change],
   );
 
   /**
@@ -211,17 +240,18 @@ export function MissionPlayer({ locale, mission, worldSlug, worldTitle, lessonId
    * what starts the lesson. Pressing is a click, so the state change lives in the handler
    * and never in an effect.
    */
-  const opening = phases.encounter.world?.props;
-  const press = phaseKey === "encounter" ? pressTarget(opening) : null;
-  const [pressed, setPressed] = useState(false);
+  const awaiting = phaseKey === "encounter" && encounterStarted ? interactions[interactionIndex] : undefined;
+  const press = awaiting?.target ?? null;
 
   const restProps: MissionProps | undefined = useMemo(() => {
-    const base = change?.props ?? opening;
-    // Pressing the sign turns it, before a single line of code is written. That is the
-    // point of the beat: the world answers them first, and then they learn to say it.
-    if (!press || !pressed || !base) return base;
-    return { ...base, sign: "open" };
-  }, [change, opening, press, pressed]);
+    return { ...world, ...change?.props };
+  }, [change, world]);
+
+  const takePress = (target: string) => {
+    if (!awaiting || target !== awaiting.target || sceneBusy) return;
+    play(awaiting.onPress, `interaction-${interactionIndex}`);
+    setInteractionIndex((index) => index + 1);
+  };
 
   /**
    * Where a character's words appear, in the scene's own 1600×900 coordinates.
@@ -247,7 +277,11 @@ export function MissionPlayer({ locale, mission, worldSlug, worldTitle, lessonId
    * the caption its Run produced. The panel keeps the questions, the editor and the
    * buttons — the things you act on rather than listen to.
    */
-  const sceneLine = phaseKey === "encounter" ? phases.encounter.lineAr : change?.captionAr || null;
+  const sceneLine = phaseKey === "encounter"
+    ? encounterStarted
+      ? awaiting?.promptAr || change?.captionAr || phases.encounter.lineAr
+      : phases.encounter.lineAr
+    : change?.captionAr || null;
 
   // Stable across renders, or the scene rebuilds its frame callback on every one.
   const beats = useMemo(() => beatsOf(change), [change]);
@@ -262,7 +296,10 @@ export function MissionPlayer({ locale, mission, worldSlug, worldTitle, lessonId
   const speaker = phaseKey === "encounter" ? phases.encounter.speaker || "tico" : "tico";
   const speakerName = phaseKey === "encounter" ? phases.encounter.speakerNameAr : ar ? "تيكو" : "Tico";
   const blockedOnWidth = narrow && CODING.has(phaseKey);
-  const runnerBusy = runner.state === "running";
+  // Coding cannot begin while Pyodide is still loading or rebuilding after a timeout.
+  // Posting early starts the learner-code timer while the interpreter is still warming,
+  // which made a one-line assignment look like an infinite loop on slower machines.
+  const runnerBusy = runner.state !== "ready";
 
   return (
     <MotionConfig reducedMotion="user">
@@ -306,12 +343,13 @@ export function MissionPlayer({ locale, mission, worldSlug, worldTitle, lessonId
               animate={change?.animate}
               playToken={playToken}
               caption={change?.captionAr}
-              highlight={press && !pressed ? [press] : highlight}
-              pickable={press && !pressed ? press : undefined}
-              onPick={() => setPressed(true)}
-              pickLabel={() => (ar ? "اضغط على اليافطة" : "Press the sign")}
+              highlight={press ? [press] : highlight}
+              pickable={!sceneBusy ? press ?? undefined : undefined}
+              onPick={takePress}
+              pickLabel={() => awaiting?.promptAr || (ar ? "اضغط على العنصر المضيء" : "Press the highlighted object")}
+              onSettled={settleScene}
               beats={beats}
-              upset={missed ? { name: ar ? "مدام مريم" : "Madam Mariam", line: ar ? "بسرعة عشان مستعجلة" : "Quickly please, I'm in a hurry" } : null}
+              upset={missed ? { name: ar ? "الطلب مستني" : "Order waiting", line: ar ? "الطلب لسه متجهّزش. شوف نتيجة الكود وجرب تاني." : "The order is still waiting. Check your result and try again." } : null}
               speech={sceneLine ? { name: speakerName, line: sceneLine } : null}
               speechAt={speechAt}
               extendLeft={ext}
@@ -321,8 +359,11 @@ export function MissionPlayer({ locale, mission, worldSlug, worldTitle, lessonId
               <dl className={styles.readouts}>
                 {extras.map(([key, value]) => (
                   <div key={key} className={highlight.includes(key) ? styles.readoutLit : ""}>
-                    <dt dir="ltr" lang="en">{key}</dt>
-                    <dd>{typeof value === "number" ? new Intl.NumberFormat(locale).format(value) : value}</dd>
+                    <dt>{READOUT_LABELS[key]?.[ar ? "ar" : "en"] ?? key}</dt>
+                    <dd>
+                      {typeof value === "number" ? new Intl.NumberFormat(locale).format(value) : value}
+                      {READOUT_LABELS[key]?.[ar ? "unitAr" : "unitEn"] ? ` ${READOUT_LABELS[key][ar ? "unitAr" : "unitEn"]}` : ""}
+                    </dd>
                   </div>
                 ))}
               </dl>
@@ -358,7 +399,7 @@ export function MissionPlayer({ locale, mission, worldSlug, worldTitle, lessonId
             */}
             <motion.div
               key={phaseKey}
-              initial={reduced ? false : { opacity: 0, y: 10 }}
+              initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: reduced ? 0.12 : 0.22, ease: [0.22, 1, 0.36, 1] }}
             >
@@ -370,8 +411,8 @@ export function MissionPlayer({ locale, mission, worldSlug, worldTitle, lessonId
                     <EncounterPhase
                       phase={phases.encounter}
                       locale={locale}
-                      onContinue={advance}
-                      awaiting={press && !pressed ? press : null}
+                      onContinue={() => encounterStarted ? advance() : setEncounterStarted(true)}
+                      awaiting={press || (sceneBusy ? "scene" : null)}
                       spokenInScene
                     />
                   )}
@@ -396,8 +437,9 @@ export function MissionPlayer({ locale, mission, worldSlug, worldTitle, lessonId
                       locale={locale}
                       runCode={runCode}
                       requestHint={requestHint}
-                      runnerBusy={runnerBusy}
-                      onSolved={() => play(phases.guided.onRun, "guided")}
+                      runnerBusy={runnerBusy || sceneBusy}
+                      onEnter={(outcome) => play(outcome, "guided-enter")}
+                      onSolved={(_code, outcome) => play(outcome ?? phases.guided.onRun, "guided")}
                       onContinue={advance}
                     />
                   )}
@@ -407,7 +449,7 @@ export function MissionPlayer({ locale, mission, worldSlug, worldTitle, lessonId
                       locale={locale}
                       runCode={runCode}
                       requestHint={requestHint}
-                      runnerBusy={runnerBusy}
+                      runnerBusy={runnerBusy || sceneBusy}
                       onSolved={() => play(phases.remix.onRun, "remix")}
                       onFinish={finish}
                     />
@@ -444,7 +486,7 @@ export function MissionPlayer({ locale, mission, worldSlug, worldTitle, lessonId
             conceptNameAr={phases.discover.conceptNameAr}
             worldLine={phases.remix.onRun?.captionAr || phases.guided.onRun?.captionAr || (ar ? "الفرن اشتغل بالكود اللي كتبته." : "The bakery ran on the code you wrote.")}
             debrief={debrief}
-            onReplay={() => { setDone(false); setStep(0); setChange(null); setRan({}); }}
+            onReplay={() => { setDone(false); setStep(0); setChange(null); setRan({}); setWorld(phases.encounter.world?.props ?? {}); setInteractionIndex(0); setEncounterStarted(false); setMissed(false); setSceneBusy(false); setPlayToken((n) => n + 1); }}
             onNext={() => router.push(mapHref)}
           />
         </MissionDialog>

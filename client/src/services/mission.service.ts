@@ -313,6 +313,25 @@ export class MissionService {
   }): Promise<string | null> {
     const { userId, worldSlug, lessonSlug, lessonId, token, forceRegenerate } = params;
 
+    // Authored bakery lessons are deterministic. Resolve their pinned mission locally
+    // before asking the AI service, otherwise a live service can return a different
+    // generated row for the same lesson while the local fallback returns the authored one.
+    const lesson = await db.lesson.findUnique({
+      where: { id: lessonId },
+      select: {
+        trackId: true,
+        exercises: {
+          orderBy: { order: "asc" },
+          select: { concepts: { where: { isPrimary: true }, select: { conceptId: true } } },
+        },
+      },
+    });
+    const concept = lesson?.exercises.flatMap((exercise) => exercise.concepts.map((item) => item.conceptId))[0];
+    if (lesson && concept) {
+      const pinned = await this.pinnedForLesson(lesson.trackId, concept, lessonId);
+      if (pinned) return pinned;
+    }
+
     if (token) {
       try {
         const served: LessonMissionOut = await aiClient.getMissionForLesson(token, {

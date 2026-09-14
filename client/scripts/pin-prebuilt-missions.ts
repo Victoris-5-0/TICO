@@ -28,6 +28,7 @@ import { PrismaClient } from "@prisma/client";
 const db = new PrismaClient();
 
 const DEFAULT_DIR = resolve(process.cwd(), "../ai-backend/content/prebuilt");
+const ACTIVE_MISSION = /^(variables|conditionals)-[12]-/;
 
 function parseArgs(argv: string[]) {
   const write = argv.includes("--write");
@@ -58,13 +59,35 @@ function readPrebuilt(dir: string): Prebuilt[] {
 
 async function main() {
   const { write, dir } = parseArgs(process.argv.slice(2));
-  const prebuilt = readPrebuilt(dir);
+  const authored = readPrebuilt(dir);
+  const prebuilt = authored.filter((item) => ACTIVE_MISSION.test(item.file));
 
   if (!prebuilt.length) throw new Error(`no prebuilt missions in ${dir}`);
-  console.log(`${prebuilt.length} prebuilt missions in ${dir}\n`);
+  console.log(`${prebuilt.length} active prebuilt missions in ${dir}\n`);
 
   let missing = 0;
   let pinned = 0;
+
+  const activeIds = prebuilt.map((item) => item.id);
+  const stale = await db.generatedMission.findMany({
+    where: {
+      id: { notIn: activeIds },
+      params: { path: ["prebuilt"], equals: true },
+    },
+    select: { id: true, params: true, content: true },
+  });
+
+  for (const row of stale) {
+    const params = (row.params && typeof row.params === "object" ? row.params : {}) as Record<string, unknown>;
+    const title = (row.content as { titleAr?: string } | null)?.titleAr ?? row.id;
+    console.log(`  ${write ? "UNPINNED" : "unpin   "} extra mission  ${title}`);
+    if (write) {
+      await db.generatedMission.update({
+        where: { id: row.id },
+        data: { params: { ...params, prebuilt: false } },
+      });
+    }
+  }
 
   for (const item of prebuilt) {
     const row = await db.generatedMission.findUnique({

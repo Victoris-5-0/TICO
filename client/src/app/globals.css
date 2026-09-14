@@ -36,6 +36,13 @@ button, input { font: inherit; }
 img { max-width: 100%; }
 :focus-visible { outline: 3px solid var(--teal); outline-offset: 4px; }
 
+.service-error { min-height: 100svh; display: grid; place-items: center; padding: 24px; background: radial-gradient(circle at 70% 20%, #f5d6ac, var(--cream) 48%); }
+.service-error__card { width: min(560px, 100%); padding: 36px; border: 1px solid var(--line); border-radius: var(--radius-lg); background: rgba(255,255,255,.88); box-shadow: var(--shadow); }
+.service-error__mark { display: grid; place-items: center; width: 48px; height: 48px; border-radius: 15px; background: var(--coral); color: white; font: 800 1rem var(--font-code), monospace; box-shadow: 0 5px 0 var(--coral-dark); }
+.service-error__card h1 { margin: 24px 0 10px; font-size: clamp(1.7rem, 4vw, 2.5rem); }
+.service-error__card p { margin: 0; color: var(--muted); line-height: 1.9; }
+.service-error__actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 26px; }
+
 .shell { width: min(1180px, calc(100% - 40px)); margin-inline: auto; }
 .skip-link { position: fixed; inset-block-start: 12px; inset-inline-start: 12px; z-index: 100; translate: 0 -160%; background: var(--ink); color: white; padding: 10px 16px; border-radius: 10px; }
 .skip-link:focus { translate: 0; }

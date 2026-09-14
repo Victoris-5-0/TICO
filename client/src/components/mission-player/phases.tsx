@@ -14,6 +14,7 @@ import type {
   PhaseGuided,
   PhaseRemix,
   PhaseUnderstand,
+  WorldChange,
 } from "@/lib/ai/types";
 import type { CaseResult } from "@/lib/runner/protocol";
 import type { RunResult } from "@/lib/runner/use-python-runner";
@@ -58,7 +59,8 @@ export function EncounterPhase({ phase, locale, onContinue, awaiting = null, spo
       {!spokenInScene && <Speech portrait={portrait} name={phase.speakerNameAr} line={phase.lineAr} ar={ar} />}
       {awaiting ? (
         <p className={styles.awaiting} dir={ar ? "rtl" : "ltr"}>
-          {ar ? "اضغط على اليافطة المضوّية جوّه المحل." : "Press the highlighted sign inside the shop."}
+          {awaiting === "scene" ? (ar ? "شوف اللي حصل في الفرن…" : "Watch what happens in the bakery…")
+            : ar ? "اضغط على العنصر المضيء في المشهد." : "Press the highlighted object in the scene."}
         </p>
       ) : (
         <button type="button" className={styles.primaryAction} onClick={onContinue}>
@@ -426,6 +428,7 @@ export function GuidedPhase({
   requestHint,
   runnerBusy,
   onSolved,
+  onEnter,
   onContinue,
 }: {
   phase: PhaseGuided;
@@ -433,7 +436,8 @@ export function GuidedPhase({
   runCode: RunCode;
   requestHint: RequestHint;
   runnerBusy: boolean;
-  onSolved: (code: string) => void;
+  onSolved: (code: string, change?: WorldChange | null) => void;
+  onEnter: (change?: WorldChange | null) => void;
   onContinue: () => void;
 }) {
   const [index, setIndex] = useState(0);
@@ -449,13 +453,16 @@ export function GuidedPhase({
       step={step}
       index={index}
       total={phase.steps.length}
-      tests={phase.tests}
+      tests={step.tests ?? phase.tests}
       locale={locale}
       runCode={runCode}
       requestHint={requestHint}
       runnerBusy={runnerBusy}
-      onSolved={onSolved}
-      onNext={() => (index === phase.steps.length - 1 ? onContinue() : setIndex((n) => n + 1))}
+      onSolved={(code) => onSolved(code, step.onRun)}
+      onNext={() => {
+        if (index === phase.steps.length - 1) onContinue();
+        else { onEnter(phase.steps[index + 1]?.onEnter); setIndex((n) => n + 1); }
+      }}
       isLast={index === phase.steps.length - 1}
     />
   );
@@ -485,6 +492,7 @@ function GuidedStepView({
   const solved = Boolean(result?.allPassed);
 
   async function check() {
+    if (runnerBusy) return;
     // A blank left in place is not a syntax error worth a traceback — it is the one
     // thing this phase is asking them to do, so say that instead.
     if (code.includes("___")) {
@@ -543,7 +551,7 @@ function GuidedStepView({
       <RunFeedback result={result} locale={locale} />
 
       {solved && (
-        <button type="button" className={styles.primaryAction} onClick={onNext}>
+        <button type="button" className={styles.primaryAction} onClick={onNext} disabled={runnerBusy}>
           {isLast ? (ar ? "كمّل" : "Continue") : (ar ? "الخطوة اللي بعدها" : "Next step")}
         </button>
       )}
@@ -577,6 +585,7 @@ export function RemixPhase({
   const solved = Boolean(result?.allPassed);
 
   async function check() {
+    if (runnerBusy) return;
     const next = await runCode(code, phase.tests);
     setResult(next);
     if (next.allPassed) onSolved(code);
@@ -637,7 +646,7 @@ export function RemixPhase({
       <RunFeedback result={result} locale={locale} />
 
       {solved && (
-        <button type="button" className={styles.primaryAction} onClick={onFinish}>
+        <button type="button" className={styles.primaryAction} onClick={onFinish} disabled={runnerBusy}>
           {ar ? "خلّصت المهمة" : "Finish mission"}
         </button>
       )}

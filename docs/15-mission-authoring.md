@@ -27,16 +27,17 @@ A mission is a `PhasedMissionOut` JSON in `ai-backend/content/prebuilt/`, import
 `generated_missions.content`. Six phases, fixed order, and the client renders them into the
 bakery rather than into a panel beside it.
 
-### 2.1 Three beats the child acts on
+### 2.1 Two interactions and three coding stops
 
-This is the rule the good mission follows and the generated ones do not. **Every mission
-has three moments where the child does something to the world**, and they escalate:
+Each of the four authored opening missions has **two scene interactions and three
+coding stops**. The learner acts on the same continuing shop:
 
 | beat | what they do | in `رسالة الفتح` |
 | --- | --- | --- |
-| 1 | **click** a prop — no code | press the sign; it turns مقفول → مفتوح |
-| 2 | **write** one value — the world answers | `sign = "open"` |
-| 3 | **write again**, after the world moves | a customer arrives and orders → `loaves = 5` |
+| 1 | **click** two props — no code | turn the sign, then prepare dough at the table |
+| 2 | **write** a value — the world answers | `sign = "open"` opens the shop |
+| 3 | **write again** in a second guided stop | `batch = 8` bakes the first tray |
+| 4 | **adapt** after the world moves | a customer arrives and orders → `loaves = 5` |
 
 Beat 1 is not decoration. It is the child changing the shop before they have been asked to
 write anything, so that by the time they type, they already know what typing is *for*.
@@ -44,12 +45,12 @@ write anything, so that by the time they type, they already know what typing is 
 ### 2.2 Where each beat lives in the six phases
 
 ```
-encounter    beat 1   world.props.press = "<prop>"   →  no Continue button, the prop is the way on
+encounter    beat 1   world.interactions → click each prop and watch its outcome before continuing
 explore      —        two questions, highlight the thing being asked about
 discover     —        name the concept. three lines, no syntax
 understand   —        the finished line, read-only, Run plays it
-guided       beat 2   one blank. the world changes on Run
-remix        beat 3   worldChange plays a SEQUENCE, then they write again
+guided       beats 2–3   two coding stops, each with its own tests and outcome
+remix        beat 4   worldChange plays a SEQUENCE, then they write again
 ```
 
 ### 2.3 Sequences: nobody appears out of nowhere
@@ -232,7 +233,19 @@ trusted.
 3. **Never key content by mission id.** The pool can hold more than one row per lesson and
    the claim service picks. Key by lesson, or by concept+stop.
 4. **`client/src/lib/ai/types.ts` is generated** from the service's OpenAPI. Never hand-edit.
-   `press` and `steps` are read through casts because of this — `docs/14` step 4.
+   `WorldChange.steps` is now a typed sequence of `WorldBeat` values. Guided phases
+   accept one or more tests. Both are needed for the authored files to pass backend
+   validation; otherwise `find_prebuilt` skips them and serves a different mission.
+   `WorldState.interactions` lists ordered `{ target, promptAr, onPress }` actions.
+   Each click plays its own consequence before the next target becomes available.
+   `world.props.press` remains a compatibility fallback for older missions.
+   Each guided step can provide its own `tests`, `onEnter`, and `onRun` so a second
+   coding stop continues the queue and inventory rather than restarting the scene.
+   Outcome props written as `"= variable_name"` bind to values returned by the Python
+   runner; they are not evaluated as JavaScript. Final beat props persist between stops.
+   A Git rollback does not roll back `generated_missions.content`: restore the matching
+   prebuilt files with `mission:import`, then `mission:pin --write`, and restart a backend
+   running without reload when its schema changes.
 5. **The runner accepts a bare name or a plain call.** `sign` works; `obj.attr` does not.
 6. **No functions before the functions lesson.** Tested.
 7. **Only what a phase is waiting on takes clicks.** The scene sits in a
@@ -268,6 +281,20 @@ played by `client/src/components/bakery/script-player.tsx`.
 ---
 
 ## 9. Definition of done, per mission
+
+The four opening missions now each have two scene interactions, two guided coding
+stops, and one remix coding stop. Conditionals require complete `if`/`else` blocks.
+The fourth mission starts with three waiting customers and admits a fourth; delivery
+loading uses the existing scooter art. Revised narration lines are omitted from the
+audio manifest until matching recordings exist.
+
+Verification on 2026-09-14: all four completed in system Edge with normal and reduced
+motion. Reduced-motion checks also covered a failed run followed by correction, replay,
+and keyboard activation. Run from `client/` with the local app and database available:
+`pnpm exec tsx scripts/check-bakery-playthrough.ts --motion` or
+`pnpm exec tsx scripts/check-bakery-playthrough.ts --recovery`.
+The script uses a temporary session for the seeded demo student and suppresses browser
+telemetry writes. `--filter=variables` or `--filter=conditionals` limits the selection.
 
 - [ ] three beats the child acts on, escalating
 - [ ] opens where the previous mission ended, and says so

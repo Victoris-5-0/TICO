@@ -65,7 +65,8 @@ const WALL_SLICE = { x: 20, width: 90 };
  */
 const UPSET = { width: 100, height: 260 };
 
-export function BakeryScene({ state, reducedMotion, counterView, label, highlight, extendLeft = 0, loose, cast, pickable, onPick, pickLabel, upset = false, sign, sacks, preview }: { state: BakeryState; reducedMotion: boolean; counterView: boolean; label: string; highlight?: readonly string[]; extendLeft?: number; loose?: readonly WorldPropName[]; cast?: readonly CustomerId[]; pickable?: string; onPick?: (name: string) => void; pickLabel?: (name: string) => string;
+export function BakeryScene({ state, reducedMotion, counterView, label, highlight, extendLeft = 0, loose, cast, pickable, onPick, pickLabel, upset = false, sign, sacks, preview, delivery }: { state: BakeryState; reducedMotion: boolean; counterView: boolean; label: string; highlight?: readonly string[]; extendLeft?: number; loose?: readonly WorldPropName[]; cast?: readonly CustomerId[]; pickable?: string; onPick?: (name: string) => void; pickLabel?: (name: string) => string;
+  delivery?: "parked" | "loaded" | "sent";
   /**
    * The customer at the head of the queue is out of patience.
    *
@@ -106,7 +107,7 @@ export function BakeryScene({ state, reducedMotion, counterView, label, highligh
   const ext = counterView ? 0 : Math.max(0, Math.round(extendLeft));
   const tiles = ext ? Math.ceil(ext / WALL_SLICE.width) : 0;
   const raw = phaseProgress(state);
-  const p = reducedMotion ? 0 : raw;
+  const p = reducedMotion ? 1 : raw;
   const step = reducedMotion ? 0 : Math.min(3, Math.floor(raw * 4));
   const walking = reducedMotion ? 0 : 1 + Math.floor(state.elapsed / 180) % 4;
   // `cast` narrows who is drawn without touching who is in the queue. The opening tour
@@ -149,7 +150,7 @@ export function BakeryScene({ state, reducedMotion, counterView, label, highligh
     const index = state.queue.indexOf(id);
     // She walks in from the right of frame and, when she is done, straight out to the left
     // — through the shop rather than back the way she came, which is what people do.
-    if (index === 0 && state.phase === "arriving") return { x: mix(1760, scene.queue.first.x, p), y: scene.queue.first.y };
+    if ((state.active ? state.active === id : index === 0) && state.phase === "arriving") return { x: mix(1760, scene.queue.first.x + index * scene.queue.spacing, p), y: scene.queue.first.y };
     if (state.active === id && state.phase === "exiting") return { x: mix(scene.queue.first.x, -220, p), y: scene.queue.first.y + Math.sin(Math.min(1, p * 4) * Math.PI / 2) * 45 };
     return { x: scene.queue.first.x + (index + (state.phase === "advancing" ? 1 - p : 0)) * scene.queue.spacing, y: scene.queue.first.y };
   }
@@ -203,7 +204,11 @@ export function BakeryScene({ state, reducedMotion, counterView, label, highligh
       const sprite = loaf.owner === "dough" || (inOven && raw < .6) ? "dough" : "loaf";
       return <Prop key={loaf.id} loaf={loaf} lit={isLit(sprite)} name={sprite} x={x} y={y} width={stock ? loafW : mix(20, loafW, placing ? p : 0)} height={stock ? loafH : mix(9, loafH, placing ? p : 0)} />;
     })}
-    <LooseProps names={visible} layer="front" isLit={isLit} pick={pick} pickLabel={pickLabel} />
+    <LooseProps names={delivery ? visible?.filter((name) => name !== "scooter-crate") : visible} layer="front" isLit={isLit} pick={pick} pickLabel={pickLabel} />
+    {delivery && delivery !== "sent" && <g data-delivery={delivery}>
+      <Prop name="scooter-crate" href={delivery === "loaded" ? cutFrame("delivery-load") : cutFrame("scooter-crate")}
+        {...worldProps["scooter-crate"]} {...target("scooter-crate")} />
+    </g>}
     {counted && <FlourSacks count={sacks!} {...target("flour-sacks")} />}
     {sign && <ShopSign open={sign.open} label={sign.label} {...target("sign")} />}
     {state.active && onStage(state.active) && state.phase === "paying" && (() => {
@@ -224,7 +229,7 @@ export function BakeryScene({ state, reducedMotion, counterView, label, highligh
       const pos = customerPosition(id);
       const leaving = state.active === id && state.phase === "exiting";
       const receiving = state.active === id && state.phase === "handover";
-      const arriving = index === 0 && state.phase === "arriving";
+      const arriving = (state.active ? state.active === id : index === 0) && state.phase === "arriving";
       // Bread already handed over: she keeps holding it while she thanks him and leaves.
       const carrying = state.loaves.some((loaf) => loaf.owner === `customer:${id}`);
       const frame = leaving || arriving || state.phase === "advancing" ? walking : receiving ? 5 : 0;

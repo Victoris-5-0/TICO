@@ -7,7 +7,7 @@
   "carriedConceptIds": [
    "variables"
   ],
-  "titleAr": "الفرن سخن ولا لسه؟",
+  "titleAr": "ظلي العيلة",
   "source": "template",
   "validated": true,
   "difficultyBand": 3,
@@ -16,16 +16,62 @@
    "encounter": {
     "speaker": "hassan",
     "speakerNameAr": "عم حسن",
-    "lineAr": "الدفعة خلصت والفرن برد. مش أي حرارة تخبز عيش — لازم نبص على الساعة الأول. اضغط على ساعة الفرن.",
+    "lineAr": "في المهمة اللي فاتت خبزنا العيش وحمّلنا طلب التوصيل. دلوقتي الطابور مستني والفرن برد. طلّع السكوتر، وبعدها نراجع الحرارة قبل الدفعة الجديدة.",
     "world": {
      "props": {
       "sign": "open",
       "oven": "cold",
-      "queue": 0,
+      "loaf": 3,
       "flour-sack": 2,
-      "loaf": 0,
-      "press": "oven-gauge"
-     }
+      "total_price": 65,
+      "queue": 2,
+      "customer": "omar,amina",
+      "delivery": "loaded",
+      "press": "scooter-crate"
+     },
+     "interactions": [
+      {
+       "target": "scooter-crate",
+       "promptAr": "اضغط على السكوتر عشان تطلع حمولة التوصيل.",
+       "onPress": {
+        "animate": null,
+        "actions": [],
+        "props": {
+         "sign": "open",
+         "oven": "cold",
+         "loaf": 3,
+         "flour-sack": 2,
+         "total_price": 65,
+         "queue": 2,
+         "customer": "omar,amina",
+         "delivery": "sent"
+        },
+        "captionAr": "السكوتر خرج بطلبه. تلات أرغفة فضلوا في المحل.",
+        "steps": []
+       }
+      },
+      {
+       "target": "oven-gauge",
+       "promptAr": "اضغط على الساعة عشان تقيس حرارة الفرن.",
+       "onPress": {
+        "animate": null,
+        "actions": [],
+        "props": {
+         "sign": "open",
+         "oven": "cold",
+         "loaf": 3,
+         "flour-sack": 2,
+         "total_price": 65,
+         "queue": 2,
+         "customer": "omar,amina",
+         "delivery": "sent",
+         "temperature": 180
+        },
+        "captionAr": "الساعة بتعرض ١٨٠. محتاجين ٢٠٠ على الأقل للدفعة الجديدة.",
+        "steps": []
+       }
+      }
+     ]
     }
    },
    "explore": {
@@ -62,22 +108,22 @@
    },
    "discover": {
     "conceptSlug": "conditionals",
-    "conceptNameAr": "الشرط (Condition)",
-    "explanationAr": "لحد دلوقتي المتغيّر كان بيشيل رقم أو كلمة. في نوع تالت: صح ولا غلط. لما نقارن رقمين — أكبر، أصغر، يساوي — بيطلع صح أو غلط، وده اللي بيقرر نعمل إيه.",
-    "ticoLineAr": "«الفرن سخن كفاية؟» — الإجابة صح أو غلط، مش رقم."
+    "conceptNameAr": "الاختيار بـ if وelse",
+    "explanationAr": "المقارنة لوحدها بتجاوب صح أو غلط. if بتختار الشغل اللي يحصل لو الشرط صح، وelse بتختار الشغل في الحالة التانية. السطور اللي جوّه كل فرع لازم تكون داخلة بمسافة.",
+    "ticoLineAr": "الشرط قرار بيغيّر الفرن، مش مجرد إجابة على الشاشة."
    },
    "understand": {
-    "introAr": "علامة >= معناها «أكبر من أو يساوي». بتقارن، وبتطلع صح ولا غلط.",
-    "code": "temperature = 180\nhot_enough = temperature >= 200",
+    "introAr": "اقرأ الفرعين: لو الحرارة كفاية نخبز، وغير كده نستنى.",
+    "code": "temperature = 180\nif temperature >= 200:\n    plan = \"bake\"\nelse:\n    plan = \"wait\"",
     "annotations": [
      {
-      "line": 1,
-      "textAr": "الرقم اللي على الساعة دلوقتي.",
+      "line": 2,
+      "textAr": "هنا الشرط اللي بيختار الفرع.",
       "pointsAt": "oven-gauge"
      },
      {
-      "line": 2,
-      "textAr": "المقارنة: ١٨٠ أكبر من أو تساوي ٢٠٠؟ لأ — يبقى غلط.",
+      "line": 5,
+      "textAr": "الفرن بارد، فالكود اختار الانتظار.",
       "pointsAt": "oven"
      }
     ],
@@ -88,117 +134,309 @@
      "props": {
       "sign": "open",
       "oven": "cold",
-      "queue": 0,
+      "loaf": 3,
       "flour-sack": 2,
-      "loaf": 0
+      "total_price": 65,
+      "queue": 2,
+      "customer": "omar,amina",
+      "delivery": "sent",
+      "temperature": 180,
+      "plan": "wait"
      },
-     "captionAr": "hot_enough = False — الفرن لسه بارد."
+     "captionAr": "الفرن أقل من ٢٠٠: انتظر، ومتدخلش دفعة نيّة.",
+     "steps": []
     }
    },
    "guided": {
     "steps": [
      {
-      "code": "temperature = 180\nhot_enough = temperature ___ 200",
+      "code": "temperature = 180\n___",
       "blanks": [
-       ">="
+       "if temperature >= 200:\n    plan = \"bake\"\nelse:\n    plan = \"wait\""
       ],
-      "promptAr": "حط علامة المقارنة: الحرارة لازم تكون أكبر من أو تساوي ٢٠٠.",
-      "hintAr": "علامتين جنب بعض: أكبر من، وبعدها يساوي."
-     }
-    ],
-    "solutionCode": "temperature = 180\nhot_enough = temperature >= 200",
-    "tests": [
+      "promptAr": "اكتب if وelse كاملين لمتغيّر اسمه plan: لو الحرارة ٢٠٠ أو أكتر خزّن فيه \"bake\"، وغير كده خزّن فيه \"wait\".",
+      "hintAr": "اكتب شرط، وتحته قرار بمسافة، وبعده else والقرار التاني.",
+      "tests": [
+       {
+        "call": "temperature",
+        "expected": "180",
+        "hidden": false,
+        "name": null
+       },
+       {
+        "call": "plan",
+        "expected": "wait",
+        "hidden": false,
+        "name": null
+       }
+      ],
+      "onRun": {
+       "animate": null,
+       "actions": [],
+       "props": {
+        "sign": "open",
+        "oven": "cold",
+        "loaf": 3,
+        "flour-sack": 2,
+        "total_price": 65,
+        "queue": 2,
+        "customer": "omar,amina",
+        "delivery": "sent",
+        "temperature": 180,
+        "plan": "= plan"
+       },
+       "captionAr": "الفرع اختار الانتظار. محدش دخل عيش في فرن بارد.",
+       "steps": []
+      },
+      "onEnter": null
+     },
      {
-      "call": "hot_enough",
-      "expected": "False",
-      "name": null,
-      "hidden": false
-     }
-    ],
-    "onRun": {
-     "animate": null,
-     "actions": [],
-     "props": {
-      "sign": "open",
-      "oven": "cold",
-      "queue": 0,
-      "flour-sack": 2,
-      "loaf": 0
-     },
-     "captionAr": "غلط — يعني استنى."
-    }
-   },
-   "remix": {
-    "twistAr": "نور واقف على الباب رايح المدرسة وعاوز رغيف. والفرن لسه ١٨٠.",
-    "newRequirementAr": "زوّد شرط: لو الفرن سخن كفاية يبقى plan = \"bake\"، وغير كده plan = \"wait\".",
-    "worldChange": {
-     "animate": "arriving",
-     "actions": [],
-     "props": {
-      "sign": "open",
-      "oven": "cold",
-      "queue": 1,
-      "flour-sack": 2,
-      "loaf": 0,
-      "customer": "nour"
-     },
-     "captionAr": null,
-     "steps": [
-      {
-       "animate": "arriving",
-       "props": {
-        "sign": "open",
-        "oven": "cold",
-        "queue": 1,
-        "flour-sack": 2,
-        "loaf": 0,
-        "customer": "nour"
+      "code": "temperature = 180\nif temperature >= 200:\n    plan = \"bake\"\nelse:\n    plan = \"wait\"\ntemperature = 220\n___",
+      "blanks": [
+       "if temperature >= 200:\n    batch = 8\nelse:\n    batch = 0"
+      ],
+      "promptAr": "دلوقتي الحرارة ٢٢٠. اكتب if وelse لمتغيّر اسمه batch: خزّن فيه 8 لو الحرارة كفاية، وغير كده صفر.",
+      "hintAr": "نفس القرار لازم يشتغل للحرارة القليلة والعالية.",
+      "tests": [
+       {
+        "call": "plan",
+        "expected": "wait",
+        "hidden": false,
+        "name": null
        },
-       "speakerNameAr": "عم حسن",
-       "lineAr": "أهو نور. صباح الخير يا حبيبي."
-      },
-      {
+       {
+        "call": "temperature",
+        "expected": "220",
+        "hidden": false,
+        "name": null
+       },
+       {
+        "call": "batch",
+        "expected": "8",
+        "hidden": false,
+        "name": null
+       }
+      ],
+      "onRun": {
        "animate": null,
+       "actions": [],
        "props": {
         "sign": "open",
         "oven": "cold",
-        "queue": 1,
-        "flour-sack": 2,
-        "loaf": 0,
-        "customer": "nour"
+        "loaf": 8,
+        "flour-sack": 1,
+        "total_price": 80,
+        "queue": 2,
+        "customer": "amina,nour",
+        "temperature": 220,
+        "delivery": "sent"
        },
-       "speakerNameAr": "نور",
-       "lineAr": "صباح النور يا عم حسن، عاوز رغيف وأنا مستعجل على المدرسة."
+       "captionAr": "الشرط اختار الخَبز. تمن أرغفة وشوال واحد باقي.",
+       "steps": [
+        {
+         "animate": "loading",
+         "props": {
+          "sign": "open",
+          "oven": "lit",
+          "loaf": 8,
+          "flour-sack": 2,
+          "total_price": 80,
+          "queue": 2,
+          "customer": "amina,nour",
+          "temperature": 220,
+          "delivery": "sent"
+         },
+         "speakerNameAr": "عم حسن",
+         "lineAr": "العجين دخل الفرن."
+        },
+        {
+         "animate": "baking",
+         "props": {
+          "sign": "open",
+          "oven": "lit",
+          "loaf": 8,
+          "flour-sack": 2,
+          "total_price": 80,
+          "queue": 2,
+          "customer": "amina,nour",
+          "temperature": 220,
+          "delivery": "sent"
+         },
+         "speakerNameAr": "عم حسن",
+         "lineAr": "الدفعة بتستوي."
+        },
+        {
+         "animate": "stocking",
+         "props": {
+          "sign": "open",
+          "oven": "cold",
+          "loaf": 8,
+          "flour-sack": 1,
+          "total_price": 80,
+          "queue": 2,
+          "customer": "amina,nour",
+          "temperature": 220,
+          "delivery": "sent"
+         },
+         "speakerNameAr": "عم حسن",
+         "lineAr": "تمن أرغفة جاهزين، واستخدمنا شوال دقيق."
+        },
+        {
+         "animate": null,
+         "props": {
+          "sign": "open",
+          "oven": "cold",
+          "loaf": 8,
+          "flour-sack": 1,
+          "total_price": 80,
+          "queue": 2,
+          "customer": "amina,nour",
+          "temperature": 220,
+          "delivery": "sent"
+         },
+         "speakerNameAr": "عم حسن",
+         "lineAr": "الدفعة على الصينية. دي نتيجة الكود."
+        }
+       ]
       },
-      {
+      "onEnter": {
        "animate": null,
+       "actions": [],
        "props": {
         "sign": "open",
-        "oven": "cold",
-        "queue": 1,
-        "flour-sack": 2,
+        "oven": "lit",
         "loaf": 0,
-        "customer": "nour"
+        "flour-sack": 2,
+        "total_price": 80,
+        "queue": 2,
+        "customer": "amina,nour",
+        "temperature": 220,
+        "delivery": "sent"
        },
-       "speakerNameAr": "تيكو",
-       "lineAr": "بص على الساعة الأول. الفرن يقدر يخبزله دلوقتي ولا لأ؟"
+       "captionAr": "بعنا التلاتة لعمر ورفعنا الحرارة. أمينة ونور مستنيين.",
+       "steps": [
+        {
+         "animate": "handover",
+         "props": {
+          "sign": "open",
+          "oven": "cold",
+          "loaf": 0,
+          "flour-sack": 2,
+          "total_price": 65,
+          "queue": 2,
+          "customer": "omar,amina",
+          "delivery": "sent",
+          "temperature": 180,
+          "give": 3
+         },
+         "speakerNameAr": "عم حسن",
+         "lineAr": "اتفضل طلبك يا عمر."
+        },
+        {
+         "animate": "paying",
+         "props": {
+          "sign": "open",
+          "oven": "cold",
+          "loaf": 0,
+          "flour-sack": 2,
+          "total_price": 80,
+          "queue": 2,
+          "customer": "omar,amina",
+          "delivery": "sent",
+          "temperature": 180,
+          "give": 3
+         },
+         "speakerNameAr": "عم حسن",
+         "lineAr": "الطلب اتدفع واتسجّل في الدرج."
+        },
+        {
+         "animate": "exiting",
+         "props": {
+          "sign": "open",
+          "oven": "cold",
+          "loaf": 0,
+          "flour-sack": 2,
+          "total_price": 80,
+          "queue": 2,
+          "customer": "omar,amina",
+          "delivery": "sent",
+          "temperature": 180,
+          "give": 3
+         },
+         "speakerNameAr": "عم حسن",
+         "lineAr": "شكراً، واللي بعده يتفضل."
+        },
+        {
+         "animate": null,
+         "props": {
+          "sign": "open",
+          "oven": "lit",
+          "loaf": 0,
+          "flour-sack": 2,
+          "total_price": 80,
+          "queue": 1,
+          "customer": "amina",
+          "temperature": 220,
+          "delivery": "sent"
+         },
+         "speakerNameAr": "عم حسن",
+         "lineAr": "الطابور اتحرك والعيش اللي فاضل واضح."
+        },
+        {
+         "animate": "arriving",
+         "props": {
+          "sign": "open",
+          "oven": "lit",
+          "loaf": 0,
+          "flour-sack": 2,
+          "total_price": 80,
+          "queue": 2,
+          "customer": "amina,nour",
+          "temperature": 220,
+          "delivery": "sent"
+         },
+         "speakerNameAr": "عم حسن",
+         "lineAr": "نور وصل ورا أمينة."
+        },
+        {
+         "animate": null,
+         "props": {
+          "sign": "open",
+          "oven": "lit",
+          "loaf": 0,
+          "flour-sack": 2,
+          "total_price": 80,
+          "queue": 2,
+          "customer": "amina,nour",
+          "temperature": 220,
+          "delivery": "sent"
+         },
+         "speakerNameAr": "عم حسن",
+         "lineAr": "الساعة بقت ٢٢٠."
+        }
+       ]
       }
-     ]
-    },
-    "startingCode": "temperature = 180\nhot_enough = temperature >= 200",
-    "solutionCode": "temperature = 180\nhot_enough = temperature >= 200\nif hot_enough:\n    plan = \"bake\"\nelse:\n    plan = \"wait\"",
+     }
+    ],
+    "solutionCode": "temperature = 180\nif temperature >= 200:\n    plan = \"bake\"\nelse:\n    plan = \"wait\"\ntemperature = 220\nif temperature >= 200:\n    batch = 8\nelse:\n    batch = 0",
     "tests": [
-     {
-      "call": "hot_enough",
-      "expected": "False",
-      "name": null,
-      "hidden": false
-     },
      {
       "call": "plan",
       "expected": "wait",
-      "name": null,
-      "hidden": false
+      "hidden": false,
+      "name": null
+     },
+     {
+      "call": "temperature",
+      "expected": "220",
+      "hidden": false,
+      "name": null
+     },
+     {
+      "call": "batch",
+      "expected": "8",
+      "hidden": false,
+      "name": null
      }
     ],
     "onRun": {
@@ -207,55 +445,213 @@
      "props": {
       "sign": "open",
       "oven": "cold",
-      "queue": 1,
-      "flour-sack": 2,
-      "loaf": 0,
-      "customer": "nour",
-      "plan": "wait"
+      "loaf": 8,
+      "flour-sack": 1,
+      "total_price": 80,
+      "queue": 2,
+      "customer": "amina,nour",
+      "temperature": 220,
+      "delivery": "sent"
      },
-     "captionAr": null,
+     "captionAr": "الشرط اختار الخَبز. تمن أرغفة وشوال واحد باقي.",
      "steps": [
-      {
-       "animate": null,
-       "props": {
-        "sign": "open",
-        "oven": "cold",
-        "queue": 1,
-        "flour-sack": 2,
-        "loaf": 0,
-        "customer": "nour",
-        "plan": "wait"
-       },
-       "speakerNameAr": "عم حسن",
-       "lineAr": "الكود قال «استنى» — يبقى نستنى. مش هنطلّع عيش نيّ."
-      },
       {
        "animate": "loading",
        "props": {
         "sign": "open",
         "oven": "lit",
-        "queue": 1,
+        "loaf": 8,
         "flour-sack": 2,
-        "loaf": 0,
-        "customer": "nour",
-        "plan": "wait"
+        "total_price": 80,
+        "queue": 2,
+        "customer": "amina,nour",
+        "temperature": 220,
+        "delivery": "sent"
        },
        "speakerNameAr": "عم حسن",
-       "lineAr": "بنولّع دلوقتي، وأول ما تسخن هتاخد أول رغيف."
+       "lineAr": "العجين دخل الفرن."
       },
       {
-       "animate": "exiting",
+       "animate": "baking",
        "props": {
         "sign": "open",
         "oven": "lit",
-        "queue": 1,
+        "loaf": 8,
         "flour-sack": 2,
-        "loaf": 0,
-        "customer": "nour",
-        "plan": "wait"
+        "total_price": 80,
+        "queue": 2,
+        "customer": "amina,nour",
+        "temperature": 220,
+        "delivery": "sent"
        },
-       "speakerNameAr": "تيكو",
-       "lineAr": "الشرط منعش غلطة. دي أول مرة الكود بيقولك «لأ»."
+       "speakerNameAr": "عم حسن",
+       "lineAr": "الدفعة بتستوي."
+      },
+      {
+       "animate": "stocking",
+       "props": {
+        "sign": "open",
+        "oven": "cold",
+        "loaf": 8,
+        "flour-sack": 1,
+        "total_price": 80,
+        "queue": 2,
+        "customer": "amina,nour",
+        "temperature": 220,
+        "delivery": "sent"
+       },
+       "speakerNameAr": "عم حسن",
+       "lineAr": "تمن أرغفة جاهزين، واستخدمنا شوال دقيق."
+      },
+      {
+       "animate": null,
+       "props": {
+        "sign": "open",
+        "oven": "cold",
+        "loaf": 8,
+        "flour-sack": 1,
+        "total_price": 80,
+        "queue": 2,
+        "customer": "amina,nour",
+        "temperature": 220,
+        "delivery": "sent"
+       },
+       "speakerNameAr": "عم حسن",
+       "lineAr": "الدفعة على الصينية. دي نتيجة الكود."
+      }
+     ]
+    }
+   },
+   "remix": {
+    "twistAr": "دينا وصلت، والحرارة طلعت ٢٦٠. الدفعة الجاية ممكن تتحرق لو فضلنا نخبز.",
+    "newRequirementAr": "اكتب متغيّر اسمه temperature وقيمته 260. بعده اكتب if لمتغيّر اسمه action: لو الحرارة أكبر من 240 خزّن فيه \"cool\"، وغير كده \"bake\". خليك محافظ على شغلك اللي فوق.",
+    "worldChange": {
+     "animate": null,
+     "actions": [],
+     "props": {
+      "sign": "open",
+      "oven": "lit",
+      "loaf": 8,
+      "flour-sack": 1,
+      "total_price": 80,
+      "queue": 3,
+      "customer": "amina,nour,dina",
+      "temperature": 260,
+      "delivery": "sent"
+     },
+     "captionAr": "الحرارة عالية. امنع حرق الدفعة الجاية.",
+     "steps": [
+      {
+       "animate": "arriving",
+       "props": {
+        "sign": "open",
+        "oven": "lit",
+        "loaf": 8,
+        "flour-sack": 1,
+        "total_price": 80,
+        "queue": 3,
+        "customer": "amina,nour,dina",
+        "temperature": 260,
+        "delivery": "sent"
+       },
+       "speakerNameAr": "عم حسن",
+       "lineAr": "دينا دخلت آخر الطابور."
+      },
+      {
+       "animate": null,
+       "props": {
+        "sign": "open",
+        "oven": "lit",
+        "loaf": 8,
+        "flour-sack": 1,
+        "total_price": 80,
+        "queue": 3,
+        "customer": "amina,nour,dina",
+        "temperature": 260,
+        "delivery": "sent"
+       },
+       "speakerNameAr": "دينا",
+       "lineAr": "أنا مستنية معاكم."
+      },
+      {
+       "animate": null,
+       "props": {
+        "sign": "open",
+        "oven": "lit",
+        "loaf": 8,
+        "flour-sack": 1,
+        "total_price": 80,
+        "queue": 3,
+        "customer": "amina,nour,dina",
+        "temperature": 260,
+        "delivery": "sent"
+       },
+       "speakerNameAr": "عم حسن",
+       "lineAr": "بص على الساعة: ٢٦٠، لازم قرار جديد."
+      }
+     ]
+    },
+    "startingCode": "temperature = 180\nif temperature >= 200:\n    plan = \"bake\"\nelse:\n    plan = \"wait\"\ntemperature = 220\nif temperature >= 200:\n    batch = 8\nelse:\n    batch = 0",
+    "solutionCode": "temperature = 180\nif temperature >= 200:\n    plan = \"bake\"\nelse:\n    plan = \"wait\"\ntemperature = 220\nif temperature >= 200:\n    batch = 8\nelse:\n    batch = 0\ntemperature = 260\nif temperature > 240:\n    action = \"cool\"\nelse:\n    action = \"bake\"",
+    "tests": [
+     {
+      "call": "plan",
+      "expected": "wait",
+      "hidden": false,
+      "name": null
+     },
+     {
+      "call": "batch",
+      "expected": "8",
+      "hidden": false,
+      "name": null
+     },
+     {
+      "call": "temperature",
+      "expected": "260",
+      "hidden": false,
+      "name": null
+     },
+     {
+      "call": "action",
+      "expected": "cool",
+      "hidden": false,
+      "name": null
+     }
+    ],
+    "onRun": {
+     "animate": null,
+     "actions": [],
+     "props": {
+      "sign": "open",
+      "oven": "cold",
+      "loaf": 8,
+      "flour-sack": 1,
+      "total_price": 80,
+      "queue": 3,
+      "customer": "amina,nour,dina",
+      "temperature": 220,
+      "delivery": "sent",
+      "action": "cool"
+     },
+     "captionAr": "الكود قلّل النار وحافظ على الدفعة.",
+     "steps": [
+      {
+       "animate": null,
+       "props": {
+        "sign": "open",
+        "oven": "cold",
+        "loaf": 8,
+        "flour-sack": 1,
+        "total_price": 80,
+        "queue": 3,
+        "customer": "amina,nour,dina",
+        "temperature": 220,
+        "delivery": "sent",
+        "action": "cool"
+       },
+       "speakerNameAr": "عم حسن",
+       "lineAr": "الفرع اختار التبريد، والنار هديت."
       }
      ]
     }

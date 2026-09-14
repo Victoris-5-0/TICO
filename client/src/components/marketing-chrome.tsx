@@ -15,7 +15,7 @@ export function MarketingHeader({
   user,
 }: {
   locale: Locale;
-  currentPage?: "home" | "about" | "pricing" | "learn";
+  currentPage?: "home" | "about" | "pricing" | "learn" | "progress";
   user?: HeaderUser | null;
 }) {
   const copy = landingCopy[locale];

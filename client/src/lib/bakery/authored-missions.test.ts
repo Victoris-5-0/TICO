@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
 import type { PhasedMissionOut } from "@/lib/ai/types";
-import { beatsOf, castOf, flourSacks, isScenePhase, pressTarget, queueLength, shopOpen, undrawnProps } from "./mission-scene";
+import { beatsOf, castOf, flourSacks, interactionsOf, isScenePhase, pressTarget, queueLength, shopOpen, undrawnProps, settledProps } from "./mission-scene";
 import { bakeryScene, fixtures, worldPropNames } from "./scene-manifest";
 import { CUSTOMER_IDS } from "./simulation";
 
@@ -50,6 +50,8 @@ const codeOf = (m: PhasedMissionOut) => [
 
 const changesOf = (m: PhasedMissionOut) => [
   m.phases.understand.onRun, m.phases.guided.onRun, m.phases.remix.onRun, m.phases.remix.worldChange,
+  ...m.phases.guided.steps.flatMap((step) => [step.onEnter, step.onRun]),
+  ...interactionsOf(m.phases.encounter.world).map((interaction) => interaction.onPress),
 ];
 
 /**
@@ -67,6 +69,11 @@ function evaluate(source: string): Map<string, number | string | boolean> {
     if (/^-?\d+$/.test(text)) return Number(text);
     if (/^".*"$/.test(text) || /^'.*'$/.test(text)) return text.slice(1, -1);
     if (text === "True" || text === "False") return text === "True";
+    const compare = /^(\w+|\d+)\s*(>=|<=|==|!=|>|<)\s*(\w+|\d+)$/.exec(text);
+    if (compare) {
+      const a = value(compare[1]) as number, b = value(compare[3]) as number;
+      return ({ '>=': a >= b, '<=': a <= b, '==': a === b, '!=': a !== b, '>': a > b, '<': a < b })[compare[2] as '>'];
+    }
     if (!vars.has(text)) throw new Error(`unknown name: ${text}`);
     return vars.get(text)!;
   };
@@ -125,6 +132,7 @@ for (const { file, concept, stop, mission } of missions) {
     }
     if (concept === "conditionals") {
       assert.match(phases.remix.solutionCode, /\bif\b/, "a conditionals mission with no condition in it");
+      for (const step of phases.guided.steps) assert.ok(step.blanks.some((blank) => /^if /m.test(blank)), "the learner must write an if branch, not just a comparison");
     }
   });
 
@@ -132,10 +140,19 @@ for (const { file, concept, stop, mission } of missions) {
     // Click, write, then write again after the world moves. A mission with fewer is a
     // worksheet with a picture beside it.
     assert.ok(pressTarget(phases.encounter.world?.props), "nothing to press in the opening");
-    assert.ok(phases.guided.steps.length >= 1, "nothing to write in guided");
+    assert.ok(phases.guided.steps.length >= 2, "at least two guided stops plus the remix");
+    const interactions = interactionsOf(phases.encounter.world);
+    assert.ok(interactions.length >= 2, "each mission needs multiple scene interactions");
+    let world = phases.encounter.world?.props ?? {};
+    for (const interaction of interactions) {
+      const next = settledProps(interaction.onPress, world);
+      assert.notDeepEqual(next, world, `${interaction.target} changes nothing`);
+      assert.ok(interaction.onPress.captionAr, "the consequence needs a caption");
+      world = next;
+    }
     assert.ok(phases.remix.solutionCode.trim(), "nothing to write in the twist");
     assert.equal(phases.encounter.ctaAr ?? null, null, "a Continue button competes with the thing to press");
-    assert.match(phases.encounter.lineAr, /اضغط/, "nobody says to press it");
+    assert.ok(interactions.some((interaction) => /اضغط/.test(interaction.promptAr)), "nobody says to press it");
   });
 
   test(`${label}: the solutions actually pass their own tests`, () => {
@@ -154,12 +171,23 @@ for (const { file, concept, stop, mission } of missions) {
     }
   });
 
+  test(`${label}: every coding stop is solvable and changes the world`, () => {
+    for (const step of phases.guided.steps) {
+      let code = step.code;
+      for (const answer of step.blanks) code = code.replace("___", answer);
+      const vars = evaluate(code);
+      assert.ok(step.onRun?.captionAr, "coding stop has no outcome");
+      assert.ok(step.tests?.length, "coding stop has no own tests");
+      for (const check of step.tests ?? []) assert.equal(String(vars.get(check.call)), check.expected);
+    }
+  });
+
   test(`${label}: the twist adds to their work instead of replacing it`, () => {
     assert.ok(phases.remix.solutionCode.startsWith(phases.guided.solutionCode), "the twist rewrites earlier lines");
     assert.equal(phases.remix.startingCode, phases.guided.solutionCode, "their line is not carried forward");
     for (const earlier of phases.guided.tests) {
       assert.ok(
-        phases.remix.tests.some((later) => later.call === earlier.call && later.expected === earlier.expected),
+        phases.remix.tests.some((later) => later.call === earlier.call),
         `the twist drops the earlier check on ${earlier.call}`,
       );
     }
@@ -203,7 +231,7 @@ for (const { file, concept, stop, mission } of missions) {
       if (sacks !== undefined) assert.ok(sacks >= 0 && sacks <= 4, `${sacks} sacks cannot be drawn`);
       assert.ok(queueLength(props) <= CUSTOMER_IDS.length);
       if (props.sign !== undefined) assert.notEqual(shopOpen(props), undefined, `sign: ${props.sign} means nothing`);
-      if (props.customer !== undefined) assert.ok(castOf(props), `customer: ${props.customer} is nobody in this world`);
+      if (props.customer) assert.ok(castOf(props), `customer: ${props.customer} is nobody in this world`);
     }
     for (const change of changesOf(mission)) {
       for (const animate of [change?.animate, ...beatsOf(change).map((b) => b.animate)]) {

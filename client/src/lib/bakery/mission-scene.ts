@@ -13,6 +13,7 @@
  */
 
 import { CUSTOMER_IDS, DURATIONS, type BakeryState, type CustomerId, type Loaf, type LoafOwner, type Phase } from "./simulation";
+import type { SceneInteraction, WorldChange, WorldState } from "@/lib/ai/types";
 
 /** The props a mission may set, as the manifest's `visual.sprites` keys. */
 export type MissionProps = Record<string, number | string>;
@@ -56,7 +57,7 @@ const clamp = (value: number, min: number, max: number) => Math.max(min, Math.mi
  * the only thing this mapper knew how to do, so every scene looked identical no matter who
  * the mission was about. A mission about one customer now gets one customer.
  */
-const DRAWN = new Set(["loaf", "dough", "oven", "queue", "flour-sack", "sign", "press", "customer"]);
+const DRAWN = new Set(["loaf", "dough", "oven", "queue", "flour-sack", "sign", "press", "customer", "delivery"]);
 
 const toCount = (value: number | string | undefined): number | null => {
   if (typeof value === "number" && Number.isFinite(value)) return value;
@@ -116,7 +117,15 @@ export function missionSceneState({ props = {}, animate, progress = 0, queueLeng
 
   const served: CustomerId[] = [];
   // A named cast wins over a count: a mission about Hoda should draw Hoda.
-  const queue: CustomerId[] = castOf(props) ?? CUSTOMER_IDS.slice(0, queueSize);
+  const queue: CustomerId[] = (castOf(props) ?? CUSTOMER_IDS).slice(0, queueSize);
+  const active = phase === "arriving" ? queue.at(-1) ?? null
+    : ["handover", "paying", "exiting"].includes(phase) ? queue[0] ?? null : null;
+  if (active && ["handover", "paying", "exiting"].includes(phase)) {
+    const give = clamp(Math.round(toCount(props.give) ?? 0), 0, 8);
+    for (let n = 0; n < give; n += 1) {
+      loaves.push({ id: 8 + n, owner: phase === "handover" ? `handover:${active}` : `customer:${active}` });
+    }
+  }
 
   return {
     phase: litWithoutPhase ? "baking" : phase,
@@ -126,14 +135,14 @@ export function missionSceneState({ props = {}, animate, progress = 0, queueLeng
     loaves,
     batches: loaves.length ? 1 : 0,
     // `paying` needs one too: the banknote is drawn from the active customer's hand.
-    active: phase === "handover" || phase === "exiting" || phase === "paying" ? queue[0] ?? null : null,
+    active,
     auto: false,
     paused: false,
     hidden: false,
     notice: "phase",
     // A mission draws a still frame of the world; nobody is buying anything in it.
-    money: 0,
-    charge: 0,
+    money: toCount(props.total_price) ?? 0,
+    charge: toCount(props.charge) ?? 0,
   };
 }
 
@@ -172,16 +181,14 @@ export function flourSacks(props: MissionProps = {}): number | undefined {
  * Missions that need a sequence carry `steps` on their `WorldChange` and the scene plays
  * them back to back, speaking each one's line over the character as it goes.
  *
- * Read through a cast because `lib/ai/types.ts` is generated from the service's OpenAPI
- * and `WorldChange` has no `steps` yet. `docs/14` step 4 is where it becomes a real field;
- * until then this is the only place that knows the shape, and a malformed one degrades to
- * the single `animate` the phase already had.
+ * The backend exposes typed steps. Older stored missions can still omit them and use
+ * a single animation.
  */
 export type WorldBeat = {
   animate?: string | null;
   props?: MissionProps;
-  speakerNameAr?: string;
-  lineAr?: string;
+  speakerNameAr?: string | null;
+  lineAr?: string | null;
 };
 
 export function beatsOf(change: { animate?: string | null; props?: MissionProps } | null | undefined): WorldBeat[] {
@@ -211,15 +218,33 @@ export function castOf(props: MissionProps = {}): CustomerId[] | null {
 /**
  * The one thing in the scene this phase wants pressed before it will move on.
  *
- * A convention on `world.props` rather than a field on the DTO, because `lib/ai/types.ts`
- * is generated from the service's OpenAPI, so adding a field there is a backend change.
- * It earns its keep: a mission can say "turn the sign" and mean it, instead of putting a
- * Continue button underneath a sentence about turning the sign. `docs/14` step 4 is where
- * this should become a real field.
+ * Compatibility for stored missions predating WorldState.interactions.
  */
 export function pressTarget(props: MissionProps = {}): string | null {
   const value = props.press;
   return typeof value === "string" && value.trim() ? value : null;
+}
+
+export function interactionsOf(world: WorldState | null | undefined): SceneInteraction[] {
+  if (world?.interactions?.length) return world.interactions;
+  const target = pressTarget(world?.props);
+  return target ? [{ target, promptAr: "", onPress: { props: target === "sign" ? { sign: "open" } : {} } }] : [];
+}
+
+/** Persist the last frame when the next task starts; never rewind the queue or stock. */
+export function settledProps(change: WorldChange | null | undefined, base: MissionProps = {}): MissionProps {
+  return Object.assign({}, base, change?.props, ...beatsOf(change).map((beat) => beat.props));
+}
+
+/** The only inputs to a code binding are values returned by the Python worker. */
+export function resolveChange(change: WorldChange, values: Record<string, string>): WorldChange {
+  const resolve = (props: MissionProps = {}): MissionProps => Object.fromEntries(Object.entries(props).map(([key, value]) => {
+    if (typeof value !== "string" || !value.startsWith("= ")) return [key, value];
+    const actual = values[value.slice(2).trim()];
+    if (actual === undefined) return [key, value];
+    return [key, /^-?\d+$/.test(actual) ? Number(actual) : actual.replace(/^['"]|['"]$/g, "")];
+  }));
+  return { ...change, props: resolve(change.props), steps: change.steps?.map((beat) => ({ ...beat, props: resolve(beat.props) })) };
 }
 
 /**
