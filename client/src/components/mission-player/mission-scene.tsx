@@ -113,9 +113,14 @@ export function MissionScene({ locale, props, animate, playToken = 0, caption, h
       // the scene jumps to the resolved end rather than travelling through it.
       if (state.id !== id) {
         state.id = id;
+        // The beat counter has to rewind with the clock. Leaving it behind meant the
+        // second sequence of a phase started past its own end: the six-beat twist left
+        // it at 5, the three-beat handover clamped to its last frame, and the bread was
+        // never handed over, paid for or carried out of the shop.
+        state.beat = reduced ? timeline.length - 1 : 0;
         state.elapsed = 0;
         state.lastFrame = null;
-        setBeat(reduced ? timeline.length - 1 : 0);
+        setBeat(state.beat);
         setProgress(reduced ? 1 : 0);
         return;
       }
