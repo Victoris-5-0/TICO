@@ -1,12 +1,12 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { MotionConfig, motion, useReducedMotion } from "motion/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { MissionDialog, MissionExitPanel } from "@/components/mission-ui/mission-panels";
-import { SiteLogo } from "@/components/site-logo";
 import type { MissionTest, PhasedMissionOut, WorldChange } from "@/lib/ai/types";
 import { beatsOf, interactionsOf, settledProps, resolveChange, undrawnProps, type MissionProps } from "@/lib/bakery/mission-scene";
 import { bakeryScene } from "@/lib/bakery/scene-manifest";
@@ -78,11 +78,12 @@ export type MissionPlayerProps = {
   lessonId?: string | null;
   /** Used to point the map at whatever this mission just unlocked. */
   lessonSlug?: string | null;
+  missionName?: string | null;
   /** Line keys with a pre-recorded reading. Empty means this mission has no audio. */
   narrationKeys?: readonly string[];
 };
 
-export function MissionPlayer({ locale, mission, worldSlug, worldTitle, lessonId, lessonSlug, narrationKeys = [] }: MissionPlayerProps) {
+export function MissionPlayer({ locale, mission, worldSlug, worldTitle, lessonId, lessonSlug, missionName, narrationKeys = [] }: MissionPlayerProps) {
   const ar = locale === "ar-EG";
   const reduced = useReducedMotion();
   const router = useRouter();
@@ -323,10 +324,12 @@ export function MissionPlayer({ locale, mission, worldSlug, worldTitle, lessonId
      <NarrationProvider missionId={mission.id} keys={narrationKeys} sequence={NARRATION[phaseKey]}>
       <div className={styles.page} dir={ar ? "rtl" : "ltr"}>
         <header className={styles.header}>
-          <SiteLogo href={`/${locale}`} />
+          <Link className={styles.navLogo} href={`/${locale}`} aria-label="TICO home">
+            <Image src="/assets/landing/logo.svg" alt="TICO" width={200} height={70} priority />
+          </Link>
           <div className={styles.headerMeta}>
             <span className={styles.world}>{worldTitle}</span>
-            <h1 className={styles.title}>{mission.titleAr}</h1>
+            <h1 className={styles.title}>{missionName || mission.titleAr}</h1>
           </div>
           <NarrationControls locale={locale} />
           <button
@@ -505,7 +508,7 @@ export function MissionPlayer({ locale, mission, worldSlug, worldTitle, lessonId
         <MissionDialog open={done} onClose={() => setDone(false)} label={ar ? "المهمة اكتملت" : "Mission complete"}>
           <MissionDebrief
             locale={locale}
-            titleAr={mission.titleAr}
+            titleAr={missionName || mission.titleAr}
             conceptNameAr={phases.discover.conceptNameAr}
             worldLine={phases.remix.onRun?.captionAr || phases.guided.onRun?.captionAr || (ar ? "الفرن اشتغل بالكود اللي كتبته." : "The bakery ran on the code you wrote.")}
             debrief={debrief}

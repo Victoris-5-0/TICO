@@ -1,0 +1,12 @@
+{
+  "note": "\"Select your world\" map — Figma file mYA52DN0D9UfDUJzB4PQsX, node 23:52. Island PNGs are the Figma image fills trimmed to their alpha bounding box and capped at 1024px wide; the sky is the frame's background fill. All webp.",
+  "fileKey": "mYA52DN0D9UfDUJzB4PQsX",
+  "assets": [
+    { "file": "sky.webp", "node": "23:53", "dimensions": [1536, 2752], "tiled": "repeat down the page, every other tile flipped vertically (23:78)" },
+    { "file": "island-programming-basics.webp", "node": "23:85", "dimensions": [1024, 782] },
+    { "file": "island-oop.webp", "node": "23:98", "dimensions": [955, 777] },
+    { "file": "island-data-structures.webp", "node": "23:105", "dimensions": [944, 907] },
+    { "file": "island-algorithms.webp", "node": "23:92", "dimensions": [979, 778] },
+    { "file": "lock.svg", "node": "23:109", "name": "bxs:lock" }
+  ]
+}

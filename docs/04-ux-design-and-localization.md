@@ -17,7 +17,8 @@ Authenticated learner routes:
 - `/[locale]/onboarding` — two-step first-visit profile setup; interrupted setup resumes.
 - `/[locale]/onboarding/preview` — public, non-persistent visual preview of both setup steps.
 
-- `/[locale]/learn` — current mission, roadmap, and continue action.
+- `/[locale]/learn` — chapters map with the learner's progress.
+- `/[locale]/learn/[chapterSlug]` — the selected chapter's worlds map.
 - `/[locale]/worlds/[worldSlug]` — chapter scene and lesson path.
 - `/[locale]/missions/[missionSlug]` — coding workspace.
 - `/[locale]/progress` — concepts, completed missions, badges, and replay.

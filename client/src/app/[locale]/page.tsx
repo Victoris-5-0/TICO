@@ -4,7 +4,7 @@ import { LandingPage } from "@/components/landing-page";
 import { isLocale } from "@/i18n/config";
 import { getCurrentUser } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { buildWorldsMap } from "@/services/worlds-map.service";
+import { buildChaptersMap } from "@/services/chapters-map.service";
 
 export default async function Page({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
@@ -15,17 +15,17 @@ export default async function Page({ params }: { params: Promise<{ locale: strin
     orderBy: { startedAt: "desc" },
     select: { id: true },
   }).catch(() => null) : null;
-  let mapWorlds;
+  let mapChapters;
   try {
-    mapWorlds = await buildWorldsMap({ userId: user?.id, locale });
+    mapChapters = await buildChaptersMap({ userId: user?.id, locale });
   } catch {
-    mapWorlds = undefined;
+    mapChapters = undefined;
   }
 
   return (
     <LandingPage
       locale={locale}
-      mapWorlds={mapWorlds}
+      mapChapters={mapChapters}
       chatSessionId={chatSession?.id ?? null}
       user={
         user

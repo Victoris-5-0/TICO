@@ -8,6 +8,7 @@ import { getAuthToken } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { isLocale } from "@/i18n/config";
 import { missionService } from "@/services/mission.service";
+import { worlds } from "@/content/worlds";
 
 type Params = Promise<{ locale: string; worldSlug: string; missionId: string }>;
 type Search = Promise<{ lesson?: string }>;
@@ -77,9 +78,15 @@ export default async function Page({ params, searchParams }: { params: Params; s
   const fromUrl = lessonSlug
     ? await db.lesson.findFirst({
         where: { slug: lessonSlug, track: { slug: worldSlug } },
-        select: { id: true, slug: true },
+        select: { id: true, slug: true, order: true },
       })
     : null;
+
+  const lessonRecord = fromUrl ?? (stored.lessonId
+    ? await db.lesson.findUnique({ where: { id: stored.lessonId }, select: { id: true, slug: true, order: true } })
+    : null);
+  const authoredWorld = worlds.find((world) => world.slug === worldSlug);
+  const missionName = authoredWorld?.missions[lessonRecord?.order ?? -1]?.[locale] ?? null;
 
   return (
     <MissionPlayer
@@ -87,8 +94,9 @@ export default async function Page({ params, searchParams }: { params: Params; s
       mission={stored.mission}
       worldSlug={stored.trackSlug}
       worldTitle={stored.trackTitle}
-      lessonId={fromUrl?.id ?? stored.lessonId}
-      lessonSlug={fromUrl?.slug ?? lessonSlug ?? null}
+      lessonId={lessonRecord?.id ?? stored.lessonId}
+      lessonSlug={lessonRecord?.slug ?? lessonSlug ?? null}
+      missionName={missionName}
       narrationKeys={narrationKeys(missionId)}
     />
   );

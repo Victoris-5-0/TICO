@@ -20,7 +20,8 @@ import {
   CardMotion,
   StepNumberMotion,
 } from "@/components/motion/hero-motion";
-import { WorldsMap, type MapWorld } from "@/components/mission-ui/worlds-map";
+import { ChaptersMap, type MapChapter } from "@/components/mission-ui/chapters-map";
+import { chapters } from "@/content/chapters";
 import { worlds } from "@/content/worlds";
 import { type Locale } from "@/i18n/config";
 import { getDictionary } from "@/i18n/dictionaries";
@@ -36,12 +37,12 @@ const stepImages = ["step-start", "step-solve", "step-help", "step-progress"];
 export function LandingPage({
   locale,
   user,
-  mapWorlds,
+  mapChapters,
   chatSessionId = null,
 }: {
   locale: Locale;
   user?: HeaderUser | null;
-  mapWorlds?: readonly MapWorld[];
+  mapChapters?: readonly MapChapter[];
   chatSessionId?: string | null;
 }) {
   const dict = getDictionary(locale);
@@ -50,36 +51,19 @@ export function LandingPage({
   const arrow = locale === "en" ? "→" : "←";
   const isRtl = locale === "ar-EG";
 
-  const fallbackWorlds: readonly MapWorld[] = [
-    {
-      slot: 1,
-      slug: worlds[0].slug,
-      title: worlds[0].title[locale],
-      status: "current",
-      after: null,
-      missionsDone: 0,
-      missionsTotal: worlds[0].missions.length,
-    },
-    {
-      slot: 2,
-      slug: worlds[1].slug,
-      title: worlds[1].title[locale],
-      status: "locked",
-      after: worlds[0].title[locale],
-      missionsDone: 0,
-      missionsTotal: worlds[1].missions.length,
-    },
-    {
-      slot: 3,
-      slug: worlds[2].slug,
-      title: worlds[2].title[locale],
-      status: "locked",
-      after: worlds[1].title[locale],
-      missionsDone: 0,
-      missionsTotal: worlds[2].missions.length,
-    },
-  ];
-  const resolvedWorlds = mapWorlds && mapWorlds.length > 0 ? mapWorlds : fallbackWorlds;
+  // Without the database (a guest, or a failed read) the map still shows the road ahead:
+  // the first chapter open, the rest as drawn.
+  const fallbackChapters: readonly MapChapter[] = chapters.map((chapter, index) => ({
+    slug: chapter.slug,
+    title: chapter.title[locale],
+    kicker: chapter.kicker[locale],
+    island: chapter.island,
+    status: index === 0 ? "current" : "soon",
+    after: null,
+    worldsDone: 0,
+    worldsTotal: chapter.worlds.length,
+  }));
+  const resolvedChapters = mapChapters && mapChapters.length > 0 ? mapChapters : fallbackChapters;
 
   return (
     <div data-landing-page className={`${styles.page} ${inter.variable} ${outfit.variable}`}>
@@ -89,7 +73,7 @@ export function LandingPage({
       <main id="main-content">
         <section className={styles.hero} aria-labelledby="hero-title" data-landing-hero>
           <HeroArtMotion>
-            <Image src="/assets/landing/tico/background.webp" alt="" fill sizes="100vw" preload />
+            <Image src="/assets/landing/tico/background-ar.png" alt="" fill sizes="100vw" preload />
           </HeroArtMotion>
           <InteractiveTico locale={locale} />
           <div className={styles.heroInner}>
@@ -170,7 +154,7 @@ export function LandingPage({
           <KineticParagraph className={styles.intro} text={dict.worlds.body} delay={0.08} />
           <Reveal delay={0.12}>
             <div className={styles.mapWrapper}>
-              <WorldsMap locale={locale} worlds={resolvedWorlds} />
+              <ChaptersMap locale={locale} chapters={resolvedChapters} framed />
             </div>
           </Reveal>
         </section>
