@@ -3,23 +3,23 @@ import { notFound } from "next/navigation";
 import { LandingPage } from "@/components/landing-page";
 import { isLocale } from "@/i18n/config";
 import { getCurrentUser } from "@/lib/auth";
-import { buildChaptersMap } from "@/services/chapters-map.service";
+import { buildWorldsMap } from "@/services/worlds-map.service";
 
 export default async function Page({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
   if (!isLocale(locale)) notFound();
   const user = await getCurrentUser();
-  let mapChapters;
+  let mapWorlds;
   try {
-    mapChapters = await buildChaptersMap({ userId: user?.id, locale });
+    mapWorlds = await buildWorldsMap({ userId: user?.id, locale });
   } catch {
-    mapChapters = undefined;
+    mapWorlds = undefined;
   }
 
   return (
     <LandingPage
       locale={locale}
-      mapChapters={mapChapters}
+      mapWorlds={mapWorlds}
       user={
         user
           ? {
