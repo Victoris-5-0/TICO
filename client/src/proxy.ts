@@ -2,9 +2,8 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { defaultLocale, locales } from "@/i18n/config";
 
-function preferredLocale(request: NextRequest) {
-  const accepted = request.headers.get("accept-language")?.toLowerCase() ?? "";
-  return accepted.includes("ar") ? "ar-EG" : accepted ? "en" : defaultLocale;
+function preferredLocale() {
+  return defaultLocale;
 }
 
 export async function proxy(request: NextRequest) {
@@ -15,7 +14,7 @@ export async function proxy(request: NextRequest) {
 
   if (!matchedLocale) {
     const url = request.nextUrl.clone();
-    url.pathname = `/${preferredLocale(request)}${pathname}`;
+    url.pathname = `/${preferredLocale()}${pathname}`;
     return NextResponse.redirect(url);
   }
 

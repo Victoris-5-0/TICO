@@ -73,7 +73,13 @@ export function LandingPage({
       <main id="main-content">
         <section className={styles.hero} aria-labelledby="hero-title" data-landing-hero>
           <HeroArtMotion>
-            <Image src="/assets/landing/tico/background-ar.png" alt="" fill sizes="100vw" preload />
+            <Image
+              src={isRtl ? "/assets/landing/tico/background-ar.png" : "/assets/landing/tico/background.webp"}
+              alt=""
+              fill
+              sizes="100vw"
+              preload
+            />
           </HeroArtMotion>
           <InteractiveTico locale={locale} />
           <div className={styles.heroInner}>

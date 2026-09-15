@@ -1,6 +1,6 @@
+import Image from "next/image";
 import Link from "next/link";
 
-import { SiteLogo } from "@/components/site-logo";
 import type { Locale } from "@/i18n/config";
 
 /**
@@ -30,7 +30,9 @@ export function MissionBriefing({
   return (
     <div className="briefing-page">
       <header className="briefing-header shell">
-        <SiteLogo href={`/${locale}`} />
+        <Link className="site-logo" href={`/${locale}`} aria-label="TICO home">
+          <Image src="/assets/landing/logo.svg" alt="TICO" width={200} height={70} priority />
+        </Link>
         <span className="briefing-preview-label">{pick(label)}</span>
         <Link className="briefing-close" href={`/${locale}/worlds/el-forn`} aria-label={ar ? "إغلاق المهمة" : "Close mission"}>×</Link>
       </header>
