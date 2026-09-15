@@ -5,6 +5,7 @@
  *   pnpm audio:missions --write         # synthesise the missing files
  *   pnpm audio:missions --write --all   # include questions, hints and prompts
  *   pnpm audio:missions --write --force # re-record lines that already exist
+ *   pnpm audio:missions --only=<id,id>  # restrict to these mission ids
  *
  * ## Why pre-recorded
  *
@@ -19,7 +20,15 @@
  * is 10,000 characters a month and a careless re-run can eat it. Existing files are
  * skipped unless `--force`, so re-running after adding one mission costs one mission.
  *
- * The key is read from `ELEVENLABS_API_KEY` and never written anywhere.
+ * ## Only what is deployed
+ *
+ * `content/prebuilt/` holds every prepared file, including drafts that are not pinned in
+ * production and missions that only ever serve as pool fallbacks. `--only` narrows a run
+ * to the ids that are actually pinned (`params.prebuilt = true` on `generated_missions`),
+ * so a draft sitting in the working tree does not quietly spend the month's quota.
+ *
+ * The key is read from `ELEVENLABS_API_KEY` and never written anywhere. The voice and
+ * model live in `elevenlabs.ts`, shared with the tour's recording script.
  */
 
 import "dotenv/config";
@@ -28,11 +37,7 @@ import { join, resolve } from "node:path";
 
 import type { PhasedMissionOut } from "../src/lib/ai/types";
 import { narrationLines, type NarrationManifest } from "../src/lib/mission/narration";
-
-/** Sarah — a premade voice, usable on the free tier. Library voices are not. */
-const DEFAULT_VOICE = "EXAVITQu4vr4xnSDxMaL";
-const MODEL = "eleven_multilingual_v2";
-const API = "https://api.elevenlabs.io/v1";
+import { MODEL, remainingCharacters, synthesise, voiceId } from "./elevenlabs";
 
 const PREBUILT_DIR = resolve(process.cwd(), "../ai-backend/content/prebuilt");
 const OUT_DIR = resolve(process.cwd(), "public/audio/missions");
@@ -47,14 +52,27 @@ const OUT_DIR = resolve(process.cwd(), "public/audio/missions");
  */
 const MANIFEST_FILE = resolve(process.cwd(), "src/lib/mission/narration-manifest.json");
 
-type Options = { write: boolean; force: boolean; scope: "core" | "all"; voiceId: string };
+type Options = {
+  write: boolean;
+  force: boolean;
+  scope: "core" | "all";
+  voiceId: string;
+  /** Mission ids to record. Empty means every prepared file. */
+  only: ReadonlySet<string>;
+};
 
 function parseArgs(argv: string[]): Options {
+  const only = argv
+    .filter((a) => a.startsWith("--only="))
+    .flatMap((a) => a.slice("--only=".length).split(","))
+    .map((id) => id.trim())
+    .filter(Boolean);
   return {
     write: argv.includes("--write"),
     force: argv.includes("--force"),
     scope: argv.includes("--all") ? "all" : "core",
-    voiceId: process.env.ELEVENLABS_VOICE_ID || DEFAULT_VOICE,
+    voiceId: voiceId(),
+    only: new Set(only),
   };
 }
 
@@ -68,51 +86,18 @@ function readMissions(): Array<{ file: string; mission: PhasedMissionOut }> {
     });
 }
 
-/** What the account has left, so the run can stop before it fails halfway. */
-async function remainingCharacters(key: string): Promise<number | null> {
-  try {
-    const res = await fetch(`${API}/user/subscription`, { headers: { "xi-api-key": key } });
-    if (!res.ok) return null;
-    const body = (await res.json()) as { character_count?: number; character_limit?: number };
-    if (typeof body.character_count !== "number" || typeof body.character_limit !== "number") return null;
-    return body.character_limit - body.character_count;
-  } catch {
-    return null;
-  }
-}
-
-async function synthesise(key: string, voiceId: string, text: string): Promise<Buffer> {
-  const res = await fetch(`${API}/text-to-speech/${voiceId}?output_format=mp3_44100_128`, {
-    method: "POST",
-    headers: { "xi-api-key": key, "Content-Type": "application/json" },
-    body: JSON.stringify({
-      text,
-      model_id: MODEL,
-      voice_settings: { stability: 0.5, similarity_boost: 0.75 },
-    }),
-  });
-
-  if (!res.ok) {
-    const detail = await res.text();
-    // The one failure worth naming: a library voice on a free key looks like a bad
-    // request until you read the body.
-    if (res.status === 402) {
-      throw new Error(
-        `${res.status}: this voice needs a paid plan. Free keys can only use premade voices — ${detail.slice(0, 200)}`,
-      );
-    }
-    throw new Error(`${res.status}: ${detail.slice(0, 300)}`);
-  }
-
-  return Buffer.from(await res.arrayBuffer());
-}
-
 async function main() {
   const options = parseArgs(process.argv.slice(2));
   const apiKey = process.env.ELEVENLABS_API_KEY ?? "";
 
-  const missions = readMissions();
-  if (!missions.length) throw new Error(`no prebuilt missions in ${PREBUILT_DIR}`);
+  const all = readMissions();
+  if (!all.length) throw new Error(`no prebuilt missions in ${PREBUILT_DIR}`);
+
+  const missions = options.only.size ? all.filter(({ mission }) => options.only.has(mission.id)) : all;
+  if (options.only.size) {
+    const missing = [...options.only].filter((id) => !missions.some(({ mission }) => mission.id === id));
+    if (missing.length) throw new Error(`--only names missions with no prepared file: ${missing.join(", ")}`);
+  }
 
   // Plan first, always — including on a real run, so the totals are printed before a
   // single character is spent.
@@ -131,7 +116,9 @@ async function main() {
     return { file, mission, lines, todo };
   });
 
-  console.log(`${missions.length} prebuilt missions · scope "${options.scope}" · voice ${options.voiceId}\n`);
+  console.log(
+    `${missions.length}${options.only.size ? ` of ${all.length}` : ""} prebuilt missions · scope "${options.scope}" · voice ${options.voiceId}\n`,
+  );
   for (const row of plan) {
     const chars = row.todo.reduce((n, l) => n + l.text.length, 0);
     console.log(
@@ -180,14 +167,18 @@ async function main() {
   }
 
   // The manifest is what the player reads; a line with no entry simply has no audio and
-  // the UI shows no play control for it.
+  // the UI shows no play control for it. It describes what is on disk for every prepared
+  // file, not just this run's `--only` set, so a narrow run never drops another mission's
+  // entries.
   const manifest: NarrationManifest = {
     voiceId: options.voiceId,
     model: MODEL,
     missions: Object.fromEntries(
-      plan.map(({ mission, lines }) => [
+      all.map(({ mission }) => [
         mission.id,
-        lines.filter((l) => existsSync(join(OUT_DIR, mission.id, `${l.key}.mp3`))).map((l) => l.key),
+        narrationLines(mission, "all")
+          .filter((l) => existsSync(join(OUT_DIR, mission.id, `${l.key}.mp3`)))
+          .map((l) => l.key),
       ]).filter(([, keys]) => (keys as string[]).length),
     ),
   };

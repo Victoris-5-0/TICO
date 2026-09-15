@@ -88,9 +88,24 @@
    says so for anybody who cannot tell the outline apart from the artwork. */
 .waiting { display: block; padding-block-start: 2px; color: #B9401E; font-size: clamp(11px, .9vw, 13px); font-weight: 700; }
 
-.skip { position: absolute; inset-block-start: 14px; inset-inline-end: 14px; min-block-size: 36px; padding: 8px 14px; border: 1px solid #E5DDD580; border-radius: 999px; background: #FFFDF9d9; color: #716A72; font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; }
+/* The stage's top corner: the narration controls and Skip, side by side. Both are quiet
+   pills in the tour's own palette rather than the mission player's dark glass, so they
+   sit on the warm wall instead of floating over it. */
+.corner { position: absolute; inset-block-start: 14px; inset-inline-end: 14px; display: flex; align-items: center; gap: 8px; }
+.skip { min-block-size: 36px; padding: 8px 14px; border: 1px solid #E5DDD580; border-radius: 999px; background: #FFFDF9d9; color: #716A72; font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; }
 .skip:hover { color: #1F1820; }
 .skip:focus-visible { outline: 3px solid #267977; outline-offset: 3px; }
+
+.narration { display: flex; gap: 6px; }
+.narration button {
+  display: grid; place-items: center; inline-size: 36px; block-size: 36px;
+  border: 1px solid #E5DDD580; border-radius: 999px; background: #FFFDF9d9;
+  color: #1F1820; font: inherit; font-size: 15px; line-height: 1; cursor: pointer;
+  backdrop-filter: none;
+}
+.narration button:hover { border-color: #267977; }
+.narration button:focus-visible { outline: 3px solid #267977; outline-offset: 3px; }
+.narration button[aria-pressed="true"] { color: #716A72; }
 
 .progress { position: absolute; inset-block-end: 0; inset-inline: 0; block-size: 4px; background: #1F182026; }
 .progress > span { display: block; block-size: 100%; background: #DB5B31; transition: inline-size .3s ease; }

@@ -10,6 +10,7 @@ import { SiteLogo } from "@/components/site-logo";
 import type { MissionTest, PhasedMissionOut, WorldChange } from "@/lib/ai/types";
 import { beatsOf, interactionsOf, settledProps, resolveChange, undrawnProps, type MissionProps } from "@/lib/bakery/mission-scene";
 import { bakeryScene } from "@/lib/bakery/scene-manifest";
+import { narrationDir } from "@/lib/mission/narration";
 import * as telemetry from "@/lib/mission/telemetry";
 import { usePythonRunner, type RunResult } from "@/lib/runner/use-python-runner";
 import type { Locale } from "@/i18n/config";
@@ -310,7 +311,7 @@ export function MissionPlayer({ locale, mission, worldSlug, worldTitle, lessonId
 
   return (
     <MotionConfig reducedMotion="user">
-     <NarrationProvider missionId={mission.id} keys={narrationKeys} sequence={NARRATION[phaseKey]}>
+     <NarrationProvider dir={narrationDir(mission.id)} keys={narrationKeys} sequence={NARRATION[phaseKey]}>
       <div className={styles.page} dir={ar ? "rtl" : "ltr"}>
         <header className={styles.header}>
           <SiteLogo href={`/${locale}`} />

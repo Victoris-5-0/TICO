@@ -3,18 +3,22 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useSyncExternalStore, type ReactNode } from "react";
 
 import { muteStore } from "@/lib/mission/mute-store";
-import { narrationDir } from "@/lib/mission/narration";
 import type { Locale } from "@/i18n/config";
 
 import styles from "./mission-player.module.css";
 
 /**
- * Playback for the pre-recorded mission lines.
+ * Playback for pre-recorded lines.
  *
  * Each phase declares the lines it narrates, and they play in order as the phase appears.
  * A mission is a sequence of moments rather than a page of text, and the student has
  * already pressed something to get to each one — so the line reads itself, and the only
  * controls are the two that matter: silence it, or hear it again.
+ *
+ * The provider knows nothing about missions: it is given the folder the recordings live
+ * in and the keys that exist there. The mission player hands it `narrationDir(id)`; the
+ * opening tour hands it `tourNarrationDir(world)` with a stop id per line. Both are the
+ * same child listening to the same voice, so both go through one mute switch.
  *
  * ## Autoplay and the first line
  *
@@ -43,12 +47,13 @@ type NarrationValue = {
 const NarrationContext = createContext<NarrationValue | null>(null);
 
 export function NarrationProvider({
-  missionId,
+  dir,
   keys,
   sequence,
   children,
 }: {
-  missionId: string;
+  /** Where the recordings live, relative to `public/`. */
+  dir: string;
   /** Line keys that have a recording, from the manifest. */
   keys: readonly string[];
   /** What the phase now on screen narrates, in order. */
@@ -85,7 +90,7 @@ export function NarrationProvider({
         return;
       }
 
-      const element = new Audio(`${narrationDir(missionId)}/${next}.mp3`);
+      const element = new Audio(`${dir}/${next}.mp3`);
       element.onended = step;
       // A missing or unplayable file should not strand the rest of the sequence.
       element.onerror = step;
@@ -95,7 +100,7 @@ export function NarrationProvider({
       void element.play().catch(() => {});
     };
     step();
-  }, [missionId]);
+  }, [dir]);
 
   // The phase changed — or the student unmuted — so cut whatever was speaking and read
   // the line now on screen.
@@ -105,7 +110,7 @@ export function NarrationProvider({
     queue.current = sequenceId.split("|");
     playQueue();
     return stop;
-  }, [sequenceId, muted, missionId, playQueue, stop]);
+  }, [sequenceId, muted, dir, playQueue, stop]);
 
   const toggleMute = useCallback(() => {
     const nowMuted = !muteStore.read();
@@ -130,15 +135,20 @@ export function NarrationProvider({
   return <NarrationContext.Provider value={value}>{children}</NarrationContext.Provider>;
 }
 
-/** Mute and repeat. Hidden entirely when the mission has no recordings. */
-export function NarrationControls({ locale }: { locale: Locale }) {
+/**
+ * Mute and repeat. Hidden entirely when there are no recordings.
+ *
+ * `className` places the pair: the mission player's toolbar by default, or a corner of
+ * the tour's stage.
+ */
+export function NarrationControls({ locale, className = styles.narrationControls }: { locale: Locale; className?: string }) {
   const narration = useContext(NarrationContext);
   const ar = locale === "ar-EG";
 
   if (!narration?.hasAudio) return null;
 
   return (
-    <div className={styles.narrationControls}>
+    <div className={className}>
       <button
         type="button"
         className={`${styles.narrationButton} ${narration.muted ? styles.narrationMuted : ""}`}

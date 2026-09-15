@@ -45,8 +45,12 @@ missions do none of them. **That gap is the whole job.**
 | driven by | an authored `Script` array | `PhasedMissionOut` from the database |
 
 `ScriptPlayer` is the one to keep. `MissionPlayer` is ~1000 lines carrying things
-`ScriptPlayer` does **not** yet have and must not lose: the hint ladder, narration audio,
-telemetry per phase, the debrief screen, and the exit panel.
+`ScriptPlayer` does **not** yet have and must not lose: the hint ladder, telemetry per
+phase, the debrief screen, and the exit panel. Narration was ported on 2026-09-15:
+`ScriptPlayer` takes a `narration` prop (the recordings folder and which stop ids have
+one) and reads one line per stop through the same `NarrationProvider` the missions use,
+behind the same mute switch. The tour's recordings come from `pnpm audio:tour`, which
+records in script order and stops when the month's quota runs out.
 
 ### 2.2 The scene — rebuilt, shared, good
 
@@ -213,7 +217,7 @@ no idea what either means. The change moves the boundary.
 **Frontend / game UI**
 
 - `ScriptPlayer` becomes the only mission engine; `MissionPlayer` is deleted **after** its
-  hint ladder, narration, telemetry and debrief are ported into it.
+  hint ladder, telemetry and debrief are ported into it (narration already is).
 - Implement `visual.actions` for real: `bind` (have it), `write`, `set`, `face`, `focus`.
 - Implement `simulation.controls` as real buttons a beat can present.
 
@@ -250,7 +254,7 @@ Each step is shippable and unblocks the next.
 | # | Step | Layer | Unblocks |
 | --- | --- | --- | --- |
 | 1 | Wire `AUTHORED` into the mission route by lesson slug — the same key `startForLesson` already uses | FE | lesson 1 plays as a script |
-| 2 | Port hint ladder + narration + debrief into `ScriptPlayer` | FE | retiring `MissionPlayer` |
+| 2 | Port hint ladder + debrief into `ScriptPlayer` (narration is done) | FE | retiring `MissionPlayer` |
 | 3 | Persistent world row (money, flour) + read it in `ScriptPlayer` | DB, FE | consequences |
 | 4 | Extend `el_forn.yaml` (sprites, sign, animations, countable flour) | AI | generation can describe the real world |
 | 5 | Author lessons 2–4 as scripts | content | the whole world plays |
