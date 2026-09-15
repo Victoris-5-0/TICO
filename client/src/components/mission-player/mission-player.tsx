@@ -325,7 +325,7 @@ export function MissionPlayer({ locale, mission, worldSlug, worldTitle, lessonId
       <div className={styles.page} dir={ar ? "rtl" : "ltr"}>
         <header className={styles.header}>
           <Link className={styles.navLogo} href={`/${locale}`} aria-label="TICO home">
-            <Image src="/assets/landing/logo.svg" alt="TICO" width={200} height={70} priority />
+            <Image src="/assets/landing/tico/logo-mission.png" alt="TICO" width={912} height={289} priority />
           </Link>
           <div className={styles.headerMeta}>
             <span className={styles.world}>{worldTitle}</span>
