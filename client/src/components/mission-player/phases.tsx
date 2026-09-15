@@ -22,18 +22,22 @@ import type { Locale } from "@/i18n/config";
 
 import { CodeEditor } from "./code-editor";
 import { SPEAKER_PORTRAITS, TICO_PORTRAIT } from "./mission-copy";
+import { Prose, mixed, proseAttrs } from "./prose";
 import styles from "./mission-player.module.css";
 
-type Ar = { ar: boolean };
-
-/** A line of dialogue with the speaker's portrait beside it. */
-function Speech({ portrait, name, line, ar }: { portrait: string; name: string; line: string } & Ar) {
+/**
+ * A line of dialogue with the speaker's portrait beside it.
+ *
+ * The line directs itself (see `prose.tsx`): it is Arabic under every locale, so it
+ * must not take the page's direction.
+ */
+function Speech({ portrait, name, line }: { portrait: string; name: string; line: string }) {
   return (
     <div className={styles.speech}>
       <Image className={styles.portrait} src={portrait} alt="" width={384} height={384} sizes="88px" />
       <div className={styles.speechBubble}>
         <strong className={styles.speaker}>{name}</strong>
-        <p dir={ar ? "rtl" : "ltr"}>{line}</p>
+        <Prose text={line} />
       </div>
     </div>
   );
@@ -56,7 +60,7 @@ export function EncounterPhase({ phase, locale, onContinue, awaiting = null, spo
   return (
     <div className={styles.storyPhase}>
       {/* When the scene is saying it over his head, the panel would only be an echo. */}
-      {!spokenInScene && <Speech portrait={portrait} name={phase.speakerNameAr} line={phase.lineAr} ar={ar} />}
+      {!spokenInScene && <Speech portrait={portrait} name={phase.speakerNameAr} line={phase.lineAr} />}
       {awaiting ? (
         <p className={styles.awaiting} dir={ar ? "rtl" : "ltr"}>
           {awaiting === "scene" ? (ar ? "شوف اللي حصل في الفرن…" : "Watch what happens in the bakery…")
@@ -115,13 +119,12 @@ export function ExplorePhase({
 
   return (
     <div className={styles.storyPhase}>
-      <Speech portrait={TICO_PORTRAIT} name={ar ? "تيكو" : "Tico"} line={phase.ticoIntroAr} ar={ar} />
+      <Speech portrait={TICO_PORTRAIT} name={ar ? "تيكو" : "Tico"} line={phase.ticoIntroAr} />
 
       <div className={styles.question}>
-        <p className={styles.questionText} dir={ar ? "rtl" : "ltr"}>
-          <span className={styles.roundCount}>{ar ? `سؤال ${round + 1} من ${phase.rounds.length}` : `Question ${round + 1} of ${phase.rounds.length}`}</span>
-          {current.questionAr}
-        </p>
+        <Prose className={styles.questionText} text={current.questionAr}>
+          <span className={styles.roundCount} dir={ar ? "rtl" : "ltr"}>{ar ? `سؤال ${round + 1} من ${phase.rounds.length}` : `Question ${round + 1} of ${phase.rounds.length}`}</span>
+        </Prose>
 
         <ul className={styles.options}>
           {current.optionsAr.map((option, index) => {
@@ -144,7 +147,7 @@ export function ExplorePhase({
                   <span aria-hidden="true" className={styles.optionMark}>
                     {isRight ? "✓" : isWrong ? "•" : ""}
                   </span>
-                  <bdi>{option}</bdi>
+                  <bdi {...proseAttrs(option)}>{mixed(option)}</bdi>
                 </motion.button>
               </li>
             );
@@ -157,9 +160,9 @@ export function ExplorePhase({
             initial={reduced ? false : { opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
             role="status"
-            dir={ar ? "rtl" : "ltr"}
+            {...proseAttrs(current.nudgeAr)}
           >
-            {current.nudgeAr}
+            {mixed(current.nudgeAr)}
           </motion.p>
         )}
 
@@ -187,10 +190,10 @@ export function DiscoverPhase({ phase, locale, onContinue }: { phase: PhaseDisco
     <div className={styles.storyPhase}>
       <div className={styles.conceptCard}>
         <span className={styles.conceptEyebrow}>{ar ? "المفهوم" : "The concept"}</span>
-        <h2 className={styles.conceptName}>{phase.conceptNameAr}</h2>
-        <p className={styles.conceptBody} dir={ar ? "rtl" : "ltr"}>{phase.explanationAr}</p>
+        <h2 className={styles.conceptName} {...proseAttrs(phase.conceptNameAr)}>{mixed(phase.conceptNameAr)}</h2>
+        <Prose className={styles.conceptBody} text={phase.explanationAr} />
       </div>
-      {phase.ticoLineAr && <Speech portrait={TICO_PORTRAIT} name={ar ? "تيكو" : "Tico"} line={phase.ticoLineAr} ar={ar} />}
+      {phase.ticoLineAr && <Speech portrait={TICO_PORTRAIT} name={ar ? "تيكو" : "Tico"} line={phase.ticoLineAr} />}
       <button type="button" className={styles.primaryAction} onClick={onContinue}>
         {ar ? "وريني الكود" : "Show me the code"}
       </button>
@@ -321,7 +324,7 @@ export function UnderstandPhase({
 
   return (
     <div className={styles.workspaceBody}>
-      {phase.introAr && <p className={styles.intro} dir={ar ? "rtl" : "ltr"}>{phase.introAr}</p>}
+      {phase.introAr && <Prose className={styles.intro} text={phase.introAr} />}
 
       <CodeEditor value={phase.code} readOnly onRun={onRun} ariaLabel={ar ? "كود المهمة، للقراءة فقط" : "Mission code, read only"} />
 
@@ -330,7 +333,7 @@ export function UnderstandPhase({
           {phase.annotations.map((note) => (
             <li key={`${note.line}-${note.textAr}`}>
               <span className={styles.lineChip} dir="ltr" lang="en">{ar ? `سطر ${note.line}` : `line ${note.line}`}</span>
-              <span dir={ar ? "rtl" : "ltr"}>{note.textAr}</span>
+              <span {...proseAttrs(note.textAr)}>{mixed(note.textAr)}</span>
             </li>
           ))}
         </ol>
@@ -388,10 +391,9 @@ function HintNote({ hint, locale }: { hint: { text: string; rung: number } | nul
   const ar = locale === "ar-EG";
   if (!hint) return null;
   return (
-    <p className={styles.hint} role="note" dir={ar ? "rtl" : "ltr"}>
-      <span className={styles.hintRung}>{ar ? `تلميح ${hint.rung} من ٤` : `Hint ${hint.rung} of 4`}</span>
-      {hint.text}
-    </p>
+    <Prose className={styles.hint} role="note" text={hint.text}>
+      <span className={styles.hintRung} dir={ar ? "rtl" : "ltr"}>{ar ? `تلميح ${hint.rung} من ٤` : `Hint ${hint.rung} of 4`}</span>
+    </Prose>
   );
 }
 
@@ -525,7 +527,7 @@ function GuidedStepView({
     <div className={styles.workspaceBody}>
       <div className={styles.stepHeader}>
         <span className={styles.roundCount}>{ar ? `خطوة ${index + 1} من ${total}` : `Step ${index + 1} of ${total}`}</span>
-        <p dir={ar ? "rtl" : "ltr"}>{step.promptAr}</p>
+        <Prose text={step.promptAr} />
       </div>
 
       <CodeEditor
@@ -610,8 +612,8 @@ export function RemixPhase({
     <div className={styles.workspaceBody}>
       <div className={styles.twist}>
         <span className={styles.conceptEyebrow}>{ar ? "الدنيا اتغيرت" : "The world changed"}</span>
-        <p className={styles.twistLine} dir={ar ? "rtl" : "ltr"}>{phase.twistAr}</p>
-        <p dir={ar ? "rtl" : "ltr"}>{phase.newRequirementAr}</p>
+        <Prose className={styles.twistLine} text={phase.twistAr} />
+        <Prose text={phase.newRequirementAr} />
       </div>
 
       <CodeEditor

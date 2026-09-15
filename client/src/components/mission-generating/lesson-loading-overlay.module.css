@@ -153,6 +153,34 @@
   color: var(--coral, #db5b31);
 }
 
+/*
+ * Shown on phones only, while the mission is still being prepared.
+ *
+ * The coding phases need a keyboard and room for an editor; below 640px the mission
+ * player replaces them with a wider-screen notice (`docs/design.md`, containers table).
+ * A child on a phone finds that out three phases in. Saying it here, while they are
+ * waiting anyway, lets them switch devices before they have started — and says nothing
+ * at all on a tablet or desktop, where it would be noise.
+ */
+.deviceHint {
+  display: none;
+  width: 100%;
+  margin: -8px 0 20px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(233, 153, 47, 0.45);
+  background: rgba(233, 153, 47, 0.14);
+  color: var(--ink, #1f1820);
+  font-size: 0.86rem;
+  font-weight: 700;
+  line-height: 1.55;
+  text-align: center;
+}
+
+@media (max-width: 639px) {
+  .deviceHint { display: block; }
+}
+
 .actionsRow {
   display: flex;
   align-items: center;

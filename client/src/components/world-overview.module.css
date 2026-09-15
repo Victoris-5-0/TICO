@@ -176,6 +176,44 @@
   box-shadow: none;
 }
 
+/* The secondary variant from docs/design.md: raised surface, ink text, neutral border.
+   Same height and radius as the primary so the pair reads as one row; quieter so it
+   never competes with "Continue". */
+.secondaryBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 50px;
+  padding: 12px 22px;
+  border-radius: 14px;
+  background: #fffdf9;
+  color: #1f1820;
+  font-weight: 800;
+  font-size: 15.5px;
+  text-decoration: none;
+  border: 1px solid rgba(31, 24, 32, 0.18);
+  box-shadow: 0 4px 0 rgba(31, 24, 32, 0.12), 0 8px 20px rgba(31, 24, 32, 0.08);
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+  cursor: pointer;
+}
+
+.secondaryBtn:hover {
+  transform: translateY(-2px);
+  border-color: #267977;
+  box-shadow: 0 6px 0 rgba(31, 24, 32, 0.12), 0 12px 24px rgba(31, 24, 32, 0.12);
+}
+
+.secondaryBtn:active {
+  transform: translateY(2px);
+  box-shadow: 0 2px 0 rgba(31, 24, 32, 0.12);
+}
+
+.secondaryBtn:focus-visible {
+  outline: 3px solid #267977;
+  outline-offset: 3px;
+}
+
 .heroRight {
   display: flex;
   flex-direction: column;
@@ -541,4 +579,9 @@
   .missionListSection {
     padding: 20px 16px;
   }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .primaryBtn, .secondaryBtn { transition: none; }
+  .primaryBtn:hover, .secondaryBtn:hover, .primaryBtn:active, .secondaryBtn:active { transform: none; }
 }

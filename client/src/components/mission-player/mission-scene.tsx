@@ -9,6 +9,7 @@ import { bakeryScene, frame, propAssetUrls, sceneAssetUrls, worldPropNames } fro
 import { CUSTOMER_IDS } from "@/lib/bakery/simulation";
 import type { Locale } from "@/i18n/config";
 
+import { mixed, proseAttrs } from "./prose";
 import styles from "./mission-player.module.css";
 
 const subscribeToHydration = () => () => {};
@@ -205,12 +206,12 @@ export function MissionScene({ locale, props, animate, playToken = 0, caption, h
             dir={ar ? "rtl" : "ltr"}
           >
             <span>{upset.name}</span>
-            <p aria-live="assertive">{upset.line}</p>
+            <p aria-live="assertive" {...proseAttrs(upset.line)}>{mixed(upset.line)}</p>
           </div>
         ) : saying?.line ? (
           <div className={styles.sceneSpeech} style={speechAt} dir={ar ? "rtl" : "ltr"}>
             {saying.name && <span>{saying.name}</span>}
-            <p aria-live="polite">{saying.line}</p>
+            <p aria-live="polite" {...proseAttrs(saying.line)}>{mixed(saying.line)}</p>
           </div>
         ) : null}
         {assets !== "ready" && (
@@ -222,8 +223,8 @@ export function MissionScene({ locale, props, animate, playToken = 0, caption, h
         )}
       </div>
       {caption && (
-        <figcaption className={styles.sceneCaption} role="status" aria-live="polite">
-          {caption}
+        <figcaption className={styles.sceneCaption} role="status" aria-live="polite" {...proseAttrs(caption)}>
+          {mixed(caption)}
         </figcaption>
       )}
     </figure>

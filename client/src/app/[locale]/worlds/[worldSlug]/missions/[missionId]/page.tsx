@@ -86,7 +86,9 @@ export default async function Page({ params, searchParams }: { params: Params; s
     ? await db.lesson.findUnique({ where: { id: stored.lessonId }, select: { id: true, slug: true, order: true } })
     : null);
   const authoredWorld = worlds.find((world) => world.slug === worldSlug);
-  const missionName = authoredWorld?.missions[lessonRecord?.order ?? -1]?.[locale] ?? null;
+  // `order` counts from 1 and the authored list from 0; `missions[order]` showed every
+  // mission under the name of the lesson after it.
+  const missionName = authoredWorld?.missions[(lessonRecord?.order ?? 0) - 1]?.[locale] ?? null;
 
   return (
     <MissionPlayer

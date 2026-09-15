@@ -308,6 +308,14 @@ export function LessonLoadingOverlay({
             <span className={styles.percentLabel}>{progress}%</span>
           </div>
 
+          {/* Phones only — see the stylesheet. */}
+          <p className={styles.deviceHint} role="note">
+            <span aria-hidden="true">💻 </span>
+            {isArabic
+              ? "الدرس ده أحسن على كمبيوتر أو تابلت. لو تقدر، افتحه هناك."
+              : "This lesson works best on a desktop or tablet. Open it there if you can."}
+          </p>
+
           {/* Actions */}
           <div className={styles.actionsRow}>
             <button
