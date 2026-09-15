@@ -10,22 +10,18 @@
  *   dock   a small button pinned to the side                      (idle)
  *   chat   a conversation, streamed from the AI service           (a real model)
  *
- * Scoped to this page on purpose. It is being reviewed here before it goes anywhere else.
+ * The landing page shares the dock/chat states without the analysis tour.
  *
  * ## The session
  *
- * `POST /v1/tico/messages` is built around a mission: it takes a `sessionId`, checks the
- * student owns it, and uses it as the LangGraph thread. There is no mission on this page,
- * so the chat attaches to the learner's most recent session — one they own, which the
- * ownership check will accept, and which gives the conversation somewhere to live.
- *
- * With no sessions at all he says so rather than failing. A child who has never played
- * has nothing to discuss yet, and a spinner that ends in an error is a worse answer than
- * a sentence.
+ * Page chat sends its page and locale. An optional owned session supplies background
+ * only when the learner asks about a mission; it is not required for page questions.
  */
 
 import Image from "next/image";
+import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { readTicoStream } from "@/lib/ai/tico-stream";
 
 import styles from "./tico-dock.module.css";
 import { TOUR, type Stop } from "./tico-guide";
@@ -51,9 +47,12 @@ const COPY = {
     next: "التالي",
     done: "تمام!",
     greeting: "أهلاً! اسألني عن أي حاجة في الصفحة دي — أو عن الكود لو عندك سؤال.",
-    noSession: "لسه مخلّصتش أي مهمة، فمعنديش حاجة أتكلم عنها لحد دلوقتي. ابدأ أول مهمة وارجعلي!",
     failed: "معرفتش أوصل دلوقتي. جرّب تاني بعد شوية.",
     thinking: "بفكّر…",
+    signIn: "سجّل دخولك بجوجل عشان أساعدك تفهم الموقع والصفحة دي.",
+    login: "سجّل دخولك",
+    landingSubtitle: "اسألني عن تيكو وطريقة استخدام الموقع",
+    landingGreeting: "أهلاً! أنا تيكو، الروبوت البرتقالي وصاحبك في تعلّم البرمجة. تحب تعرف إيه عن الموقع أو طريقة استخدامه؟",
   },
   en: {
     open: "Chat with TICO",
@@ -66,23 +65,34 @@ const COPY = {
     next: "Next",
     done: "Got it!",
     greeting: "Hi! Ask me about anything on this page — or about your code, if you have a question.",
-    noSession: "You haven't finished a mission yet, so there's nothing for me to talk about. Start one and come back!",
     failed: "I couldn't reach anyone just now. Try again in a moment.",
     thinking: "Thinking…",
+    signIn: "Sign in with Google so I can help you understand this website and page.",
+    login: "Sign in",
+    landingSubtitle: "Ask about TICO and how to use the website",
+    landingGreeting: "Hi! I'm TICO, the orange robot and your programming companion. What would you like to know about this website or how to use it?",
   },
 } as const;
 
-export function TicoDock({ locale, sessionId }: { locale: string; sessionId: string | null }) {
+export function TicoDock({ locale, sessionId, page = "analysis", signedIn = true }: {
+  locale: string;
+  sessionId: string | null;
+  page?: "analysis" | "landing";
+  signedIn?: boolean;
+}) {
   const ar = locale.startsWith("ar");
   const t = ar ? COPY.ar : COPY.en;
 
-  const [mode, setMode] = useState<"tour" | "dock" | "chat">("tour");
+  const [mode, setMode] = useState<"tour" | "dock" | "chat">(page === "landing" ? "dock" : "tour");
   const [step, setStep] = useState(0);
   const [walking, setWalking] = useState(false);
 
-  const [turns, setTurns] = useState<Turn[]>([{ role: "tico", text: t.greeting }]);
+  const [turns, setTurns] = useState<Turn[]>([{ role: "tico", text: page === "landing" ? t.landingGreeting : t.greeting }]);
   const [draft, setDraft] = useState("");
   const [busy, setBusy] = useState(false);
+  const [needsSignIn, setNeedsSignIn] = useState(!signedIn);
+  const dockRef = useRef<HTMLButtonElement>(null);
+  const conversationRef = useRef<string | null>(null);
 
   const lineRef = useRef<HTMLParagraphElement>(null);
   const logRef = useRef<HTMLDivElement>(null);
@@ -107,9 +117,10 @@ export function TicoDock({ locale, sessionId }: { locale: string; sessionId: str
   // step the reader asked for — because stealing it on load drops a keyboard user into
   // something they did not open.
   useEffect(() => {
+    if (page !== "analysis") return;
     lightPanel(TOUR[0].target, false);
     return clearPanels;
-  }, [lightPanel, clearPanels]);
+  }, [page, lightPanel, clearPanels]);
 
   useEffect(() => {
     if (mode === "tour" && stepped.current) lineRef.current?.focus();
@@ -122,6 +133,11 @@ export function TicoDock({ locale, sessionId }: { locale: string; sessionId: str
   useEffect(() => {
     if (mode === "chat") inputRef.current?.focus();
   }, [mode]);
+
+  const closeChat = useCallback(() => {
+    setMode("dock");
+    window.requestAnimationFrame(() => dockRef.current?.focus());
+  }, []);
 
   const goTo = useCallback((next: number) => {
     stepped.current = true;
@@ -140,7 +156,7 @@ export function TicoDock({ locale, sessionId }: { locale: string; sessionId: str
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
-        if (mode === "chat") setMode("dock");
+        if (mode === "chat") closeChat();
         else if (mode === "tour") endTour();
         return;
       }
@@ -154,19 +170,14 @@ export function TicoDock({ locale, sessionId }: { locale: string; sessionId: str
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [mode, step, ar, goTo, endTour]);
+  }, [mode, step, ar, goTo, endTour, closeChat]);
 
   async function send() {
     const text = draft.trim();
-    if (!text || busy) return;
+    if (!text || busy || needsSignIn) return;
 
     setTurns((prev) => [...prev, { role: "you", text }]);
     setDraft("");
-
-    if (!sessionId) {
-      setTurns((prev) => [...prev, { role: "tico", text: t.noSession }]);
-      return;
-    }
 
     setBusy(true);
     // One empty TICO turn, filled in as the stream arrives.
@@ -176,45 +187,19 @@ export function TicoDock({ locale, sessionId }: { locale: string; sessionId: str
       const res = await fetch("/api/v1/ai/tico/messages", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sessionId, message: text }),
+        body: JSON.stringify({ sessionId, message: text, page, locale,
+          conversationId: conversationRef.current ?? (conversationRef.current = crypto.randomUUID()) }),
       });
+      if (res.status === 401) setNeedsSignIn(true);
       if (!res.ok || !res.body) throw new Error(String(res.status));
-
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = "";
-      let answer = "";
-
-      // SSE frames are `data: {...}` separated by a blank line, and a chunk can split one
-      // in half — so hold the tail until the next chunk completes it.
-      for (;;) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-
-        const frames = buffer.split("\n\n");
-        buffer = frames.pop() ?? "";
-
-        for (const frame of frames) {
-          const line = frame.split("\n").find((l) => l.startsWith("data: "));
-          if (!line) continue;
-          try {
-            const payload = JSON.parse(line.slice(6));
-            if (payload.delta) {
-              answer += payload.delta;
-              setTurns((prev) => {
-                const next = [...prev];
-                next[next.length - 1] = { role: "tico", text: answer };
-                return next;
-              });
-            }
-          } catch {
-            // A frame that is not JSON is not something a learner should be shown.
-          }
-        }
-      }
-
-      if (!answer) {
+      const answer = await readTicoStream(res.body, (text) => {
+        setTurns((prev) => {
+          const next = [...prev];
+          next[next.length - 1] = { role: "tico", text };
+          return next;
+        });
+      });
+      if (!answer.trim()) {
         setTurns((prev) => {
           const next = [...prev];
           next[next.length - 1] = { role: "tico", text: t.failed };
@@ -273,8 +258,9 @@ export function TicoDock({ locale, sessionId }: { locale: string; sessionId: str
   if (mode === "dock") {
     return (
       <button
+        ref={dockRef}
         type="button"
-        className={styles.dock}
+        className={`${styles.dock} ${page === "landing" ? styles.landingDock : ""}`}
         onClick={() => setMode("chat")}
         aria-label={t.open}
         title={t.open}
@@ -287,7 +273,7 @@ export function TicoDock({ locale, sessionId }: { locale: string; sessionId: str
 
   // ------------------------------------------------------------------- the chat
   return (
-    <section className={styles.chat} aria-label={t.title}>
+    <section className={styles.chat} aria-label={t.title} dir={ar ? "rtl" : "ltr"}>
       <header className={styles.chatHead}>
         <Image
           className={styles.chatFace}
@@ -298,12 +284,12 @@ export function TicoDock({ locale, sessionId }: { locale: string; sessionId: str
         />
         <div className={styles.chatTitle}>
           <strong>{t.title}</strong>
-          <span>{t.subtitle}</span>
+          <span>{page === "landing" ? t.landingSubtitle : t.subtitle}</span>
         </div>
         <button
           type="button"
           className={styles.close}
-          onClick={() => setMode("dock")}
+          onClick={closeChat}
           aria-label={t.close}
         >
           ×
@@ -321,7 +307,14 @@ export function TicoDock({ locale, sessionId }: { locale: string; sessionId: str
         ))}
       </div>
 
-      <form
+      {needsSignIn ? (
+        <div className={styles.entry}>
+          <p>{t.signIn}</p>
+          <Link className={styles.primary} href={`/${locale}/login`}>
+            {t.login}
+          </Link>
+        </div>
+      ) : <form
         className={styles.compose}
         onSubmit={(e) => {
           e.preventDefault();
@@ -334,13 +327,14 @@ export function TicoDock({ locale, sessionId }: { locale: string; sessionId: str
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           placeholder={t.placeholder}
+          aria-label={t.placeholder}
           disabled={busy}
           maxLength={500}
         />
         <button type="submit" className={styles.primary} disabled={busy || !draft.trim()}>
           {t.send}
         </button>
-      </form>
+      </form>}
     </section>
   );
 }

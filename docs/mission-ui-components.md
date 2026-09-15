@@ -70,7 +70,7 @@ in the mission/backend flow, not in this presentation component.
 The separate map preview uses the first five authored mission names from each of the
 two depicted worlds. All are available to preview, and selection opens a description
 with a real world-overview link. This is explicitly labeled as a design preview, not
-learner progress. It does not replace the `/learn` maps (see design.md §24).
+learner progress. It does not replace the three-world `/learn` curriculum.
 
 ## Verification
 

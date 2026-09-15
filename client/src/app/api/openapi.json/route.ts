@@ -558,16 +558,20 @@ Protected endpoints require a valid Better Auth session token. The session must 
         post: {
           tags: ['AI Service Proxies'],
           summary: 'Stream TICO companion chat (SSE)',
-          description: 'Streams Server-Sent Events from the AI companion.',
+          description: 'Streams page-relevant TICO responses. Mission chat requires sessionId; landing and analysis chat do not. Analysis metrics are computed server-side.',
           requestBody: {
             required: true,
             content: {
               'application/json': {
                 schema: {
                   type: 'object',
+                  required: ['message'],
                   properties: {
-                    message: { type: 'string' },
-                    locale: { type: 'string', example: 'ar-EG' },
+                    message: { type: 'string', minLength: 1, maxLength: 2000 },
+                    sessionId: { type: 'string', nullable: true, description: 'Required when page is mission.' },
+                    page: { type: 'string', enum: ['mission', 'landing', 'analysis'], default: 'mission' },
+                    locale: { type: 'string', enum: ['ar-EG', 'en'], default: 'ar-EG' },
+                    conversationId: { type: 'string', pattern: '^[a-zA-Z0-9_-]{1,80}$' },
                   },
                 },
               },

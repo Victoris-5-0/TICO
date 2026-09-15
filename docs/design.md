@@ -778,36 +778,3 @@ Motion for React handles short step transitions and respects reduced motion.
 its completion is explicitly a preview and saves nothing. The real onboarding route
 continues to verify identity and uses the authenticated completion action. Asset source
 nodes and crop geometry are recorded in `public/assets/auth/sources.json`.
-
-## 24. Chapters map and chapter worlds map (2026-09-15)
-
-`/[locale]/learn` implements Figma `23:52`, "Select your world": four chapter islands
-down one painted sky, a dashed road weaving between them, a plaque beside each and one
-action — an orange Join World, or a black Locked pill with the lock badge riding its top
-edge. `/[locale]/learn/[chapterSlug]` implements Figma `23:119`: the chapter's worlds
-as floating Egyptian islands, TICO standing on the one to play, a Play button into that
-world's own mission map at `/worlds/[worldSlug]`, and a lock on the ones after it. The
-existing world page and its mission road are the third level and are unchanged. This
-supersedes the three-region map in §9 as the learner's entry point; the three Egyptian
-worlds now sit inside the first chapter, and the three chapters drawn after it (OOP,
-Data Structure, Algorithms) are locked until they have worlds. Chapter content lives in
-`client/src/content/chapters.ts`; both maps read progress through
-`services/chapters-map.service.ts` so they can never disagree about what is open.
-
-Both maps are measured in the 1440-wide artboard and scale with a container-query unit
-(`--px`, one artboard pixel), so the composition holds from laptop to wide desktop.
-Under 760 px the scene is not shrunk; it becomes a stacked list — island, plaque,
-action — with the road removed and the curriculum order kept. Positions use logical
-insets, so Arabic mirrors the islands and the road; the art itself is never mirrored,
-and TICO turns to face along the road. Copy follows the Figma with two additions the
-design system requires: each plaque names its status in words (locked ones name the
-prerequisite), and every island on the worlds map carries a small name plaque, since
-names are never baked into art. Inter on English, Alexandria on Arabic, orange actions
-with ink text; the Figma's `#D5582A` kicker uses the brand anchor.
-
-Motion is a hover lift and press on the action, a single 400 ms entrance for TICO, and
-nothing continuous. The landing page's worlds section embeds the chapter worlds map in
-a `framed` variant (sky inside a rounded frame, header band trimmed). Assets are the
-Figma image fills trimmed to their alpha bounds, as webp, in
-`public/assets/chapters-map/` and `public/assets/worlds-map/`, with `sources.json` in
-each recording the node ids.

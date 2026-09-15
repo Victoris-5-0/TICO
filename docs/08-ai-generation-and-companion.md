@@ -59,7 +59,20 @@ After rung four, route the learner to a short practice on that idea, then return
 
 ## Conversation boundaries
 
-TICO may discuss the active mission, its prerequisite concepts, a recent execution result, and emotional encouragement related to learning. It must refuse or redirect requests for complete solutions, unrelated personal advice, secrets, unsafe activity, romance, or off-platform contact.
+TICO may discuss the current website page, platform navigation and learning design, the
+analysis dashboard and its recorded metrics, the active mission, prerequisite concepts,
+execution results, and encouragement related to learning. On landing and analysis pages,
+page context takes precedence; owned mission background is loaded only for explicit
+mission questions. Page chat does not require a mission session. It remains bounded to
+the platform and learning, rather than becoming a general-purpose personal chatbot.
+See [ADR 0004](decisions/0004-page-aware-tico-chat.md). TICO must refuse or redirect requests
+for complete solutions, unrelated personal advice, secrets, unsafe activity, romance,
+or off-platform contact.
+
+The shared persona describes TICO as the friendly orange robot. Chat output validation
+rejects the retired bird identity, retries once with the robot identity, and uses an
+authored robot response if necessary. Old assistant turns using the retired identity
+are excluded from model history.
 
 Before a model call, remove name, email, OAuth identity, exact age, and unrelated chat history. Send only pseudonymous internal IDs if correlation is required. Pass locale explicitly; Python identifiers remain English.
 
