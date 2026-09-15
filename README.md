@@ -1,4 +1,4 @@
-# TICO — Learn Python by helping Egypt
+# TICO: Learn Python by helping Egypt
 
 <p align="center"><img src="client/public/assets/landing/logo.svg" alt="TICO" width="220" /></p>
 
