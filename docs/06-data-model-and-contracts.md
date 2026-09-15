@@ -1,5 +1,12 @@
 # Data model and shared contracts
 
+Hint requests name the mission attached to the owned session currently open, including
+replays. Generated mission IDs are checked against `generatedMissionId`; authored IDs
+against `exerciseId`. Guided hints use only the current step; remix hints use the remix
+requirement and solution guard. Cache keys include mission and code context. Since the
+existing hint cache references exercises, sessions without an exercise ID do not use
+that cache. The client allows 45 seconds for guarded model generation before fallback.
+
 > ## Status: binding for the wire, stale for the schema
 >
 > Read this document with the split below in mind. It was written before the schema was
@@ -135,10 +142,18 @@ Never put secrets, code solutions, or stack traces in a browser-facing error.
 | 3 | `POST /v1/students/{id}/refresh` | evidence watermark | mastery deltas and reason |
 | 4 | `POST /v1/students/{id}/plan` | diagnostic/version | ordered required/optional lesson decisions |
 | 5 | `POST /v1/missions/next` | learner profile, lesson, world manifest version | validated mission or template fallback |
-| 6 | `POST /v1/tico/messages` | mission thread, message, locale | SSE text deltas then completion metadata |
+| 6 | `POST /v1/tico/messages` | message, page, locale, conversation key; mission session required only for mission chat | SSE text deltas then completion metadata |
 | 7 | `POST /v1/challenges/next` | mastered concept snapshot | validated mixed challenge |
 
 The server derives `student_id`, role, allowed lesson, hint rung, and legal manifest choices. Clients cannot choose them.
+
+TICO page chat adds optional `page`, `locale`, `conversationId`, and `analysisSummary`
+fields. `sessionId` remains required when `page` is `mission` (the default); landing and
+analysis requests may omit it. Any supplied mission session must belong to the verified
+user. Page thread IDs are scoped server-side to that user and page, separately from
+mission threads. Next.js computes `analysisSummary` from the signed-in user's recorded
+dashboard metrics; it does not accept browser-provided summaries. No database change is
+required. Deploy the AI API update before the client page-context update.
 
 ## Mission DTO
 

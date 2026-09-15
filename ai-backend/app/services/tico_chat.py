@@ -23,7 +23,9 @@ stream from the model this module is the only thing that changes.
 from __future__ import annotations
 
 import json
+import hashlib
 import logging
+import re
 from collections.abc import Iterator
 
 from sqlalchemy.orm import Session
@@ -31,7 +33,7 @@ from sqlalchemy.orm import Session
 from app.ai.graphs.tico_chat import run_tico_chat
 from app.models_tables import GeneratedMission
 from app.queries import ai_log, sessions as session_q, users
-from app.schemas.tico import TicoChunk
+from app.schemas.tico import TicoAnalysisSummary, TicoChunk
 
 log = logging.getLogger(__name__)
 
@@ -48,19 +50,30 @@ def frame(chunk: TicoChunk) -> str:
     return f"data: {json.dumps(chunk.model_dump(), ensure_ascii=False)}\n\n"
 
 
-def reply(db: Session, *, user_id: str, session_id: str, message: str) -> Iterator[str]:
+def reply(db: Session, *, user_id: str, session_id: str | None, message: str,
+          page: str = "mission", locale: str = "ar-EG", conversation_id: str | None = None,
+          analysis_summary: TicoAnalysisSummary | None = None) -> Iterator[str]:
     """One chat turn, as a sequence of SSE frames."""
     users.ensure(db, user_id)
 
-    session = session_q.get_owned(db, session_id, user_id)
-    if session is None:
+    session = session_q.get_owned(db, session_id, user_id) if session_id else None
+    if (session_id and session is None) or (page == "mission" and session is None):
         raise SessionNotFound(f"no session '{session_id}' for this student")
 
-    world, mission, concept, identifiers, values = _mission_context(db, session)
+    use_mission = page == "mission" or asks_about_mission(message)
+    world, mission, concept, identifiers, values = (
+        _mission_context(db, session) if session is not None and use_mission
+        else (None, None, None, None, None)
+    )
+    # Page conversations cannot inherit mission threads, another user's history, or
+    # older mission coaching when the next question is about the website itself.
+    thread_id = session_id if page == "mission" else hashlib.sha256(
+        f"{user_id}:{page}:{conversation_id or 'default'}:{'mission' if use_mission else 'page'}".encode()
+    ).hexdigest()
 
     result = run_tico_chat(
         user_message=message,
-        session_id=session_id,
+        session_id=thread_id,
         world_title=world,
         mission_title=mission,
         target_concept=concept,
@@ -68,6 +81,9 @@ def reply(db: Session, *, user_id: str, session_id: str, message: str) -> Iterat
         # model that has seen the solution is far more likely to repeat it.
         solution_identifiers=identifiers,
         target_values=values,
+        page=page,
+        locale=locale,
+        analysis_summary=analysis_summary.model_dump() if analysis_summary is not None else None,
         stream=False,
     )
 
@@ -80,6 +96,19 @@ def reply(db: Session, *, user_id: str, session_id: str, message: str) -> Iterat
         status=ai_log.REJECTED if result.is_blocked else ai_log.SUCCESS,
     )
     db.commit()
+    return _response_frames(result)
+
+
+def asks_about_mission(message: str) -> bool:
+    """Only load historical mission details for explicit mission questions."""
+    return bool(re.search(
+        r"\b(?:missions?|bakery|trays?|hassan|remix|guided coding)\b"
+        r"|مهم[ةه]|الفرن|الصواني|عم حسن|رسالة الفتح|ظلي العيلة|النصيب العادي",
+        message, re.IGNORECASE,
+    ))
+
+
+def _response_frames(result) -> Iterator[str]:
 
     if result.is_blocked:
         # One frame, no model call was made. The text is an in-character redirect, not a

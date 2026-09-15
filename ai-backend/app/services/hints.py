@@ -19,6 +19,8 @@ rather than counting its own.
 from __future__ import annotations
 
 import logging
+import hashlib
+import json
 
 from sqlalchemy.orm import Session
 
@@ -42,7 +44,7 @@ class SessionNotFound(RuntimeError):
     """
 
 
-def _mission_context(db: Session, session, guided_step: int | None) -> tuple[str, str, list[str]]:
+def _mission_context(db: Session, session, guided_step: int | None, phase: Phase = Phase.GUIDED_CODING) -> tuple[str, str, list[str]]:
     """`(task description, solution code, blank answers)` for the mission being played.
 
     The solution and the blank answers are fetched only so the guards can compare
@@ -59,13 +61,13 @@ def _mission_context(db: Session, session, guided_step: int | None) -> tuple[str
     phases = content.get("phases") or {}
     guided = phases.get("guided") or {}
     encounter = phases.get("encounter") or {}
+    if phase == Phase.ADAPT_REMIX:
+        remix = phases.get("remix") or {}
+        return "\n".join(filter(None, [remix.get("twistAr"), remix.get("newRequirementAr")])), remix.get("solutionCode") or "", []
 
     # What the student is being asked to do, in their own language, so the hint can talk
     # about the bakery rather than about "the function".
     task_bits = [encounter.get("lineAr") or ""]
-    for step in guided.get("steps") or []:
-        if step.get("promptAr"):
-            task_bits.append(step["promptAr"])
 
     # The answers for the step they are actually on. A hint for step 2 must not be
     # blocked by step 1's answer, and must not give away its own.
@@ -74,6 +76,7 @@ def _mission_context(db: Session, session, guided_step: int | None) -> tuple[str
     if steps:
         index = guided_step if guided_step is not None and 0 <= guided_step < len(steps) else 0
         blanks = list(steps[index].get("blanks") or [])
+        task_bits.append(steps[index].get("promptAr") or "")
 
     return (
         "\n".join(b for b in task_bits if b),
@@ -103,6 +106,9 @@ def request_hint(
     session = session_q.get_owned(db, session_id, user_id)
     if session is None:
         raise SessionNotFound(f"no session '{session_id}' for this student")
+    current_mission_id = session.generated_mission_id or session.exercise_id
+    if current_mission_id != mission_id:
+        raise SessionNotFound("the requested mission does not match this session")
 
     if not hint_ladder.has_ladder(phase):
         raise HintsNotAvailable(
@@ -113,21 +119,22 @@ def request_hint(
     shown = hint_q.highest_rung(db, session_id)
     position = hint_ladder.next_rung(phase, shown)
 
-    task_ar, solution_code, blanks = _mission_context(db, session, guided_step)
+    task_ar, solution_code, blanks = _mission_context(db, session, guided_step, phase)
     scaffold_state = _scaffold_state(session, db)
 
     # ---------------------------------------------------------------- the cache
     cache_key = dict(
-        exercise_id=mission_id,
+        exercise_id=session.exercise_id,
         hint_level=int(position.rung),
         # Widened with the phase and step so a hint written for step 1 of guided coding
         # is never served to someone stuck on the remix.
-        error_tag=f"{error_tag or '-'}|{hint_ladder.cache_scope(phase, position.rung, guided_step)}",
+        error_tag=f"{error_tag or '-'}|{hint_ladder.cache_scope(phase, position.rung, guided_step)}|" + hashlib.sha256(json.dumps([current_mission_id, task_ar, code_excerpt, error_text], ensure_ascii=False).encode()).hexdigest()[:16],
         scaffold_state=scaffold_state,
         locale=locale,
     )
 
-    cached = hint_q.cache_lookup(db, **cache_key)
+    # hint_cache has a foreign key to exercises; generated IDs cannot be written there.
+    cached = hint_q.cache_lookup(db, **cache_key) if session.exercise_id else None
     if cached is not None:
         hint_q.cache_hit(db, cached)
         event = hint_q.record(
@@ -171,7 +178,7 @@ def request_hint(
     # Only cache what a guard approved. A cached leak is far worse than a live one: it
     # would be served to every student who hits the same mistake, with no second chance
     # for the model to get it right.
-    if result.source == "model" and not result.leaked:
+    if session.exercise_id and result.source == "model" and not result.leaked:
         hint_q.cache_store(
             db, **cache_key, text=result.text, model=result.model_name
         )

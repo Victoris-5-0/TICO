@@ -130,6 +130,7 @@ export function MissionPlayer({ locale, mission, worldSlug, worldTitle, lessonId
   // is the documented degradation — never a blocker.
   useEffect(() => {
     let cancelled = false;
+    sessionId.current = null;
     telemetry.startSession({ generatedMissionId: mission.id, lessonId }).then((id) => {
       if (!cancelled) sessionId.current = id;
     });
@@ -228,10 +229,12 @@ export function MissionPlayer({ locale, mission, worldSlug, worldTitle, lessonId
         ...where,
       });
       if (hint) return hint;
-      const authored = phases.guided.steps.find((s) => s.hintAr)?.hintAr;
+      const authored = where.phase === "GUIDED_CODING"
+        ? phases.guided.steps[where.guidedStep ?? 0]?.hintAr
+        : phases.remix.twistAr;
       return authored ? { text: authored, rung: 1 } : null;
     },
-    [mission.id, locale, phases.guided.steps],
+    [mission.id, locale, phases.guided.steps, phases.remix.twistAr],
   );
 
   const finish = useCallback(async () => {
@@ -297,7 +300,14 @@ export function MissionPlayer({ locale, mission, worldSlug, worldTitle, lessonId
     ? "فرن الحارة: حسن بيخبز والزباين مستنيين في الطابور."
     : "Forn El Hara: Hassan at the oven and neighbours waiting in the queue.";
 
-  const extras = undrawnProps(restProps);
+  const extras = undrawnProps(restProps)
+    .filter(([key]) => key in READOUT_LABELS)
+    .sort(([a], [b]) => {
+      const priority = ["stock_count", "total_price", "temperature"];
+      const rank = (key: string) => priority.includes(key) ? priority.indexOf(key) : priority.length;
+      return rank(a) - rank(b);
+    })
+    .slice(0, 3);
 
   // The encounter is spoken by whoever has the problem; every later phase is TICO.
   const speaker = phaseKey === "encounter" ? phases.encounter.speaker || "tico" : "tico";

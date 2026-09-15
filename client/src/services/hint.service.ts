@@ -25,15 +25,15 @@ export interface HintResult {
 const FALLBACK_LADDER: Record<string, readonly string[]> = {
   'ar-EG': [
     'بص على السطر اللي فيه الفراغ، وفكر: إيه اللي المفروض يتحسب هنا؟',
-    'لو عندك عدد الصواني وعدد الأرغفة في كل صنية، إزاي توصل للإجمالي؟',
-    'دي عملية ضرب متخزنة في متغير. مثال من حاجة تانية: `total_cost = price * quantity`.',
-    'رجع لسطرك: خد الاتنين اللي فوق، اضربهم في بعض، وحط الناتج في المتغير اللي ناقص.',
+    'ارجع للمطلوب في الخطوة الحالية: إيه القيمة أو القرار اللي محتاج يتغير؟',
+    'قارن الكود بالمثال اللي اتشرح في المهمة، وراجع طريقة كتابة نفس الفكرة.',
+    'راجع نتيجة التشغيل، وحدد أول فرق بينها وبين المطلوب في الخطوة الحالية.',
   ],
   en: [
     'Look at the line with the blank, and think: what is meant to be worked out here?',
-    'If you have the number of trays and the loaves per tray, how do you reach the total?',
-    'This is a multiplication stored in a variable. From something else: `total_cost = price * quantity`.',
-    'Back to your line: take the two values above it, multiply them, and put the result in the missing variable.',
+    'Read this step again: which value or decision needs to change?',
+    'Compare your code with the example explained in this mission and check how that idea is written.',
+    'Check the run result and find the first difference from what this step asks for.',
   ],
 };
 
@@ -50,6 +50,7 @@ export interface HintStore {
     findUnique(args: unknown): Promise<{
       hintEvents: { hintLevel: number }[];
       exercise: { hints: string[] } | null;
+      generatedMission?: { content: unknown } | null;
     } | null>;
     update(args: unknown): Promise<unknown>;
   };
@@ -143,13 +144,13 @@ export class HintService {
       // A 409 means this phase has no ladder — phases 1 to 4 have no blank to be stuck
       // on. That is not an outage and an authored hint is not the answer to it, so it is
       // re-thrown for the caller to handle rather than papered over.
-      if (err instanceof AiServiceError && err.status === 409) throw err;
+      if (err instanceof AiServiceError && [401, 403, 404, 409, 422].includes(err.status)) throw err;
 
       console.warn(
         'hint: AI service unavailable, using the authored ladder:',
         err instanceof Error ? err.message : err,
       );
-      return this.authoredHint({ userId, sessionId, exerciseId, locale });
+      return this.authoredHint({ userId, sessionId, exerciseId, locale, phase, guidedStep });
     }
   }
 
@@ -165,6 +166,8 @@ export class HintService {
     sessionId: string;
     exerciseId: string;
     locale: string;
+    phase?: Phase;
+    guidedStep?: number | null;
   }): Promise<HintResult> {
     const { sessionId, exerciseId, locale } = params;
 
@@ -176,6 +179,7 @@ export class HintService {
         select: {
           hintEvents: { select: { hintLevel: true } },
           exercise: { select: { hints: true } },
+          generatedMission: { select: { content: true } },
         },
       });
       // The highest rung already shown, not the number of rows. Counting rows is what
@@ -183,6 +187,13 @@ export class HintService {
       // whatever else has written.
       shown = session?.hintEvents.reduce((max, e) => Math.max(max, e.hintLevel), 0) ?? 0;
       authored = session?.exercise?.hints ?? [];
+      const content = session?.generatedMission?.content as {
+        phases?: { guided?: { steps?: { hintAr?: string }[] }; remix?: { newRequirementAr?: string } };
+      } | undefined;
+      const stepHint = params.phase === 'ADAPT_REMIX'
+        ? content?.phases?.remix?.newRequirementAr
+        : content?.phases?.guided?.steps?.[params.guidedStep ?? 0]?.hintAr;
+      if (stepHint) authored = [stepHint];
     } catch (e) {
       console.warn('hint fallback: database unreachable, serving rung 1:', e);
     }

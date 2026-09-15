@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Inter, Outfit } from "next/font/google";
 import { MarketingHeader, MarketingFooter } from "@/components/marketing-chrome";
+import { LandingTicoChat } from "@/components/landing-tico-chat";
 import { Reveal } from "@/components/motion/reveal";
 import { ScrollProgress } from "@/components/motion/scroll-progress";
 import { InteractiveTico } from "@/components/motion/interactive-tico";
@@ -36,10 +37,12 @@ export function LandingPage({
   locale,
   user,
   mapWorlds,
+  chatSessionId = null,
 }: {
   locale: Locale;
   user?: HeaderUser | null;
   mapWorlds?: readonly MapWorld[];
+  chatSessionId?: string | null;
 }) {
   const dict = getDictionary(locale);
   const copy = landingCopy[locale];
@@ -84,7 +87,7 @@ export function LandingPage({
       <a className="skip-link" href="#main-content">{dict.skip}</a>
       <MarketingHeader locale={locale} user={user} />
       <main id="main-content">
-        <section className={styles.hero} aria-labelledby="hero-title">
+        <section className={styles.hero} aria-labelledby="hero-title" data-landing-hero>
           <HeroArtMotion>
             <Image src="/assets/landing/tico/background.webp" alt="" fill sizes="100vw" preload />
           </HeroArtMotion>
@@ -210,6 +213,7 @@ export function LandingPage({
       </main>
 
       <MarketingFooter locale={locale} />
+      <LandingTicoChat locale={locale} sessionId={chatSessionId} signedIn={Boolean(user)} />
     </div>
   );
 }

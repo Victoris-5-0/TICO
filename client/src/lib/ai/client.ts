@@ -14,6 +14,7 @@ import {
   SessionCreate, SessionOut,
   SessionDebriefResponse,
   SessionPhaseUpdate,
+  TicoMessageRequest,
 } from './types';
 
 /**
@@ -124,7 +125,8 @@ export class AiClient {
   }
 
   async getHint(token: string, req: HintRequest): Promise<HintResponse> {
-    return this.fetchAi<HintResponse>('/v1/hints', token, req);
+    // A guarded hint may need two model attempts of up to 20 seconds each.
+    return this.fetchAi<HintResponse>('/v1/hints', token, req, newRequestId(), 'POST', 45000);
   }
 
   async analyzeSubmission(token: string, req: AnalyzeRequest): Promise<AnalyzeResponse> {
@@ -204,7 +206,7 @@ export class AiClient {
    * TICO is the only companion. There was once a separate "mentor" endpoint here; it was
    * removed when TICO became the single mascot, and it never existed server-side.
    */
-  async streamTicoMessage(token: string, body: unknown): Promise<Response> {
+  async streamTicoMessage(token: string, body: TicoMessageRequest, signal?: AbortSignal): Promise<Response> {
     if (!this.configured) {
       throw new AiServiceError('AI_SERVICE_URL is not set', 'NOT_CONFIGURED', newRequestId(), false, 0);
     }
@@ -216,6 +218,7 @@ export class AiClient {
         'X-Request-ID': newRequestId(),
       },
       body: JSON.stringify(body),
+      signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(60000)]) : AbortSignal.timeout(60000),
     });
   }
 
