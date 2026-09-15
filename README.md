@@ -109,6 +109,14 @@ TICO/
 
 ## Architecture
 
+### Product architecture overview
+
+![TICO AI-powered learning platform architecture overview](docs/images/architecture-overview.webp)
+
+This illustration presents the broader MVP product concept. The diagram below describes the current implemented service boundaries and is the technical reference for this repository.
+
+### Implemented service architecture
+
 ```mermaid
 flowchart LR
     B[Learner browser] -->|HTTPS| N[Next.js on Vercel]
