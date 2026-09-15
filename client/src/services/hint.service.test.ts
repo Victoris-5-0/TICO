@@ -52,6 +52,28 @@ const ASK = {
   token: 'tok',
 };
 
+test('an outage uses the replayed mission current step hint', async () => {
+  const { store } = fakeStore();
+  store.practiceSession.findUnique = async () => ({
+    hintEvents: [], exercise: null,
+    generatedMission: { content: { phases: { guided: { steps: [
+      { hintAr: 'first step' }, { hintAr: 'current replayed step' },
+    ] } } } },
+  });
+  const ai: HintSource = { getHint: async () => { throw new Error('offline'); } };
+  const result = await new HintService(store, ai).requestHint({ ...ASK, phase: 'GUIDED_CODING', guidedStep: 1 });
+  assert.equal(result.hint, 'current replayed step');
+});
+
+test('a mismatched mission is not disguised as an AI outage', async () => {
+  const { store, writes } = fakeStore();
+  const ai: HintSource = { getHint: async () => {
+    throw new AiServiceError('wrong mission', 'not_found', 'req', false, 404);
+  } };
+  await assert.rejects(new HintService(store, ai).requestHint(ASK), /wrong mission/);
+  assert.deepEqual(writes, []);
+});
+
 test('the service rung is displayed, and nothing is written locally', async () => {
   const { store, writes } = fakeStore();
   const ai: HintSource = {

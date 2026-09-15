@@ -39,6 +39,7 @@ Child safety & conversation boundaries contract (AGENTS.md, docs/08, docs/10):
 from __future__ import annotations
 
 import logging
+import re
 from dataclasses import dataclass
 from typing import Annotated, Any, Final, TypedDict
 
@@ -67,6 +68,7 @@ from app.ai.router import AICapability, get_model, get_model_name
 logger = logging.getLogger(__name__)
 
 MAX_LEAK_RETRIES: Final[int] = 1
+RETIRED_IDENTITY = re.compile(r"هدهد|hoopoe", re.IGNORECASE)
 
 
 @dataclass(frozen=True, slots=True)
@@ -93,6 +95,8 @@ class TicoChatState(TypedDict):
     world_title: str | None
     mission_title: str | None
     target_concept: str | None
+    page: str
+    analysis_summary: dict | None
 
     solution_identifiers: list[str] | None
     target_values: list[str] | None
@@ -178,6 +182,8 @@ def generate_response_node(state: TicoChatState) -> dict[str, Any]:
         mission_title=mission_title,
         target_concept=target_concept,
         locale=locale,
+        page=state.get("page", "mission"),
+        analysis_summary=state.get("analysis_summary"),
     )
 
     # Build message payload for model invocation
@@ -189,7 +195,8 @@ def generate_response_node(state: TicoChatState) -> dict[str, Any]:
             scrubbed = strip_pii_from_text(msg.content)
             llm_messages.append(HumanMessage(content=scrubbed))
         elif isinstance(msg, AIMessage):
-            llm_messages.append(msg)
+            if not RETIRED_IDENTITY.search(str(msg.content)):
+                llm_messages.append(msg)
 
     # If this is a retry attempt, append specific feedback
     if leak_feedback:
@@ -247,6 +254,9 @@ def leak_guard_node(state: TicoChatState) -> dict[str, Any]:
     locale = state.get("locale", "ar_EG")
 
     violations: list[str] = []
+    retired_identity = bool(RETIRED_IDENTITY.search(draft))
+    if retired_identity:
+        violations.append("incorrect robot identity")
 
     # Check for mission solution leak if mission context is present
     has_mission_context = bool(
@@ -276,6 +286,8 @@ def leak_guard_node(state: TicoChatState) -> dict[str, Any]:
                 else f"Previous response leaked mission solution ({', '.join(violations)}). "
                 f"Do NOT provide complete code or runnable solutions. Guide the student in words only."
             )
+            if retired_identity:
+                feedback += "\nYou are TICO, the friendly orange robot. Describe yourself only as an orange robot. Answer the current page question."
             return {
                 "retry_count": retry_count + 1,
                 "leak_feedback": feedback,
@@ -293,6 +305,12 @@ def leak_guard_node(state: TicoChatState) -> dict[str, Any]:
             else "I'm here to help you think through the code yourself, champ! "
             "Let's review the concept and try the next step yourself."
         )
+        if retired_identity:
+            fallback = (
+                "أنا تيكو، الروبوت البرتقالي الودود! أقدر أساعدك تفهم الموقع والصفحة اللي فاتحها."
+                if locale.startswith("ar") else
+                "I'm TICO, the friendly orange robot! I can help you understand this website and the page you're on."
+            )
         return {
             "final_response": fallback,
             "messages": [AIMessage(content=fallback)],
@@ -408,6 +426,8 @@ def run_tico_chat(
     solution_identifiers: list[str] | None = None,
     target_values: list[str] | None = None,
     locale: str = "ar_EG",
+    page: str = "mission",
+    analysis_summary: dict | None = None,
     stream: bool = True,
     # Caller-provided identity fields that MUST be stripped (PII)
     student_name: str | None = None,
@@ -452,6 +472,8 @@ def run_tico_chat(
         "messages": [HumanMessage(content=sanitized_user_message)],
         "user_message": sanitized_user_message,
         "locale": locale,
+        "page": page,
+        "analysis_summary": analysis_summary,
         "stream": stream,
         "world_title": world_title,
         "mission_title": mission_title,

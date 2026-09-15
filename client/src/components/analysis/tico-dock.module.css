@@ -59,8 +59,8 @@
 
 /* ===================================================================== dock */
 .dock {
-  position: fixed; inset-block-end: 18px; inset-inline-end: 18px; z-index: 60;
-  display: flex; align-items: center; gap: 10px;
+  position: fixed; inset-block-end: 18px; left: 4px; right: auto; z-index: 60;
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
   border: 0; background: transparent; cursor: pointer; padding: 0;
   animation: rise .3s ease-out;
 }
@@ -72,19 +72,19 @@
 .dock:hover img { transform: translateY(-4px) rotate(-3deg); }
 .dock:active img { transform: translateY(0); }
 
-/* The label rides alongside on a wide screen and disappears on a narrow one, where the
-   character alone is unambiguous and the room is not there. */
+/* Keep the chat label underneath the character at every screen size. */
 .dockLabel {
   background: var(--paper); border: 1px solid var(--line); border-radius: 99px;
   padding: 8px 15px; font-size: .8rem; font-weight: 800; color: var(--ink);
   box-shadow: 0 6px 18px rgba(65,38,28,.16); white-space: nowrap;
-  order: -1;
+  order: 1;
 }
 .dock:focus-visible { outline: 3px solid var(--teal); outline-offset: 6px; border-radius: 99px; }
+.landingDock img { width: clamp(80px, 9vw, 112px); }
 
 /* ===================================================================== chat */
 .chat {
-  position: fixed; inset-block-end: 18px; inset-inline-end: 18px; z-index: 61;
+  position: fixed; inset-block-end: 18px; left: 18px; right: auto; z-index: 61;
   width: min(380px, calc(100vw - 32px));
   max-height: min(560px, calc(100dvh - 36px));
   display: flex; flex-direction: column;
@@ -126,6 +126,9 @@
   display: flex; gap: 8px; padding: 12px 14px 14px;
   border-block-start: 1px solid var(--line);
 }
+.entry { padding: 12px 16px 18px; border-block-start: 1px solid var(--line); }
+.entry p { margin: 0 0 14px; font-size: .88rem; line-height: 1.5; }
+.entry a { display: inline-flex; min-height: 44px; align-items: center; text-decoration: none; }
 .input {
   flex: 1 1 auto; min-width: 0;
   border: 1px solid var(--line); border-radius: 99px; background: #fff;
@@ -138,9 +141,10 @@
   .avatar { width: 78px; }
   .bubble { padding: 13px 14px 11px; }
   .line { font-size: .88rem; }
-  .dockLabel { display: none; }
+  .dockLabel { padding: 6px 8px; font-size: .7rem; }
   .dock img { width: 96px; }
-  .chat { inset-inline: 16px; width: auto; }
+  .landingDock img { width: 76px; }
+  .chat { left: 16px; right: 16px; width: auto; }
 }
 
 /* The words are the point; the movement is decoration. */

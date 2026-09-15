@@ -100,7 +100,11 @@ export function UserProfileMenu({
 
       {isOpen && (
         <div className={styles.menu} role="menu">
-          <div className={styles.header}>
+          <Link
+            href={`/${locale}/progress`}
+            className={`${styles.header} ${styles.profileHeader}`}
+            onClick={() => setIsOpen(false)}
+          >
             <div className={styles.menuAvatar}>
               <Image
                 src={avatarSrc}
@@ -116,7 +120,7 @@ export function UserProfileMenu({
                 <span className={styles.userEmail}>{user.email}</span>
               )}
             </div>
-          </div>
+          </Link>
 
           <div className={styles.stats}>
             <div className={styles.statItem}>

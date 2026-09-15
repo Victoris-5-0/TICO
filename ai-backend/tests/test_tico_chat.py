@@ -45,7 +45,7 @@ def test_chat_prompt_builder_contains_boundaries_and_context():
     assert "Cairo Metro" in prompt
     assert "Open the Gate" in prompt
     assert "conditionals" in prompt
-    assert TICO_CHAT_PROMPT_VERSION == "1.0.0"
+    assert TICO_CHAT_PROMPT_VERSION == "1.1.0"
 
 
 def test_chat_normal_flow_single_turn():

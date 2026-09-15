@@ -49,7 +49,9 @@ def send_message(
 ) -> StreamingResponse:
     try:
         frames = chat_service.reply(
-            db, user_id=user.id, session_id=body.session_id, message=body.message
+            db, user_id=user.id, session_id=body.session_id, message=body.message,
+            page=body.page, locale=body.locale, conversation_id=body.conversation_id,
+            analysis_summary=body.analysis_summary,
         )
     except chat_service.SessionNotFound as exc:
         # 404 rather than 403, for the same reason as /v1/hints.

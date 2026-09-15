@@ -643,10 +643,31 @@ export interface StudentProfileOut {
   modelVersion?: string | null;
 }
 
+/**
+ * Page metrics computed by the application; no identity or raw learner code.
+ */
+export interface TicoAnalysisSummary {
+  submissions: number;
+  passed: number;
+  hints: number;
+  hintsPerAttempt: number;
+  minutes: number;
+  conceptsComplete: number;
+  tagsOvercome: number;
+  currentStreak: number;
+  longestStreak: number;
+  activeDays: number;
+}
+
 export interface TicoMessageRequest {
-  /** Also the LangGraph thread_id. A closed session is rejected — TICO has no context to stand on. */
-  sessionId: string;
+  /** Required for mission chat; optional owned mission background on other pages. */
+  sessionId?: string | null;
   message: string;
+  page?: "mission" | "landing" | "analysis";
+  locale?: "ar-EG" | "en";
+  /** Page conversation key, scoped server-side to the authenticated user and page. */
+  conversationId?: string | null;
+  analysisSummary?: TicoAnalysisSummary | null;
 }
 
 /**

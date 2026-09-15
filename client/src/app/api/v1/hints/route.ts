@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { requireUser, getAuthToken } from '@/lib/auth';
 import { AiServiceError } from '@/lib/ai/client';
 import { hintService } from '@/services/hint.service';
+import { db } from '@/lib/db';
 
 /**
  * `phase` and `guidedStep` are forwarded, not defaulted here.
@@ -39,6 +40,15 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const current = await db.practiceSession.findUnique({
+      where: { id: parseResult.data.sessionId },
+      select: { userId: true, exerciseId: true, generatedMissionId: true },
+    });
+    if (!current || current.userId !== user.id ||
+        (current.generatedMissionId ?? current.exerciseId) !== parseResult.data.exerciseId) {
+      return NextResponse.json({ error: { message: 'Mission session not found' } }, { status: 404 });
+    }
+
     const result = await hintService.requestHint({
       userId: user.id,
       token,
@@ -52,8 +62,8 @@ export async function POST(req: NextRequest) {
     // 409 is the AI service saying this phase has no ladder — the first four phases have
     // no blank to be stuck on. Passed through as a 409 so the player can offer chat
     // instead, rather than being reported as a server fault.
-    if (error instanceof AiServiceError && error.status === 409) {
-      return NextResponse.json({ error: { message: error.message, code: error.code } }, { status: 409 });
+    if (error instanceof AiServiceError && [401, 403, 404, 409, 422].includes(error.status)) {
+      return NextResponse.json({ error: { message: error.message, code: error.code } }, { status: error.status });
     }
 
     const message = error instanceof Error ? error.message : 'Internal Server Error';

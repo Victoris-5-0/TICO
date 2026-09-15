@@ -52,6 +52,10 @@ export function WorldOverview({
   const reduced = useReducedMotion();
 
   const nextLesson = lessons.find((lesson) => !lesson.completed) ?? lessons[0];
+  const nextLessonIndex = nextLesson ? lessons.findIndex((lesson) => lesson.id === nextLesson.id) : -1;
+  const nextMissionName = nextLesson && nextLessonIndex >= 0
+    ? world.missions[nextLessonIndex]?.[locale] ?? nextLesson.title
+    : null;
   const completedCount = lessons.filter((l) => l.completed).length;
   const startedAny = completedCount > 0;
   const allCompleted = lessons.length > 0 && completedCount === lessons.length;
@@ -122,8 +126,8 @@ export function WorldOverview({
                       : "Review World Missions"
                     : startedAny
                       ? isArabic
-                        ? `كمّل: ${nextLesson.title}`
-                        : `Continue: ${nextLesson.title}`
+                        ? `كمّل: ${nextMissionName}`
+                        : `Continue: ${nextMissionName}`
                       : isArabic
                         ? "ابدأ المهمة الأولى"
                         : "Start Mission 1"}

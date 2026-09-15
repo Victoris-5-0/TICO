@@ -17,7 +17,8 @@ Authenticated learner routes:
 - `/[locale]/onboarding` — two-step first-visit profile setup; interrupted setup resumes.
 - `/[locale]/onboarding/preview` — public, non-persistent visual preview of both setup steps.
 
-- `/[locale]/learn` — current mission, roadmap, and continue action.
+- `/[locale]/learn` — chapters map with the learner's progress.
+- `/[locale]/learn/[chapterSlug]` — the selected chapter's worlds map.
 - `/[locale]/worlds/[worldSlug]` — chapter scene and lesson path.
 - `/[locale]/missions/[missionSlug]` — coding workspace.
 - `/[locale]/progress` — concepts, completed missions, badges, and replay.
@@ -116,3 +117,27 @@ Pages and layouts remain Server Components by default. Limit client components t
 - Network loss does not block local runs; queue the latest safe progress sync and label it unsaved.
 - AI unavailability falls back to reviewed static hints and template missions.
 - Auth expiry preserves unsaved code locally, then requests sign-in.
+
+## Landing-page TICO chat
+
+The landing page reuses the analysis dashboard's TICO dock and streaming chat without
+starting the analysis tour. Both pages keep their dock on the physical left in Arabic
+and English. The landing dock stays hidden until the hero has scrolled out of view. Scrolling back
+hides the widget without resetting the conversation. Visitors see a localized Google
+sign-in action; signed-in learners can ask page questions even before starting a mission.
+The dock sits four pixels from the edge with its chat label underneath, including on
+small screens. Mission scene readouts show at most three known gameplay values,
+prioritizing bread stock, takings, and oven temperature over auxiliary values.
+
+Both pages send their page, locale, and a conversation key through
+`/api/v1/ai/tico/messages`, which proxies the AI service's `/v1/tico/messages` SSE endpoint.
+Landing chat explains the website; analysis chat explains the dashboard and its recorded
+metrics. The application computes a small numeric summary for analysis requests without
+sending identity or raw code. Optional owned mission background is used only when the
+learner asks about a mission. Page threads are separated by user, page, and topic so old
+mission coaching does not dominate later page questions. See
+[ADR 0004](decisions/0004-page-aware-tico-chat.md).
+
+Configure the server-side `AI_SERVICE_URL` in each environment; the current service URL
+is recorded in `client/.env.example`. Deploy the updated AI contract and prompts before
+the client starts sending page-context fields.

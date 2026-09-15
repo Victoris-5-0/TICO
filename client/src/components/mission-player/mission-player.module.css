@@ -131,6 +131,9 @@
 
 .headerMeta { flex: 1; min-inline-size: 0; }
 
+.navLogo { display: inline-flex; flex: 0 0 auto; inline-size: clamp(118px, 13vw, 170px); block-size: auto; }
+.navLogo img { display: block; inline-size: 100%; block-size: auto; }
+
 .world {
   display: block;
   color: rgba(255, 255, 255, 0.72);

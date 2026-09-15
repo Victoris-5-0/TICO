@@ -106,6 +106,17 @@
   border-bottom: 1px solid rgba(0, 0, 0, 0.06);
 }
 
+.profileHeader {
+  color: inherit;
+  text-decoration: none;
+  border-radius: 10px;
+  transition: background 0.12s ease;
+}
+
+.profileHeader:hover {
+  background: rgba(219, 91, 49, 0.08);
+}
+
 .menuAvatar {
   position: relative;
   width: 44px;
