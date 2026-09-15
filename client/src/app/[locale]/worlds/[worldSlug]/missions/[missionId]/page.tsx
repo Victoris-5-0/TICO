@@ -3,7 +3,6 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import { MissionPlayer } from "@/components/mission-player/mission-player";
-import narrationManifest from "@/lib/mission/narration-manifest.json";
 import { getAuthToken } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { isLocale } from "@/i18n/config";
@@ -41,9 +40,6 @@ const loadMission = cache(async (missionId: string) => {
  * production — every mission silent, with no error to notice. A mission absent from the
  * manifest simply has no audio, which is correct for anything outside the pinned set.
  */
-const narrationKeys = (missionId: string): string[] =>
-  (narrationManifest as { missions?: Record<string, string[]> }).missions?.[missionId] ?? [];
-
 export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
   const { locale, missionId } = await params;
   if (!isLocale(locale)) return {};
@@ -97,7 +93,7 @@ export default async function Page({ params, searchParams }: { params: Params; s
       lessonId={lessonRecord?.id ?? stored.lessonId}
       lessonSlug={lessonRecord?.slug ?? lessonSlug ?? null}
       missionName={missionName}
-      narrationKeys={narrationKeys(missionId)}
+      narrationKeys={[]}
     />
   );
 }
