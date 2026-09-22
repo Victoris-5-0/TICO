@@ -170,6 +170,24 @@
   box-shadow: 0 2px 0 #a64022;
 }
 
+.previewBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 50px;
+  padding: 12px 20px;
+  border: 1px solid #db5b31;
+  border-radius: 14px;
+  color: #0d1114;
+  background: #f8f9fb;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.previewBtn:hover {
+  background: #fff1eb;
+}
+
 .disabledBtn {
   opacity: 0.6;
   cursor: not-allowed;
@@ -246,6 +264,14 @@
   color: #1f1820;
   box-shadow: 0 4px 14px rgba(31, 24, 32, 0.08);
   white-space: nowrap;
+}
+
+.ticoSpeechBeta {
+  max-width: 31ch;
+  border-radius: 16px;
+  line-height: 1.55;
+  text-align: center;
+  white-space: normal;
 }
 
 /* ---------------- Map & Path Section ---------------- */

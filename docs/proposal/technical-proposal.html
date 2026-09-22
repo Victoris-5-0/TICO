@@ -1,0 +1,394 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>TICO | Technical Proposal</title>
+<style>
+@page { size:A4; margin:10.58mm 10.58mm 12mm; }
+*{box-sizing:border-box}body{margin:0;color:#636363;font:10.5pt/1.55 'Segoe UI',Arial,sans-serif;background:#F8F9FB}.page{break-after:page;min-height:252mm;padding:0}.page:last-child{break-after:auto}h1{font-size:34pt;line-height:1.12;margin:22mm 0 7mm;color:#0D1114}h2{font-size:23pt;line-height:1.2;color:#0D1114;margin:5mm 0}h3{font-size:13pt;color:#DB5B31;margin:6mm 0 2mm}p{margin:2mm 0 4mm}.eyebrow{font-size:9pt;letter-spacing:2px;text-transform:uppercase;color:#DB5B31;font-weight:700}.lead{font-size:14pt;line-height:1.5;color:#636363}.bar{height:3mm;width:24mm;background:#DB5B31;margin:6mm 0}.note{background:#fff;border-left:3px solid #DB5B31;padding:4mm;margin:5mm 0;font-size:9.5pt}table{width:100%;border-collapse:collapse;margin:4mm 0;font-size:9.5pt}th{text-align:left;background:#DB5B31;color:white}td,th{padding:2.5mm 3mm;border-bottom:1px solid #dfe2e5;vertical-align:top}tr:nth-child(even)td{background:#fff}img{max-width:100%;display:block;margin:auto}.caption{font-size:8.5pt;color:#636363;margin-top:2mm}.hero{margin:10mm 0;border:1px solid #dfe2e5;border-radius:0;overflow:hidden}.two{display:grid;grid-template-columns:repeat(8,1fr);column-gap:6.35mm}.two>.card{grid-column:span 4}.card{background:#fff;border:1px solid #dfe2e5;border-radius:0;padding:4mm}.card h3{margin-top:0}ul,ol{padding-left:6mm;margin:3mm 0}li{margin:1.5mm 0}a{color:#DB5B31;overflow-wrap:anywhere}.section-top{display:flex;justify-content:space-between;border-bottom:1px dashed #d6dadd;padding:2mm 0 4mm;margin-bottom:6mm;color:#636363;font-size:9pt}.flow{display:grid;grid-template-columns:repeat(8,1fr);column-gap:6.35mm;margin:5mm 0}.flow>.step{grid-column:span 2}.step{border-top:3px solid #DB5B31;padding:3mm;background:#fff}.step b{display:block;color:#0D1114}.small{font-size:9pt;color:#636363}
+body{font-size:9.5pt;line-height:1.4}.hero img{max-height:53mm;object-fit:contain}h1{margin-top:15mm}table{font-size:8.7pt}td,th{padding:1.8mm 3mm}h3{margin-top:4mm}
+.cover .hero img{max-height:58mm}code{font-family:Consolas,"Courier New",monospace;font-size:0.92em;background:#eef2f7;padding:0 1mm;border-radius:1mm}pre code{background:none;padding:0}
+</style></head><body>
+<section class="page cover">
+<div class="eyebrow">Competition proposal · Technical part</div>
+<h1>TICO<br>Learning Python through<br>interactive stories</h1><div class="bar"></div>
+<p class="lead">A bilingual, AI-assisted programming platform that turns beginner code into visible consequences in an Egyptian game world.</p>
+<div class="hero"><img src="landing.webp" alt="TICO landing page"></div>
+<h3>Technical approach</h3>
+<p>TICO combines a browser-based game and Python coding environment with a dedicated AI service and a shared PostgreSQL database. Learners solve story missions, run real code, observe the scene change, and receive guided support from the TICO companion.</p>
+<p>The core design separates learning assessment from AI language generation: deterministic tests decide execution results, while AI explains concepts, offers progressive hints, and personalizes the path. The guiding rule is <b>the server narrows, the model chooses</b>: code produces a closed set of legal options and the model only picks among them or writes bounded prose.</p>
+<div class="note"><b>Proposal scope.</b> This document describes the repository’s current technical baseline and the planned development path. The demonstrated authored bakery path contains four missions: two for variables and two for conditionals. Expansion beyond that demonstrated path is treated as future development.</div>
+<p class="small">Prepared from the project README, the repository source, and the architecture, AI, browser-execution, and operations documentation. Test counts and live URLs verified on 15 September 2026.</p>
+</section>
+
+<section class="page">
+<div class="section-top"><span>TICO · Technical Proposal</span><span>Contents</span></div>
+<h2>How to read this proposal</h2>
+<p>The document is organized so that each evaluation criterion maps to a contiguous block of sections. Every claim is tied to a file, a command, or a live URL that a reviewer can check.</p>
+<table><tr><th style="width:26%">Criterion</th><th>Sections</th><th style="width:34%">Where to verify</th></tr>
+<tr><td><b>Full Stack</b> — repository structure, backend logic, architecture clarity, frontend structure, target platforms</td><td>01 System architecture · 02 Service boundaries and stack · 03 Request flow · 04 Frontend · 05 Application backend, database and identity · 07 Service contract · 12 Game engine · 14 Quality, testing and repository</td><td><code>README.md</code>, <code>docs/05</code>, <code>docs/07</code>, <code>docs/11</code>, <code>client/src/</code>, <code>client/prisma/</code></td></tr>
+<tr><td><b>AI/ML</b> — justified approach, prompt and model design that is not a pass-through call</td><td>06 AI service architecture · 08 Model routing and prompt design · 09 Hint ladder, chat and mission prompt · 10 Generation pipeline and guards · 11 Cost, caching and evaluation</td><td><code>ai-backend/AGENTS.md</code>, <code>ai-backend/docs/STATE.md</code>, <code>docs/08</code>, <code>ai-backend/app/ai/</code>, <code>ai-backend/app/rules/</code></td></tr>
+<tr><td><b>Product context</b></td><td>13 Gameplay and learning design · 15 Analysis dashboard · 16 Development path and live demos</td><td><code>docs/01</code>, <code>docs/02</code>, live client</td></tr></table>
+<h3>Five commitments the architecture enforces</h3>
+<ol>
+<li><b>The client owns gameplay.</b> It renders scenes, runs learner Python, records submissions, updates progress, and owns every database migration.</li>
+<li><b>The AI backend returns decisions and prose.</b> It never renders game state, executes learner code, or changes the schema.</li>
+<li><b>Prisma is the database authority.</b> SQLAlchemy maps the same tables for AI use cases but does not create or migrate them; a test compares the mappings against the migration SQL.</li>
+<li><b>OpenAPI is the HTTP authority.</b> The client’s AI types are generated from FastAPI’s <code>/openapi.json</code> and checked for drift in CI.</li>
+<li><b>World manifests constrain generation.</b> Models select from approved characters, props, sprites, and quantities instead of inventing runtime APIs.</li>
+</ol>
+<div class="note"><b>Scope of the mechanic.</b> The learning model is a fixed linear concept order — variables → conditionals → loops → functions. Personalization changes which lessons are required and how much scaffolding a learner receives, never the order. The demonstrated path covers variables and conditionals.</div>
+</section>
+
+<section class="page">
+<div class="section-top"><span>TICO · Technical Proposal</span><span>01 / System Architecture</span></div>
+<h2>System Architecture</h2>
+<p>TICO uses a modular architecture with three clear responsibilities: the Next.js application manages the user experience and application operations; the Python service provides bounded AI capabilities; PostgreSQL stores identity, learning content, and progress.</p>
+<img src="architecture-overview.webp" alt="Product architecture overview" style="max-height:99mm;object-fit:contain">
+<p class="caption">Figure 1. Product architecture concept reproduced from the README.</p>
+<p class="small">The illustration represents the broader product vision. Its provider names, example tables, NPC features, and server execution labels are conceptual, rather than a complete statement of current implementation. The implemented baseline uses Gemini for learning AI and executes learner Python locally in a browser worker.</p>
+<h3>Design principles</h3>
+<ul>
+<li><b>Independent services:</b> frontend/application logic and AI orchestration communicate through explicit HTTP contracts.</li>
+<li><b>Safe execution boundary:</b> learner Python runs in a browser worker, away from application and AI servers.</li>
+<li><b>Controlled generation:</b> authored teaching beats and approved world manifests constrain model output.</li>
+<li><b>Single schema authority:</b> Prisma owns database migrations; SQLAlchemy maps the same tables.</li>
+<li><b>Continuity:</b> reviewed mission content and authored hints keep every mission completable when AI is unavailable.</li>
+</ul>
+</section>
+
+<section class="page">
+<div class="section-top"><span>TICO · Technical Proposal</span><span>02 / Service Boundaries &amp; Stack</span></div>
+<h2>Implemented Service Architecture</h2>
+<img src="implemented-service-architecture.png" alt="Implemented service architecture rendered directly from README Mermaid source" style="width:100%;margin:5mm 0">
+<p class="caption">Figure 2. Implemented service architecture, rendered from the exact Mermaid diagram in the README.</p>
+<h3>Technology Stack</h3>
+<table><tr><th>Layer</th><th>Selected technologies</th><th>Purpose</th></tr>
+<tr><td>Frontend</td><td>Next.js 16 App Router, React 19, TypeScript 5 (strict)</td><td>Typed, modular web experience</td></tr>
+<tr><td>UI &amp; animation</td><td>Tailwind CSS 4, CSS Modules, Motion for React</td><td>Responsive layouts, RTL/LTR, reduced-motion scene motion</td></tr>
+<tr><td>Editor &amp; execution</td><td>CodeMirror 6, Pyodide in a dedicated Web Worker</td><td>Real Python with immediate, sandboxed feedback</td></tr>
+<tr><td>Application backend</td><td>Next.js Server Actions and Route Handlers, Zod validation</td><td>Authenticated application operations</td></tr>
+<tr><td>AI backend</td><td>Python 3.11+, FastAPI, Pydantic 2, LangChain, LangGraph, Google Gemini</td><td>Validated AI workflows behind an OpenAPI contract</td></tr>
+<tr><td>Data &amp; identity</td><td>PostgreSQL on Supabase, Prisma ORM and migrations, SQLAlchemy 2 (sync, psycopg2), Better Auth</td><td>Persistent learner records and sessions</td></tr>
+<tr><td>Verification</td><td>Node test runner, Pytest, Playwright, ESLint, <code>tsc</code>, generated-type drift check</td><td>Quality checks per layer and across the boundary</td></tr>
+<tr><td>Hosting</td><td>Vercel (client), Supabase (database/storage), AWS EC2 with Nginx → Gunicorn/Uvicorn under systemd (AI)</td><td>Deployment</td></tr></table>
+<div class="note"><b>Why two backends.</b> Identity, progress, and migrations stay next to the web application where Prisma and Better Auth already live. AI orchestration is Python because LangChain/LangGraph, structured-output tooling, and a sandboxed interpreter for validating generated missions are strongest there. The boundary is a single OpenAPI contract, so either side can be replaced or scaled without touching the other.</div>
+</section>
+
+<section class="page">
+<div class="section-top"><span>TICO · Technical Proposal</span><span>03 / Request Flow</span></div>
+<h2>Mission Request Flow</h2>
+<img src="mission-request-flow.png" alt="Exact README mission request sequence diagram" style="width:100%;max-height:120mm;object-fit:contain;margin-top:4mm">
+<p class="caption">Figure 3. Mission request flow, rendered from the exact Mermaid diagram in the README.</p>
+<h3>Technical workflow, step by step</h3>
+<ol>
+<li><b>Enter:</b> the learner signs in with Google; first-visit onboarding records locale and preferences.</li>
+<li><b>Select:</b> a map stop resolves to a mission through <code>POST /v1/missions/by-lesson</code>. By default this serves a reviewed authored mission in about one second; live generation is a deliberate, gated opt-in (section 10).</li>
+<li><b>Prepare:</b> the AI service opens a mission session, loads plan and mastery evidence, and returns six-phase mission JSON that has already passed schema, manifest, and executable-code validation.</li>
+<li><b>Learn and interact:</b> the mission player presents the authored phases, scene interactions, examples, guided steps, and remix requirement.</li>
+<li><b>Run:</b> the Pyodide worker executes Python and deterministic tests, returning normalized results to the scene and editor.</li>
+<li><b>Record:</b> a Server Action validates identity and the submitted payload with Zod, then saves the submission and progress in one Prisma transaction.</li>
+<li><b>Adapt:</b> closing the session moves mastery once, idempotently; the refreshed progress tells the client whether the concept’s path extends.</li>
+</ol>
+<div class="note"><b>Reliability approach.</b> AI failure never blocks a mission. The AI client wrapper times out at 15 s (45 s for generating endpoints), surfaces a typed <code>AiServiceError</code> with a <code>retryable</code> flag, and every caller has an authored fallback — <code>hint.service.ts</code> falls back to the mission’s authored hints, and mission endpoints serve reviewed content when generation is off or fails.</div>
+</section>
+
+<section class="page">
+<div class="section-top"><span>TICO · Technical Proposal</span><span>04 / Frontend — Platforms &amp; Routes</span></div>
+<h2>Frontend</h2>
+<p>The frontend is the learner’s main environment: it connects story exploration, Python coding, feedback, and progress in one browser experience. Next.js 16, React 19, and strict TypeScript provide the foundation; Tailwind CSS, CSS Modules, and Motion for React support consistent layouts and animation.</p>
+<h3>Target platforms and browsers</h3>
+<table><tr><th style="width:30%">Target</th><th>Commitment</th></tr>
+<tr><td>Browsers</td><td>Chromium, Firefox, and WebKit (Safari). The Pyodide runner is integration-tested in all three engines; no desktop install or plugin is required.</td></tr>
+<tr><td>Form factors</td><td>Desktop and landscape tablet breakpoints for the mission workspace (scene beside editor, output, and hint panels). Marketing and map pages are responsive down to phones.</td></tr>
+<tr><td>Languages and direction</td><td>Egyptian Arabic (<code>ar-EG</code>, default) and English. Interface direction follows the language; Python source and output stay left-to-right in an isolated LTR region.</td></tr>
+<tr><td>Accessibility</td><td>Status never relies on color alone; motion honours <code>prefers-reduced-motion</code>; <code>Ctrl/Cmd+Enter</code> runs code without overriding browser shortcuts; keyboard completion of a mission is a release gate.</td></tr></table>
+<h3>Route structure (App Router, locale-prefixed)</h3>
+<table><tr><th style="width:44%">Route</th><th>Responsibility</th></tr>
+<tr><td><code>/[locale]</code>, <code>/about</code>, <code>/pricing</code></td><td>Landing and marketing pages with the page-aware TICO chat</td></tr>
+<tr><td><code>/[locale]/login</code>, <code>/signup</code>, <code>/onboarding</code></td><td>Google sign-in and first-visit onboarding</td></tr>
+<tr><td><code>/[locale]/learn</code>, <code>/learn/[chapterSlug]</code></td><td>Chapter and learning maps</td></tr>
+<tr><td><code>/[locale]/worlds/[worldSlug]/play/[lessonSlug]</code></td><td>Six-phase mission player for a map stop</td></tr>
+<tr><td><code>/[locale]/progress</code>, <code>/challenges</code></td><td>Learner analysis dashboard and post-roadmap challenge arena</td></tr>
+<tr><td><code>/api/auth/[...all]</code>, <code>/api/v1/**</code></td><td>Better Auth handler; application API and authenticated proxies to the AI service</td></tr></table>
+</section>
+
+<section class="page">
+<div class="section-top"><span>TICO · Technical Proposal</span><span>04 / Frontend — Structure &amp; Runner</span></div>
+<h2>Frontend structure and browser runner</h2>
+<h3>Component and state structure</h3>
+<p>Server Components render pages and application reads. Interactive client components are kept small and grouped by concern: <code>components/mission-player</code> (the six-phase experience), <code>components/bakery</code> (layered scene renderer and simulation), <code>components/mission-ui</code> (world and challenge maps), <code>components/analysis</code> (dashboard), and <code>components/motion</code> (reduced-motion-aware primitives). Shared logic lives in <code>lib/</code> — <code>runner</code> (worker protocol and hook), <code>bakery</code> (scene manifest and mission simulations, unit-tested), <code>ai</code> (generated contract types and the service client), and <code>auth</code>.</p>
+<h3>Mission workspace layout (desktop and landscape tablet)</h3>
+<pre style="font-size:8pt;line-height:1.3;background:#f5f8fb;border:1px solid #e2e8f0;border-radius:3mm;padding:3mm;margin:2mm 0">┌──────────────────────────────────────────────────────────────────┐
+│ world breadcrumb     mission title     XP     locale/profile     │
+├──────────────────────┬───────────────────────────────────────────┤
+│ illustrated scene    │ task, examples, and active hint           │
+│ + character reaction ├───────────────────────────────────────────┤
+│                      │ Python editor (CodeMirror, LTR)           │
+│                      ├──────────────────────┬────────────────────┤
+│                      │ Run / Submit / Hint  │ output and tests   │
+└──────────────────────┴──────────────────────┴────────────────────┘</pre>
+<p class="small">The editor and output persist while hints or story details open. <b>Run</b> executes visible checks; <b>Submit</b> executes the full formative suite. TICO’s panel is mission-bounded, not a global chatbot.</p>
+<h3>Browser Python runner</h3>
+<p>Pyodide runs in a dedicated worker (<code>public/runner/python-worker.js</code>) so execution never blocks the interface. Each run uses fresh globals, a 5,000 ms wall-clock limit, a 65,536-byte output cap, at most 30 test cases, and an import allowlist (<code>math</code>, <code>random</code>, <code>statistics</code>, <code>string</code>, <code>decimal</code>, <code>fractions</code>). A worker cannot safely interrupt synchronous Python, so on timeout the whole worker is terminated, <code>TIMEOUT</code> is reported, and a fresh worker is created without losing editor content. Results are normalized into a fixed vocabulary that the scene, the hint ladder, and error analysis all consume.</p>
+<table><tr><th style="width:30%">Protocol element</th><th>Meaning</th></tr>
+<tr><td>Run outcome</td><td><code>OK</code> · <code>SYNTAX_ERROR</code> · <code>RUNTIME_ERROR</code> · <code>TIMEOUT</code> · <code>RUNNER_ERROR</code> — the child is told something different for each.</td></tr>
+<tr><td>Per-case status</td><td><code>PASSED</code> · <code>WRONG_OUTPUT</code> · <code>RAISED</code> · <code>REJECTED</code>, with the sanitized <code>repr()</code> of the actual value and a one-line error with harness frames stripped.</td></tr>
+<tr><td>Test cases</td><td>Come from the validated mission, never from the learner; the worker still parses each one and refuses anything that is not a plain allowlisted call.</td></tr>
+<tr><td>Versioned messages</td><td>Every worker message carries a protocol version and is parsed, never trusted; stale responses are matched by request ID and dropped.</td></tr></table>
+</section>
+
+<section class="page">
+<div class="section-top"><span>TICO · Technical Proposal</span><span>05 / Application Backend</span></div>
+<h2>Application Backend — Next.js</h2>
+<p>The application backend keeps identity, application data, and progression next to the web application. It is layered so that a reviewer can follow one request from validation to persistence without crossing into UI code.</p>
+<table><tr><th style="width:26%">Layer</th><th>Location</th><th>Rule</th></tr>
+<tr><td>Server Actions</td><td><code>src/actions/</code> — auth, onboarding, session, mission, submission, hint, plan, companion</td><td>Every mutation authenticates with <code>requireUser()</code> and parses its input with a Zod schema before touching the database.</td></tr>
+<tr><td>Services</td><td><code>src/services/*.service.ts</code></td><td>Business logic and Prisma access; the only layer that composes transactions and calls the AI service.</td></tr>
+<tr><td>Data access</td><td><code>src/lib/db.ts</code></td><td>One Prisma client singleton; no <code>new PrismaClient()</code> anywhere else.</td></tr>
+<tr><td>AI boundary</td><td><code>src/lib/ai/client.ts</code>, <code>src/lib/ai/types.ts</code> (generated)</td><td>All AI calls go through one wrapper; contract types are generated from the service’s OpenAPI and never hand-edited.</td></tr>
+<tr><td>Route Handlers</td><td><code>src/app/api/**</code></td><td>Better Auth callbacks, application API, and authenticated proxies to the AI service including the SSE chat stream.</td></tr></table>
+<h3>Submission handling in detail</h3>
+<p><code>submitCodeAction</code> requires a session user, validates <code>sessionId</code>, code, a fixed outcome enum (<code>PASSED | FAILED | ERROR | TIMEOUT</code>), output, and duration, then calls <code>submissionService.processSubmission</code>. The service prefetches read data outside the transaction to keep locks short, then writes the submission and accepted progress inside <code>db.$transaction</code>. Browser-reported results are recorded as formative evidence; a duplicate completion never duplicates progress.</p>
+<h3>The AI client contract</h3>
+<ul>
+<li><b><code>X-Request-ID</code> on every request.</b> The Python service echoes it into logs and error bodies, so a classroom bug report is traceable end to end.</li>
+<li><b>Envelope unwrapping.</b> Success bodies are <code>{ data, meta }</code>; <code>fetchAi&lt;T&gt;</code> returns the typed <code>data</code> half. Errors are <code>{ error: { code, message, request_id, retryable, details } }</code> and become <code>AiServiceError</code>; callers retry only when <code>retryable</code> is true.</li>
+<li><b>Timeouts sized to the work.</b> 15 s inside the learner loop; 45 s for generating endpoints, which legitimately spend 20–30 s writing and validating a mission. <code>POST /v1/tico/messages</code> streams SSE and returns the raw <code>Response</code>.</li>
+<li><b>Always a fallback.</b> A mission must stay completable with the AI service switched off entirely.</li>
+</ul>
+<p class="small"><b>Naming across the boundary.</b> The table is <code>exercises</code>; learners and the AI contract say <b>mission</b>, and a <code>Track</code> row is a <b>world</b>. Layers translate at the boundary (<code>missionId: exercise.id</code>) rather than renaming either side.</p>
+</section>
+
+<section class="page">
+<div class="section-top"><span>TICO · Technical Proposal</span><span>05 / Database &amp; Identity</span></div>
+<h2>Database</h2>
+<p>Supabase-hosted PostgreSQL is TICO’s shared persistent data layer. It connects account identity, curriculum, mission attempts, progress, and the evidence needed for AI-supported adaptation. Both services use the same database while retaining explicit ownership boundaries.</p>
+<h3>Data organization</h3>
+<table><tr><th style="width:30%">Data area</th><th>Purpose</th></tr>
+<tr><td>Identity and learner profiles</td><td>Users, linked Google accounts, sessions, onboarding preferences, roles.</td></tr>
+<tr><td>Curriculum and content</td><td>Tracks (worlds), lessons, exercises (missions), exercise–concept weights, prebuilt and generated mission records.</td></tr>
+<tr><td>Submissions and progression</td><td>Mission attempts, practice sessions, user progress, concept mastery, per-learner lesson plans.</td></tr>
+<tr><td>Companion and AI evidence</td><td>Companion chats, hint events, hint cache, and the <code>ai_interactions</code> audit log for every model call.</td></tr></table>
+<h3>Schema ownership and service access</h3>
+<p><code>client/prisma/schema.prisma</code> (32 models, 13 migrations) is the authoritative definition of every table, AI tables included. The Next.js backend uses the shared Prisma client; the Python service maps the same tables with synchronous SQLAlchemy and never creates or migrates them — there is no Alembic. A schema change and its migration ship in the same commit, and <code>ai-backend/tests/test_model_mapping.py</code> compares every SQLAlchemy mapping against the real migration SQL, so a rename cannot drift silently.</p>
+<h3>Consistency and continuity</h3>
+<p>Transactions cover related updates that must succeed together, such as saving a submission and updating accepted progress. Session ownership, mission version, and duplicate-request handling protect progression; the AI service’s <code>close</code> endpoint moves mastery once and is idempotent. Persisted evidence powers the learner dashboard and later planning without the learner repeating completed work.</p>
+<h3>Authentication and user management</h3>
+<p>Better Auth provides Google OAuth sign-in and opaque sessions stored in PostgreSQL; the browser receives an HTTP-only cookie and there is no anonymous path. The AI service validates bearer session tokens by looking them up in the shared database — it verifies, never issues — and independently checks that the requested learner data belongs to that session. Student, teacher, and administrator roles are part of the authorization model; role-specific actions require server-side checks.</p>
+<div class="note"><b>Privacy by design.</b> Credentials stay server-side. Before any model call the service strips name, email, OAuth identity, exact age, and unrelated history; hints are keyed and cached on a hash of the code excerpt, never raw code. Recording a learner’s age band has been deliberately held pending a privacy decision, which is why under-13 static-hint mode exists in code but is not yet switchable.</div>
+</section>
+
+<section class="page">
+<div class="section-top"><span>TICO · Technical Proposal</span><span>06 / AI Service Architecture</span></div>
+<h2>AI Service Architecture</h2>
+<p>The AI backend is one FastAPI application with six bounded capabilities and one companion persona. It returns JSON decisions and prose; it never renders game state or executes learner code. Its layout enforces a dependency rule — <code>api → services → rules / queries / ai</code> — so every decision rule is testable with no database and no API key.</p>
+<table><tr><th style="width:26%">Module</th><th>Responsibility</th></tr>
+<tr><td><code>api/v1/</code></td><td>Routers only: HTTP in, HTTP out. Never import SQLAlchemy.</td></tr>
+<tr><td><code>schemas/</code></td><td>Pydantic v2 DTOs — the public contract, exported as OpenAPI and generated into the client.</td></tr>
+<tr><td><code>rules/</code></td><td>Pure Python, zero I/O: <code>mastery</code>, <code>progression</code>, <code>plan</code>, <code>composer</code>, <code>hint_ladder</code>, <code>arena</code>, <code>mission_builder</code>. Never imports LangChain.</td></tr>
+<tr><td><code>services/</code></td><td>Use cases that orchestrate rules, queries, and AI chains.</td></tr>
+<tr><td><code>ai/</code></td><td><code>router.py</code> (capability → model), <code>prompts/</code> (versioned), <code>chains/</code> and <code>graphs/</code> (LangChain / LangGraph), <code>guards.py</code>, <code>phase_guards.py</code>, <code>moderation.py</code>, <code>sandbox.py</code>.</td></tr>
+<tr><td><code>manifests/</code>, <code>content/</code></td><td>Closed world vocabularies (<code>worlds/*.yaml</code>) and reviewed prebuilt missions.</td></tr>
+<tr><td><code>queries/</code>, <code>models_tables/</code></td><td>SQLAlchemy access to the Prisma-owned tables, one module per aggregate.</td></tr></table>
+<h3>Six capabilities: deterministic layer first, model second</h3>
+<table><tr><th style="width:22%">Capability</th><th>Deterministic layer (Python)</th><th>Model contribution</th></tr>
+<tr><td>Hints and TICO chat</td><td>Chooses context, hint rung, safety limits, and cache key</td><td>Writes short Socratic guidance for that rung only</td></tr>
+<tr><td>Error analysis</td><td>Normalizes runner evidence and restricts categories</td><td>Classifies ambiguous failures</td></tr>
+<tr><td>Student model</td><td>Computes weighted mastery over target and carried concepts</td><td>None — optional summary only</td></tr>
+<tr><td>Path planner</td><td>Proposes required/optional lessons with a confidence</td><td>Reviews every proposed skip; may only refuse</td></tr>
+<tr><td>Adaptive composer</td><td>Selects scaffold, repetitions, and advance/hold</td><td>Reviews conflicting evidence only</td></tr>
+<tr><td>Mission generation</td><td>Narrows curriculum and scene vocabulary, runs and validates code</td><td>Composes a structured six-phase draft</td></tr></table>
+<p><b>Rules propose, the model reviews.</b> The planner and composer decide things <i>about</i> a learner. A pure rule produces a decision and a confidence; only when evidence conflicts does a model review the profile and confirm or override with a written reason. Every decision records <code>decided_by</code> and <code>reason</code>, so it can be explained. Mastery numbers are the exception: always Python, never a model.</p>
+</section>
+
+<section class="page">
+<div class="section-top"><span>TICO · Technical Proposal</span><span>07 / Service Contract</span></div>
+<h2>Service Contract</h2>
+<p>The AI service’s <code>/openapi.json</code> is the executable HTTP authority. Every DTO inherits from one Pydantic base schema whose alias generator declares the wire format as camelCase once, never per field; <code>test_contract.py</code> fails the build if snake_case reaches the public contract. The client’s <code>types.ts</code> is generated from that OpenAPI and a <code>--check</code> mode in CI fails when it is stale — the contract was hand-written once, drifted silently, and surfaced as a 422 on five fields at once; generated types cannot drift.</p>
+<h3>Envelope and error shape</h3>
+<p>All routes use the <code>/v1</code> prefix and validate Better Auth bearer sessions against the shared database. Success bodies are <code>{ data, meta }</code>; errors are a stable <code>{ error: { code, message, request_id, retryable, details } }</code>. Every request carries <code>X-Request-ID</code>, which is echoed into logs and error bodies; mutations accept <code>Idempotency-Key</code>. TICO chat is the one exception: it streams server-sent events with no envelope.</p>
+<h3>Endpoints (15, all implemented — no stubs)</h3>
+<table><tr><th style="width:44%">Endpoint</th><th>Purpose</th></tr>
+<tr><td><code>GET /v1/health</code></td><td>Process and database readiness</td></tr>
+<tr><td><code>POST /v1/sessions</code>, <code>PATCH …/phase</code>, <code>POST …/close</code>, <code>POST …/debrief</code></td><td>Mission session lifecycle; mastery moves on close; debrief numbers counted in Python</td></tr>
+<tr><td><code>POST /v1/hints</code> · <code>POST /v1/submissions/analyze</code></td><td>Next permitted hint rung · classify normalized execution failures</td></tr>
+<tr><td><code>POST /v1/students/{id}/refresh</code> · <code>…/plan</code></td><td>Recompute mastery and path progress · build the lesson plan</td></tr>
+<tr><td><code>POST /v1/missions/next</code> · <code>…/by-lesson</code> · <code>GET …/{id}</code> · <code>POST …/generate</code></td><td>Select, resolve, reload, or explicitly generate a validated mission</td></tr>
+<tr><td><code>POST /v1/challenges/next</code> · <code>POST /v1/tico/messages</code></td><td>Mixed practice from mastered concepts · mission-scoped chat over SSE</td></tr></table>
+</section>
+
+<section class="page">
+<div class="section-top"><span>TICO · Technical Proposal</span><span>08 / Model Routing &amp; Prompt Design</span></div>
+<h2>Model Routing and Prompt Design</h2>
+<p>Every model call passes through <code>app/ai/router.py</code>; there are no inline model IDs. The route per capability is configuration, so a model can be swapped without a deploy, and each route carries defaults chosen for the job rather than one global setting.</p>
+<table><tr><th style="width:30%">Route</th><th style="width:22%">Model</th><th>Why</th></tr>
+<tr><td>Hints, NPC lines, reactions</td><td><code>gemini-3.5-flash-lite</code></td><td>High volume, short output, latency-sensitive; sits inside the learner’s loop</td></tr>
+<tr><td>Error classification</td><td><code>gemini-3.5-flash-lite</code></td><td>Small structured output over a fixed category set</td></tr>
+<tr><td>Escalation review (planner skip, composer conflict)</td><td><code>gemini-3.5-flash</code></td><td>Judgement over a messy learner profile, rare</td></tr>
+<tr><td>Mission generation</td><td><code>gemini-3.5-flash</code></td><td>Structured composition, validated in Python afterwards</td></tr>
+<tr><td>TICO chat</td><td><code>gemini-3.5-flash</code></td><td>Conversational, streams</td></tr></table>
+<p class="small">Stable IDs only — no preview or scheduled-for-retirement models. Temperature defaults to 0.2 for structured and pedagogical routes and 0.7 for chat; streaming is enabled only for chat. Output budgets are per capability (hint 400 tokens, debrief 1,200, a whole mission 8,000). Structured routes use <code>with_structured_output()</code> into Pydantic models, so a malformed reply fails validation rather than reaching a child.</p>
+<h3>Prompts are versioned and minimal</h3>
+<p>Prompts live in <code>app/ai/prompts/</code> with an explicit version string — for example <code>tico_hint/v1</code> and <code>mission_gen/v3-remix-keeps-fixed-numbers</code>. The version is written to <code>ai_interactions.prompt_version</code> on every call, so when output quality moves, the column shows which wording moved it. The hint prompt is told only what changes the wording — the rung, the phase, the learner’s current code, and what went wrong. It is <i>not</i> told the learner’s name, mastery scores, or history: a hint should read as a response to what is on screen, not a report from a file.</p>
+</section>
+
+<section class="page">
+<div class="section-top"><span>TICO · Technical Proposal</span><span>09 / Hint Ladder, Chat &amp; Mission Prompt</span></div>
+<h2>Hint Ladder, Chat, and the Mission Prompt</h2>
+<h3>The hint ladder: the server decides the rung, the model writes for it</h3>
+<p>The rung is fixed in <code>rules/hint_ladder.py</code> by counting prior hint events, before any model is called. The model is never asked <i>how much</i> to give away, only to write well for the amount it was given. That turns “TICO never hands over the answer” from a prompt instruction into a guarantee checked by tests.</p>
+<table><tr><th style="width:12%">Rung</th><th style="width:36%">Job</th><th>May contain</th></tr>
+<tr><td>1 Orient</td><td>Point at the region, no diagnosis</td><td>Nothing from the solution</td></tr>
+<tr><td>2 Question</td><td>Make them think about the concept</td><td>Nothing from the solution</td></tr>
+<tr><td>3 Name it</td><td>Name the concept, show the pattern on a <i>different</i> example</td><td>The concept and a foreign example; none of the learner’s target values</td></tr>
+<tr><td>4 Walk</td><td>Walk to the fix in their own code, in words</td><td>The precise change, never a runnable line</td></tr></table>
+<p>The ladder is phase-aware. Guided coding starts at rung 1; the remix phase starts at rung 2 because the learner has already seen the code work; phases 1–4 have no ladder because there is no blank to be stuck on. After rung 4 the learner is offered a smaller practice problem, not the answer.</p>
+<h3>The chat graph and moderation</h3>
+<p>TICO chat is a LangGraph workflow: <code>moderate_input → generate_response → leak_guard</code>. Moderation is pure Python and runs before any prompt: it redirects requests for complete solutions, unrelated personal advice, secrets, romance, or off-platform contact, and a safety concern is never silently swallowed — it is surfaced as the highest-priority category with human escalation required. The persona is bounded to the platform and the active mission; it is not a general chatbot.</p>
+<h3>The mission-generation prompt</h3>
+<p>The model is the star: it invents the scenario, the questions, the code, and the twist, so two learners on the same concept get genuinely different missions. What it may not invent is the world. The system prompt states eight hard rules — one Python function that returns its result; only the vocabulary, sprites, and animations it was given; phases 4, 5, and 6 are the same function evolving; blanks marked <code>___</code>; solvable by a child who just met the concept; Egyptian Arabic prose with English identifiers; phase 2 has no code; JSON only. The model writes test <i>inputs</i>; Python runs the solution to compute expected outputs, because a model asked for both will occasionally produce an answer that is wrong before the child types a character.</p>
+</section>
+
+<section class="page">
+<div class="section-top"><span>TICO · Technical Proposal</span><span>10 / Generation Pipeline &amp; Guards</span></div>
+<h2>Generation Pipeline and Guards</h2>
+<p>A generated mission is never shown unvalidated. The pipeline treats model output as untrusted content that must earn its way to a learner.</p>
+<div class="flow">
+<div class="step"><b>1 · Constrain</b>Fix the lesson target, scaffold level, and the closed world manifest: characters, vocabulary, sprites, animations, and the scene’s fixed quantities.</div>
+<div class="step"><b>2 · Generate</b>Request a structured six-phase draft through the router. The draft is parsed into Pydantic models before anything else looks at it.</div>
+<div class="step"><b>3 · Run and validate</b>Execute the solution and starter in a sandbox; run every fence. On failure, retry once with the reason; on a second failure, serve reviewed authored content.</div>
+</div>
+<h3>Three fences, because each fails differently</h3>
+<table><tr><th style="width:22%">Fence</th><th>What it checks</th><th style="width:34%">Why it exists</th></tr>
+<tr><td>Vocabulary</td><td>Characters, places, and terms come from the manifest</td><td>Wrong here and the prose reads as though nobody looked</td></tr>
+<tr><td>Visual</td><td>Every sprite, state, and animation the scene is asked to draw exists in the client renderer</td><td>Wrong here and the screen is dead while the code still looks correct</td></tr>
+<tr><td>Simulation</td><td>Fixed quantities the scene owns (a tray holds eight loaves) are not renumbered in <i>any</i> of the four code surfaces, including the remix solution</td><td>Wrong here and everything looks correct — tests pass, validator signs off — while the child watches eight loaves land on a “tray of twelve”. This fence was added after that shipped twice.</td></tr></table>
+<h3>Code-level guards</h3>
+<ul>
+<li><b>Solution passes, starter fails.</b> The reference solution must pass its own tests and the starter code must not — a mission whose blanks are already filled is rejected.</li>
+<li><b>Identifiers in bounds.</b> Function names and parameters used across phases must match the manifest signatures; phases 4–6 must be the same function evolving.</li>
+<li><b>Hint leak checks.</b> <code>hint_leaks_answer</code> and <code>hint_leaks_blank</code> reject a hint that contains a solution identifier, a target value, or a runnable Python line for the rung it was written at. A cached leak is worse than a live one, so only guard-approved hints are cached.</li>
+<li><b>Shape check.</b> <code>looks_like_tico()</code> rejects a debrief that carries backticks, English narration about the learner, or too little Arabic to be a TICO line, and falls back to authored text.</li>
+<li><b>Sandboxed execution.</b> <code>ai/sandbox.py</code> runs generated code with a timeout and compares normalized return values; it is the only place the AI service executes any Python, and it never runs learner code.</li>
+</ul>
+<div class="note"><b>Generation is a gated cost.</b> <code>LIVE_MISSION_GENERATION</code> defaults to off. With it unset no mission endpoint calls Gemini; the service serves reviewed and pre-validated missions or answers 503, and a client cannot lift the gate with a request flag. Hints, chat, error analysis, and the debrief still call the model — short, cached, inside the learner’s loop.</div>
+</section>
+
+<section class="page">
+<div class="section-top"><span>TICO · Technical Proposal</span><span>11 / Cost, Caching &amp; Evaluation</span></div>
+<h2>Cost, Caching, and Evaluation</h2>
+<h3>Caching is the primary cost lever</h3>
+<p>Gemini context caching targets large contexts and has minimum-token thresholds; TICO prompts are short, so provider caching would not help. Instead a PostgreSQL <code>hint_cache</code> is the required cost control. Its key combines the mission, locale, ladder scope (phase, rung, guided step), the normalized error tag, and a SHA-256 of the task, the learner’s code excerpt, and the error text — never raw code as a key. A hit skips the model entirely and is logged as <code>CACHED</code>; a miss stores the hint only after the leak guard has approved it.</p>
+<h3>Every model call is auditable</h3>
+<p>Each call writes a row to <code>ai_interactions</code> with capability, model, prompt version, token counts, latency, cache status, and the moderation verdict. That one table is the cost dashboard, the bug log, the evaluation source, and the child-safety audit trail. Per-capability timeouts and a bounded retry (<code>max_retries=2</code>) sit on every route, and the request ID from the client is echoed into logs and error bodies.</p>
+<h3>Evaluation and tests that target the AI itself</h3>
+<table><tr><th style="width:36%">Check</th><th>What it proves</th></tr>
+<tr><td><code>tests/test_hint_leak.py</code></td><td>Rung-graded leak tests: rungs 1–2 contain no solution identifier, rung 3 none of the target values, rung 4 no complete runnable line.</td></tr>
+<tr><td><code>tests/test_guards.py</code>, <code>test_generation.py</code></td><td>Broken solutions, pre-filled starters, unknown sprites, renumbered quantities, and out-of-manifest identifiers are rejected.</td></tr>
+<tr><td><code>tests/test_mastery.py</code>, <code>test_progression.py</code>, <code>test_plan.py</code>, <code>test_composer.py</code>, <code>test_hint_ladder.py</code></td><td>Every decision rule runs with no database and no API key.</td></tr>
+<tr><td><code>tests/test_router_and_prompts.py</code>, <code>test_moderation.py</code></td><td>Routing, prompt versions, and moderation categories behave as documented.</td></tr>
+<tr><td><code>evals/</code> — composer and error-classification accuracy</td><td>Offline evaluation sets run as a CI step (6 cases today; the generation-legality eval is owed and tracked in <code>STATE.md</code>).</td></tr>
+<tr><td><code>tests/test_contract.py</code>, <code>test_model_mapping.py</code></td><td>The OpenAPI contract and the SQLAlchemy mappings match what the client and the migrations actually say.</td></tr></table>
+<p>The offline suite blanks <code>GOOGLE_API_KEY</code> in <code>conftest.py</code> so nothing can reach a model by accident; live-model tests are an explicit opt-in (<code>TICO_LIVE_MODEL=1</code>). Learner progression is tuned by evidence, not intuition: three stops per concept, extending to at most six when mastery stays below the single shared threshold (0.75), so no learner is trapped on one idea.</p>
+<div class="note"><b>Why this is not a pass-through call.</b> The model is never asked whether code is correct, how much of a hint to reveal, what a learner’s mastery is, or which sprite to draw. Each of those is decided in Python first; the model writes prose or composes within the set it was handed, and its output is executed, validated, leak-checked, moderated, cached, and logged before a child sees it.</div>
+</section>
+
+<section class="page">
+<div class="section-top"><span>TICO · Technical Proposal</span><span>12 / Game &amp; Simulation Engine</span></div>
+<h2>Game / Simulation Engine</h2>
+<p>TICO uses a custom browser-based 2D scene renderer and simulation layer built with React, SVG, and reviewed sprites. It does not require a separate Unity or Unreal runtime.</p>
+<img src="mission.webp" alt="Interactive bakery mission" style="max-height:50mm;object-fit:contain">
+<p class="caption">Figure 4. Interactive bakery mission and in-game coding panel.</p>
+<h3>Code becomes gameplay</h3>
+<p>The bakery is composed in a shared 1600 × 900 coordinate system with independent environment layers, fixtures, actors, props, bread ownership, queue state, delivery state, money, and animation beats. Mission logic maps coding outcomes to visible changes: a variable can open the shop or prepare trays, while an <code>if</code> statement can change who receives bread. The scene manifest (<code>client/src/lib/bakery/scene-manifest.ts</code>) and the AI world manifest (<code>ai-backend/content/worlds/el_forn.yaml</code>) share the same closed vocabulary of sprite IDs, so the renderer and generated content can never disagree about what exists.</p>
+<h3>Python execution</h3>
+<p>CodeMirror provides Python editing and Pyodide executes code in the dedicated worker described in section 04. Execution and testing happen away from the main UI thread; results are normalized before they reach the scene, the hint ladder, or error analysis.</p>
+<h3>Asset production</h3>
+<p>Versioned art prompts produce storybook scenes and isolated sprites. A person reviews cultural fit, anatomy, transparency, crop safety, and small-size readability before optimized WebP files receive stable IDs in both manifests. Sprite sheets are cut by connected components (<code>client/scripts/cut-sprite-sheet.py</code>) rather than grids, and a Playwright playthrough script drives every authored mission through a real browser to check placement, overlap, and interactions.</p>
+<div class="two" style="margin-top:4mm">
+<div><img src="flour-sacks.webp" alt="Flour sacks" style="max-height:34mm;object-fit:contain"></div>
+<div><img src="bread-board.webp" alt="Bread board with a visible baked result" style="max-height:34mm;object-fit:contain"></div>
+</div>
+<p class="caption">Sample reviewed sprites. The bread board carries one burnt loaf beside two good ones — it is the asset for the “bread can burn” consequence, not decoration.</p>
+</section>
+
+<section class="page">
+<div class="section-top"><span>TICO · Technical Proposal</span><span>13 / Gameplay &amp; Learning Design</span></div>
+<h2>Gameplay and Learning Design</h2>
+<p>Each mission follows six authored learning phases while the setting, cast, and props provide variety. The principle, learned from documented generation failures, is <b>author the beats, generate the dressing</b>: anything the learner must not get wrong is written by a person; the model varies the surface around it.</p>
+<table><tr><th style="width:24%">Phase</th><th>Learning experience</th></tr>
+<tr><td>1. Encounter</td><td>A character introduces a concrete problem in the scene.</td></tr>
+<tr><td>2. Explore</td><td>The learner predicts what should happen. No code yet.</td></tr>
+<tr><td>3. Discover</td><td>TICO introduces the Python concept in plain language.</td></tr>
+<tr><td>4. Understand</td><td>The learner runs and reads a complete example and watches the world work.</td></tr>
+<tr><td>5. Guided coding</td><td>The same code with blanks; two or more small coding steps change the world.</td></tr>
+<tr><td>6. Remix</td><td>The world changes and the working code is now wrong; the learner adapts it.</td></tr></table>
+<p>The current authored El Forn path contains two variable missions and two conditional missions: <span lang="ar" dir="rtl">رسالة الفتح</span>, <span lang="ar" dir="rtl">عدّ الصواني</span>, <span lang="ar" dir="rtl">ظلي العيلة</span>, and <span lang="ar" dir="rtl">النصيب العادي</span>. Each includes multiple scene interactions and three meaningful gameplay beats. Consequences stay legible and never scold: a wrong quantity leaves a customer unserved, an unattended oven burns a loaf, a slow service loses the sale.</p>
+<p>Python runs locally in the sandboxed Pyodide worker. AI output never decides whether code passed: deterministic tests, schemas, manifests, and progression rules make that decision.</p>
+<img src="map.webp" alt="Learning map reproduced from README" style="max-height:58mm;margin-top:3mm;object-fit:contain">
+<p class="caption">Learning map from the README. A concept shows three stops; the path extends to at most six when mastery evidence says so, and the client is told when it grew.</p>
+</section>
+
+<section class="page">
+<div class="section-top"><span>TICO · Technical Proposal</span><span>14 / Quality, Testing &amp; Repository</span></div>
+<h2>Quality, Testing, and Repository Structure</h2>
+<p>Tests follow the risk boundaries rather than the code layout. The numbers below were produced by running the suites on 15 September 2026.</p>
+<table><tr><th style="width:38%">Command</th><th style="width:20%">Result</th><th>Covers</th></tr>
+<tr><td><code>ai-backend&gt; python -m pytest -q</code></td><td>496 passed, 71 skipped</td><td>Rules, guards, prompts, routers, contract, model mapping; live-database and live-model suites skip without credentials</td></tr>
+<tr><td><code>ai-backend&gt; python -m pytest evals -q</code></td><td>6 passed</td><td>Composer and error-classification evaluation sets</td></tr>
+<tr><td><code>client&gt; pnpm test</code></td><td>116 passed</td><td>Runner protocol, bakery simulations and missions, hint fallback, services</td></tr>
+<tr><td><code>python scripts/gen_client_types.py --check</code></td><td>drift check</td><td>The generated <code>client/src/lib/ai/types.ts</code> matches the live OpenAPI</td></tr>
+<tr><td><code>python scripts/check_manifests.py</code></td><td>manifest check</td><td>Every world manifest loads and every referenced asset resolves</td></tr>
+<tr><td><code>client&gt; pnpm typecheck</code>, <code>pnpm lint</code>, <code>tsx scripts/check-bakery-playthrough.ts</code></td><td>static + browser</td><td>Strict TypeScript, ESLint, and a Playwright playthrough of every authored mission with the API stubbed</td></tr></table>
+<h3>Repository structure</h3>
+<pre style="font-size:8pt;line-height:1.35;background:#f5f8fb;border:1px solid #e2e8f0;border-radius:3mm;padding:3mm;margin:3mm 0">TICO/
+├── client/                      Next.js 16 frontend + TypeScript application backend
+│   ├── prisma/                  Authoritative schema and migrations (32 models)
+│   ├── public/runner/           Isolated Pyodide worker
+│   ├── scripts/                 Mission import, asset preparation, playthrough checks
+│   └── src/
+│       ├── app/                 App Router pages and route handlers ([locale]/…, api/…)
+│       ├── actions/             Server Actions (Zod-validated, authenticated)
+│       ├── components/          analysis · bakery · mission-player · mission-ui · motion
+│       ├── lib/                 ai (generated types + client) · auth · bakery · runner · db
+│       └── services/            Application services over Prisma
+├── ai-backend/                  Python 3.11 FastAPI AI service
+│   ├── app/                     api/v1 · schemas · rules · services · queries · models_tables
+│   │   └── ai/                  router · prompts · chains · graphs · guards · sandbox · moderation
+│   ├── content/                 worlds/*.yaml manifests · prebuilt/ reviewed missions
+│   ├── deploy/, nginx/          EC2, systemd, Nginx, Docker
+│   ├── scripts/                 Type generation, manifest checks, pregeneration
+│   └── tests/, evals/
+├── docs/                        Product, curriculum, architecture, contracts, AI, safety, testing
+├── AGENTS.md · client/AGENTS.md · ai-backend/AGENTS.md   Contribution rules per lane
+└── pnpm-workspace.yaml</pre>
+<p>Contribution rules are explicit and enforced by tests: routers never import SQLAlchemy, rules never import LangChain, no model ID appears outside the router, no hand-written contract types, and no schema change without its migration. <code>ai-backend/docs/STATE.md</code> records what is true, what is owed, and what is deliberately unfinished, so a reviewer can distinguish a gap from a mistake.</p>
+</section>
+
+<section class="page">
+<div class="section-top"><span>TICO · Technical Proposal</span><span>15 / Analysis Dashboard</span></div>
+<h2>Analysis Dashboard</h2>
+<p>The learner analysis page brings progress and learning feedback into one place. Its purpose is to help learners understand their current position and connect future practice to evidence from missions. Persistent submission and progress records support this experience, while deterministic mastery and progression services provide the foundation for adaptation.</p>
+<img src="analysis-dashboard.webp" alt="Learner analysis dashboard" style="max-height:95mm;object-fit:contain">
+<p class="caption">Figure 5. Analysis dashboard shown in the project README. Teacher-wide reporting and richer longitudinal analysis are future extensions.</p>
+<p>The page-aware TICO chat can discuss the dashboard and its recorded metrics, so a learner can ask what a number means without leaving the page. <code>POST /v1/students/{id}/refresh</code> returns one row per concept — completed, total stops, remaining, complete, extended — which is enough for the client to draw the path without knowing anything about mastery internals.</p>
+</section>
+
+<section class="page">
+<div class="section-top"><span>TICO · Technical Proposal</span><span>16 / Development Path &amp; Demonstration</span></div>
+<h2>Future Technical Development</h2>
+<p>The proposed development path strengthens the demonstrated experience before expanding the platform. These items are planned directions, rather than claims of completed delivery or fixed competition milestones.</p>
+<table><tr><th style="width:22%">Stage</th><th>Planned development</th><th style="width:34%">Validation focus</th></tr>
+<tr><td>1 · Strengthen the pilot</td><td>Improve onboarding, beginner explanations, interaction clarity, accessibility, and device compatibility.</td><td>First-mission completion, scene consequences, RTL behavior, and runner recovery.</td></tr>
+<tr><td>2 · Expand learning content</td><td>Extend reviewed missions to loops and additional Egyptian worlds, preserving authored teaching beats and varied scenes.</td><td>Concept coverage, solution tests, asset manifests, and bilingual content review.</td></tr>
+<tr><td>3 · Refine adaptation</td><td>Evaluate personalization and hint quality with pilot evidence; rewrite the generation-legality eval; enrich learner analysis and introduce reviewed teacher reporting.</td><td>Mastery consistency, appropriate scaffolding, hint usefulness, and privacy controls.</td></tr>
+<tr><td>4 · Prepare wider delivery</td><td>Strengthen observability, service capacity, backups, deployment automation, and operational safety gates; decide the under-13 data policy.</td><td>Load testing, outage fallbacks, authorization, account lifecycle, and recovery exercises.</td></tr></table>
+<h3>Live demonstrations</h3>
+<table><tr><th style="width:34%">Demo</th><th>Project link</th></tr>
+<tr><td>Client application</td><td><a href="https://tico.0xd22.dev">https://tico.0xd22.dev</a></td></tr>
+<tr><td>AI service documentation (Swagger)</td><td><a href="https://54-75-53-43.sslip.io/docs">https://54-75-53-43.sslip.io/docs</a></td></tr>
+<tr><td>AI service readiness</td><td><a href="https://54-75-53-43.sslip.io/v1/health">https://54-75-53-43.sslip.io/v1/health</a></td></tr>
+<tr><td>Executable HTTP contract</td><td><a href="https://54-75-53-43.sslip.io/openapi.json">https://54-75-53-43.sslip.io/openapi.json</a></td></tr></table>
+<p class="small">Links reproduced from the README; live availability depends on deployment status.</p>
+<h3>Technical sources</h3>
+<p class="small">Project README; <code>AGENTS.md</code>, <code>client/AGENTS.md</code>, <code>ai-backend/AGENTS.md</code>, <code>ai-backend/docs/STATE.md</code>; <code>docs/05-system-architecture.md</code>; <code>docs/07-browser-python-runner.md</code>; <code>docs/08-ai-generation-and-companion.md</code>; <code>docs/11-testing-and-operations.md</code>; and the source under <code>client/src/</code> and <code>ai-backend/app/</code>. Figures 1, 4, 5 and the sample sprites are reused from the README; Figures 2 and 3 are rendered directly from the README Mermaid sources.</p>
+</section>
+</body></html>

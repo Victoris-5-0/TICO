@@ -98,6 +98,9 @@ class Settings(BaseSettings):
     #: classification still call the model — they are short, cached, and sit inside the
     #: student's own loop. `daily_model_call_cap` is what bounds those.
     live_mission_generation: bool = False
+    # Isharet Cairo has reviewed scene mechanics and two local fallback missions.
+    # Its authored progression may call the model even while other worlds stay gated.
+    traffic_live_mission_generation: bool = True
 
     allow_demo_auth: bool = False
     log_level: str = "INFO"

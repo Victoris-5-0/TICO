@@ -10,7 +10,7 @@ import { db } from "@/lib/db";
 import { buildChallengeMap } from "@/services/challenge-map.service";
 
 type Params = Promise<{ locale: string; worldSlug: string; lessonSlug: string }>;
-type Search = Promise<{ preview?: string }>;
+type Search = Promise<{ preview?: string; live?: string }>;
 
 export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
   const { locale, worldSlug } = await params;
@@ -41,11 +41,12 @@ export default async function Page({
   searchParams: Search;
 }) {
   const { locale, worldSlug, lessonSlug } = await params;
-  const { preview } = await searchParams;
+  const { preview, live } = await searchParams;
 
   if (!isLocale(locale)) notFound();
 
   const isPreview = preview === "1" || preview === "true";
+  const isLivePreview = worldSlug === "isharet-cairo" && (live === "1" || live === "true");
   const world = worlds.find((w) => w.slug === worldSlug);
   if (!world) notFound();
 
@@ -53,7 +54,7 @@ export default async function Page({
 
   const user = await getCurrentUser();
   if (!user && !isPreview) {
-    redirect(`/${locale}/login?redirect=${returnUrl}/play/${lessonSlug}`);
+    redirect(`/${locale}/login?redirect=${returnUrl}/play/${lessonSlug}${isLivePreview ? "%3Flive%3D1" : ""}`);
   }
 
   let rows: Array<{ id: string; slug: string; title: string }> = [];
@@ -125,6 +126,7 @@ export default async function Page({
         lessons={lessons}
         map={map}
         initialLoadingLesson={currentLesson || fallbackLesson}
+        initialLivePreview={isLivePreview}
       />
     </div>
   );

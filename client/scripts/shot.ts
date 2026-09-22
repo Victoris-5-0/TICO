@@ -34,6 +34,8 @@ async function main() {
   const advance = phaseFlag >= 0 ? Number(process.argv[phaseFlag + 1] ?? 0) : 0;
   // Whole page, for the tall ones — a challenge map is nearly 2000px of scene.
   const fullPage = process.argv.includes("--full");
+  const sceneClicksFlag = process.argv.indexOf("--scene-clicks");
+  const sceneClicks = sceneClicksFlag >= 0 ? Number(process.argv[sceneClicksFlag + 1] ?? 0) : 0;
 
   const token = randomBytes(24).toString("hex");
   const session = await db.authSession.create({
@@ -89,6 +91,13 @@ async function main() {
         await next.click();
         await page.waitForTimeout(700);
       }
+    }
+
+    for (let i = 0; i < sceneClicks; i += 1) {
+      const target = page.locator("[data-traffic-pick]").first();
+      await target.waitFor({ state: "visible", timeout: 5_000 });
+      await target.click();
+      await page.waitForTimeout(350);
     }
 
     // The bakery preloads 25 images before it draws; a screenshot taken first is grey.

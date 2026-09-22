@@ -71,7 +71,8 @@
 .stage {
   position: fixed;
   inset: 0;
-  z-index: 0;
+  z-index: 1;
+  pointer-events: auto;
 }
 
 /* Cover rather than contain: the frame is whatever shape the screen is. The crop is
@@ -248,6 +249,7 @@ html[lang="ar-EG"] .world { letter-spacing: 0; }
  */
 .panelDock {
   position: absolute;
+  z-index: 2;
   inset-block: auto clamp(12px, 1.6vw, 22px);
   max-block-size: calc(100% - clamp(12px, 1.6vw, 22px));
   left: clamp(10px, 1.2vw, 18px);
@@ -256,6 +258,11 @@ html[lang="ar-EG"] .world { letter-spacing: 0; }
   flex-direction: column;
   pointer-events: auto;
   transition: inline-size 0.24s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.panelDockTraffic {
+  inset-block-end: calc(var(--scene-band) + clamp(12px, 1.6vw, 22px));
+  max-block-size: calc(100% - var(--scene-band) - clamp(12px, 1.6vw, 22px));
 }
 
 /*
@@ -273,6 +280,11 @@ html[lang="ar-EG"] .world { letter-spacing: 0; }
   /* Leave room for the speaker who rises above the coding card. A ceiling, not a
      height: the card is as tall as its contents until it meets the ceiling. */
   max-block-size: calc(100% - clamp(88px, 9vw, 124px));
+}
+
+/* Leave enough space for the same full-size character portraits used in El Forn. */
+.panelDockTraffic.panelDockWide {
+  block-size: calc(100% - var(--scene-band) - clamp(190px, 16vw, 230px));
 }
 
 @media (prefers-reduced-motion: reduce) { .panelDock { transition: none; } }
@@ -867,6 +879,8 @@ html[lang="ar-EG"] .testsTitle { letter-spacing: 0; }
     margin: 0 12px 14px;
   }
 
+  .panelDockTraffic.panelDockWide { block-size: auto; }
+
   .panel { max-block-size: none; }
   .panelBody { overflow: visible; }
 
@@ -920,6 +934,9 @@ html[lang="ar-EG"] .testsTitle { letter-spacing: 0; }
 }
 .sceneSpeech > span { display: block; color: #267977; font-size: 12px; font-weight: 750; letter-spacing: .06em; }
 .sceneSpeech > p { margin: 6px 0 0; color: #1F1820; font-size: clamp(13px, 1.05vw, 15px); line-height: 1.7; text-wrap: pretty; }
+.sceneSpeechTraffic { inline-size: min(22%, 290px); min-inline-size: 180px; padding: 9px 12px 8px; border-radius: 14px; }
+.sceneSpeechTraffic > span { font-size: 11px; }
+.sceneSpeechTraffic > p { margin-block-start: 4px; font-size: clamp(12px, .9vw, 14px); line-height: 1.55; }
 
 @media (max-width: 900px) {
   .sceneSpeech { position: static; inline-size: auto; transform: none; margin: 10px 0 0; }

@@ -94,6 +94,11 @@ class Mechanic(ManifestModel):
     starter_template: str
     solution_template: str
     tests: list[Test]
+    #: Optional authored phase-6 contract. When present the model narrates the twist but
+    #: cannot invent a different algorithm or a misleading physical rule.
+    remix_goal: str | None = None
+    remix_solution_template: str | None = None
+    remix_tests: list[Test] = Field(default_factory=list)
 
     @model_validator(mode="after")
     def _enough_tests(self) -> Mechanic:
@@ -101,6 +106,12 @@ class Mechanic(ManifestModel):
             # One test is almost always the happy path, which passes for the wrong
             # reasons. The second is where the empty list and the boundary live.
             raise ValueError(f"mechanic '{self.id}' needs at least 2 tests")
+        if bool(self.remix_solution_template) != bool(self.remix_tests):
+            raise ValueError(
+                f"mechanic '{self.id}' must declare remix_solution_template and remix_tests together"
+            )
+        if self.remix_solution_template and len(self.remix_tests) < 2:
+            raise ValueError(f"mechanic '{self.id}' needs at least 2 remix tests")
         return self
 
 
@@ -151,6 +162,10 @@ class Visual(ManifestModel):
     sprites: dict[str, SpriteSpec] = Field(default_factory=dict)
     states: dict[str, list[str]] = Field(default_factory=dict)
     animations: list[str] = Field(default_factory=list)
+    #: Things the current client renderer can actually turn into a keyboard-accessible
+    #: scene button. This is narrower than `sprites`: a thing may be drawable without
+    #: having a hit target. Generation may only build encounter clicks from this list.
+    interactive_targets: list[str] = Field(default_factory=list)
     #: The third fence. `sprites` says what can be drawn and `animations` what can move;
     #: this says what a mission may *do* — and to what. Empty for a world whose client
     #: cannot act on anything yet, which is the other two worlds.
@@ -321,6 +336,11 @@ class World(ManifestModel):
         for prop, states in self.visual.states.items():
             if prop not in self.visual.sprites:
                 problems.append(f"visual.states names '{prop}', which is not a sprite")
+        for prop in self.visual.interactive_targets:
+            if prop not in self.visual.sprites:
+                problems.append(
+                    f"visual.interactive_targets names '{prop}', which is not a sprite"
+                )
         if not self.visual.animations:
             problems.append("visual.animations is empty — nothing can react to code")
 

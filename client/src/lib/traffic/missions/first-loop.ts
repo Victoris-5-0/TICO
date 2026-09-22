@@ -1,0 +1,271 @@
+import type { PhasedMissionOut, WorldChange } from "@/lib/ai/types";
+
+const release = (count: number, finalLine: string): WorldChange => ({
+  props: {
+    signal: "red", waiting_cars: 0, cars_visible: Math.min(count, 5),
+    cars_passed: "= released_count", waiting_pedestrians: 0,
+    pedestrians_crossed: 4, timer_seconds: 0,
+  },
+  captionAr: "راقب العداد: العربيات تعدّي الأول، وبعدها ييجي دور المشاة.",
+  steps: [
+    {
+      animate: "signal_countdown",
+      props: {
+        signal: "red", waiting_cars: count, cars_visible: Math.min(count, 5), cars_passed: 0,
+        waiting_pedestrians: 4, pedestrians_crossed: 0, timer_seconds: 5, timer_for: "cars",
+      },
+      speakerNameAr: "الضابط كريم",
+      lineAr: "العربيات تستنى ٥ ثواني لحد ما الإشارة تتغيّر للأخضر.",
+    },
+    {
+      animate: "signal_switch",
+      props: {
+        signal: "green", waiting_cars: count, cars_visible: Math.min(count, 5), cars_passed: 0,
+        waiting_pedestrians: 4, pedestrians_crossed: 0, timer_seconds: 0,
+      },
+      speakerNameAr: "الضابط كريم",
+      lineAr: "الإشارة فتحت. دلوقتي نمشّي العربيات واحدة واحدة.",
+    },
+    ...Array.from({ length: count }, (_, index) => ({
+      animate: "cars_move",
+      props: {
+        signal: "green", waiting_cars: count - index - 1,
+        cars_visible: Math.min(count, 5), cars_passed: index + 1, car_move_from: index,
+        waiting_pedestrians: 4, pedestrians_crossed: 0, timer_seconds: 0,
+      },
+      speakerNameAr: "الضابط كريم",
+      lineAr: `العربية رقم ${index + 1} عدّت بأمان، والمشاة لسه مستنيين على الرصيف.`,
+    })),
+    {
+      animate: "signal_countdown",
+      props: {
+        signal: "amber", waiting_cars: 0, cars_visible: Math.min(count, 5), cars_passed: count,
+        waiting_pedestrians: 4, pedestrians_crossed: 0, timer_seconds: 5, timer_for: "pedestrians",
+      },
+      speakerNameAr: "الضابط كريم",
+      lineAr: "العربيات خلصت. المشاة يستنوا ٥ ثواني لحد ما الإشارة توقف الطريق.",
+    },
+    {
+      animate: "signal_switch",
+      props: {
+        signal: "red", waiting_cars: 0, cars_visible: Math.min(count, 5), cars_passed: count,
+        waiting_pedestrians: 4, pedestrians_crossed: 0, timer_seconds: 0,
+      },
+      speakerNameAr: "الضابط كريم",
+      lineAr: "العربيات وقفت. دلوقتي دور المشاة.",
+    },
+    {
+      animate: "pedestrians_cross",
+      props: {
+        signal: "red", waiting_cars: 0, cars_visible: Math.min(count, 5), cars_passed: count,
+        waiting_pedestrians: 4, pedestrians_crossed: 0, timer_seconds: 0,
+      },
+      speakerNameAr: "الضابط كريم",
+      lineAr: "اتفضلوا اعدّوا على ممر المشاة، واحدة واحدة وبنفس الاتجاه.",
+    },
+    {
+      animate: "celebrate",
+      props: {
+        signal: "red", waiting_cars: 0, cars_visible: Math.min(count, 5), cars_passed: count,
+        waiting_pedestrians: 0, pedestrians_crossed: 4, timer_seconds: 0,
+      },
+      speakerNameAr: "الضابط كريم",
+      lineAr: `${finalLine} والمشاة كمان عدّوا بأمان.`,
+    },
+  ],
+});
+
+const THREE_CARS = `["taxi", "bus", "tuktuk"]`;
+const FIVE_CARS = `["taxi", "bus", "tuktuk", "minibus", "taxi"]`;
+
+const loopCode = (cars: string) => `cars = ${cars}
+released_count = 0
+
+for car in cars:
+    released_count = released_count + 1`;
+
+export function firstTrafficLoopMission(id: string): PhasedMissionOut {
+  const three = release(3, "التلات عربيات عدّوا بالترتيب، من غير ما حد يزاحم حد.");
+  const five = release(5, "الخمس عربيات عدّوا. نفس الحلقة اشتغلت مهما كبر الطابور.");
+
+  return {
+    id,
+    worldId: "isharet_cairo",
+    sceneId: "traffic_establishing",
+    targetConceptId: "loops",
+    carriedConceptIds: ["variables"],
+    titleAr: "دور كل عربية",
+    source: "template",
+    validated: true,
+    difficultyBand: 3,
+    phases: {
+      encounter: {
+        speaker: "officer",
+        speakerNameAr: "الضابط كريم",
+        lineAr: "أهلاً بيكم في تاني عالم! أنا ظابط المرور كريم. بنظّم حركة العربيات والمشاة عشان كل واحد يعدّي بأمان. الإشارة بتاخد ٥ ثواني عشان تتغيّر، وفي الوقت ده الطرف التاني لازم يستنى.",
+        ctaAr: "نظّم التقاطع",
+        world: {
+          props: {
+            signal: "off", waiting_cars: 0, cars_visible: 0, cars_passed: 0,
+            waiting_pedestrians: 4, pedestrians_crossed: 0, timer_seconds: 0,
+          },
+          interactions: [
+            {
+              target: "signal",
+              promptAr: "اضغط على الإشارة وشوف حالتها قبل ما نحرّك أي عربية.",
+              onPress: {
+                props: {
+                  signal: "red", waiting_cars: 0, cars_visible: 0, cars_passed: 0,
+                  waiting_pedestrians: 4, pedestrians_crossed: 0, timer_seconds: 0,
+                },
+                captionAr: "الإشارة حمراء. دلوقتي هنستقبل العربيات عند خط الوقوف.",
+                steps: [
+                  {
+                    animate: "signal_countdown",
+                    props: {
+                      signal: "off", waiting_cars: 0, cars_visible: 0, cars_passed: 0,
+                      waiting_pedestrians: 4, pedestrians_crossed: 0,
+                      timer_seconds: 5, timer_for: "signal",
+                    },
+                    speakerNameAr: "الضابط كريم",
+                    lineAr: "بصّوا على العداد: الإشارة بتاخد ٥ ثواني كاملة عشان تغيّر حالتها.",
+                  },
+                  {
+                    animate: "signal_switch",
+                    props: {
+                      signal: "red", waiting_cars: 0, cars_visible: 0, cars_passed: 0,
+                      waiting_pedestrians: 4, pedestrians_crossed: 0, timer_seconds: 0,
+                    },
+                    speakerNameAr: "الضابط كريم",
+                    lineAr: "بقت حمراء. العربيات هتقف قبل الخط والمشاة يفضلوا على الرصيف.",
+                  },
+                ],
+              },
+            },
+            {
+              target: "officer",
+              promptAr: "اضغط على الضابط كريم عشان يورّيك ترتيب العربيات.",
+              onPress: {
+                props: {
+                  signal: "red", waiting_cars: 3, cars_visible: 3, cars_passed: 0,
+                  waiting_pedestrians: 4, pedestrians_crossed: 0, timer_seconds: 0,
+                },
+                captionAr: "التاكسي والميني باص في الحارتين، والتوكتوك وراهم.",
+                steps: [
+                  {
+                    animate: "car_arrive",
+                    props: { signal: "red", waiting_cars: 1, cars_visible: 1, waiting_pedestrians: 4, pedestrians_crossed: 0 },
+                    speakerNameAr: "الضابط كريم",
+                    lineAr: "أول عربية: التاكسي يدخل بهدوء ويقف قبل الخط.",
+                  },
+                  {
+                    animate: "car_arrive",
+                    props: { signal: "red", waiting_cars: 2, cars_visible: 2, waiting_pedestrians: 4, pedestrians_crossed: 0 },
+                    speakerNameAr: "الضابط كريم",
+                    lineAr: "الميني باص يدخل الحارة التانية ويقف جنب التاكسي قبل الخط.",
+                  },
+                  {
+                    animate: "car_arrive",
+                    props: { signal: "red", waiting_cars: 3, cars_visible: 3, waiting_pedestrians: 4, pedestrians_crossed: 0 },
+                    speakerNameAr: "الضابط كريم",
+                    lineAr: "التوكتوك وصل آخر واحد ووقف ورا الميني باص من غير ما يقفل نص الطريق.",
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      },
+      explore: {
+        ticoIntroAr: "بصّ على الطريق قبل ما نتكلم عن الكود. إحنا محتاجين نكرر نفس الحركة لكل عربية.",
+        rounds: [
+          {
+            questionAr: "لو عندنا تلات عربيات، هنكرر أمر «عدّي» كام مرة؟",
+            optionsAr: ["مرة واحدة", "تلات مرات", "عدد مالوش نهاية"],
+            correctIndex: 1,
+            nudgeAr: "عدّ العربيات اللي واقفة في الطابور واحدة واحدة.",
+            highlight: ["waiting_cars"],
+          },
+          {
+            questionAr: "إيه الأكثر أمانًا: نكتب أمر مختلف لكل عربية، ولا نخلي نفس الأمر يلف عليهم بالترتيب؟",
+            optionsAr: ["نكرر نفس الأمر بالترتيب", "نحرّكهم كلهم مع بعض", "نسيب الإشارة حمراء"],
+            correctIndex: 0,
+            nudgeAr: "دور على الاختيار اللي يفضل صحيح حتى لو الطابور كبر.",
+            highlight: ["signal", "waiting_cars"],
+          },
+        ],
+      },
+      discover: {
+        conceptSlug: "loops",
+        conceptNameAr: "حلقة التكرار for",
+        explanationAr: "حلقة التكرار بتاخد مجموعة عناصر وتمشي عليهم واحد واحد. بدل ما نكتب نفس الأمر لكل عربية، بنكتب الأمر مرة جوّه الحلقة وهي تكرره لكل عربية في القائمة.",
+        ticoLineAr: "يعني الكود يقول: لكل عربية في الطابور، عدّي عربية واحدة — وبعدين يرجع للي بعدها.",
+      },
+      understand: {
+        introAr: "ده مثال كامل. القائمة فيها تلات عربيات، والحلقة تزود العداد مرة لكل عربية. شغّله وراقب التقاطع.",
+        code: loopCode(THREE_CARS),
+        annotations: [
+          { line: 1, textAr: "دي قائمة العربيات بالترتيب.", pointsAt: "waiting_cars" },
+          { line: 4, textAr: "for تبدأ التكرار، وcar تمثل العربية الحالية.", pointsAt: "signal" },
+          { line: 5, textAr: "كل لفة تزود عدد العربيات اللي عدّت.", pointsAt: "cars_passed" },
+        ],
+        runLabelAr: "شغّل وشوف العربيات",
+        onRun: three,
+      },
+      guided: {
+        steps: [
+          {
+            code: `cars = [___]
+released_count = 0`,
+            blanks: ['"taxi", "bus", "tuktuk"'],
+            promptAr: "اكتب عناصر قائمة اسمها cars: تاكسي، أتوبيس، وتوكتوك. اكتب الثلاث قيم داخل القائمة.",
+            hintAr: "النصوص بتتحط بين علامتي تنصيص، وبين كل عربية والتانية فاصلة.",
+            tests: [{ call: "len(cars)", expected: "3" }],
+            onEnter: {
+              animate: "officer_point",
+              props: { signal: "red", waiting_cars: 0, cars_visible: 0, cars_passed: 0, waiting_pedestrians: 4, pedestrians_crossed: 0 },
+              captionAr: "جولة تدريب جديدة؛ المشاة مستنيين على الرصيف، والطريق لسه فاضي.",
+            },
+            onRun: {
+              animate: "cars_arrive",
+              props: { signal: "red", waiting_cars: 3, cars_visible: "= len(cars)", cars_passed: 0, waiting_pedestrians: 4, pedestrians_crossed: 0 },
+              captionAr: "القائمة جهزت، والعربيات جاية واحدة واحدة تقف قبل الخط.",
+            },
+          },
+          {
+            code: `cars = ${THREE_CARS}
+released_count = 0
+
+for car in ___:
+    released_count = released_count + ___`,
+            blanks: ["cars", "1"],
+            promptAr: "كمّل الحلقة: خليها تلف على قائمة cars، وبعد كل عربية زوّد released_count بمقدار واحد.",
+            hintAr: "بعد in اكتب اسم القائمة. وفي آخر السطر اكتب الرقم اللي بيزود العداد مرة واحدة.",
+            tests: [{ call: "released_count", expected: "3" }],
+            onEnter: { animate: "signal_switch", props: { signal: "red", waiting_cars: 3, cars_passed: 0, waiting_pedestrians: 4, pedestrians_crossed: 0 }, captionAr: "الكود جاهز، لكن العربيات لسه مستنية تشغيل الحلقة." },
+            onRun: three,
+          },
+        ],
+        solutionCode: loopCode(THREE_CARS),
+        tests: [{ call: "released_count", expected: "3" }],
+        onRun: three,
+      },
+      remix: {
+        twistAr: "استنى! وصل ميني باص وتاكسي كمان. الطابور بقى خمس عربيات، لكن الحلقة نفسها تقدر تخدمهم.",
+        newRequirementAr: "غيّر قائمة cars وخليها تحتوي خمس عربيات. سيب الحلقة كما هي.",
+        worldChange: {
+          animate: "cars_arrive",
+          props: { signal: "red", waiting_cars: 5, cars_visible: 5, cars_passed: 0, car_move_from: 0, waiting_pedestrians: 4, pedestrians_crossed: 0 },
+          captionAr: "الطابور كبر من تلات عربيات لخمس.",
+        },
+        startingCode: loopCode(THREE_CARS),
+        solutionCode: loopCode(FIVE_CARS),
+        tests: [
+          { call: "len(cars)", expected: "5" },
+          { call: "released_count", expected: "5" },
+        ],
+        onRun: five,
+      },
+    },
+  };
+}

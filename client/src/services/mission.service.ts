@@ -1,6 +1,8 @@
 import { db } from '@/lib/db';
 import { aiClient } from '@/lib/ai/client';
 import { PhasedMissionOut, GenerateMissionRequest, GenerateMissionResponse, LessonMissionOut } from '@/lib/ai/types';
+import { firstTrafficLoopMission } from '@/lib/traffic/missions/first-loop';
+import { pedestrianTrafficFallback } from '@/lib/traffic/missions/pedestrian-fallback';
 
 /**
  * The account the pre-generation script writes missions under. Its rows are a pool for
@@ -50,6 +52,74 @@ export interface MissionPlayback {
 }
 
 export class MissionService {
+  /**
+   * Keep both reviewed traffic lessons in the shared prepared set. Generation is tried
+   * first for this world; these rows remain playable when the model or service fails.
+   */
+  private async ensureTrafficFallback(lessonId: string, lessonSlug: string): Promise<string | null> {
+    const first = lessonSlug === 'signal-rules';
+    if (!first && lessonSlug !== 'pedestrian-crossing') return null;
+    const [track, concept] = await Promise.all([
+      db.track.findUnique({ where: { slug: 'isharet-cairo' }, select: { id: true } }),
+      db.concept.findUnique({ where: { slug: 'loops' }, select: { id: true } }),
+    ]);
+    if (!track || !concept) return null;
+
+    const template = await db.missionTemplate.upsert({
+      where: { id: 'template-isharet-loops' },
+      update: {
+        trackId: track.id,
+        mechanicId: 'traffic_loops',
+        targetConceptId: concept.id,
+        carriedConceptIds: ['variables'],
+        scenes: ['traffic_establishing'],
+        propsRequired: ['signal', 'waiting_cars', 'waiting_pedestrians'],
+        paramSchema: { stops: [1, 2] },
+        difficultyBand: 3,
+        manifestVersion: '1.0.0',
+      },
+      create: {
+        id: 'template-isharet-loops',
+        trackId: track.id,
+        mechanicId: 'traffic_loops',
+        targetConceptId: concept.id,
+        carriedConceptIds: ['variables'],
+        scenes: ['traffic_establishing'],
+        propsRequired: ['signal', 'waiting_cars', 'waiting_pedestrians'],
+        paramSchema: { stops: [1, 2] },
+        difficultyBand: 3,
+        manifestVersion: '1.0.0',
+      },
+    });
+
+    const id = first ? 'prebuilt-isharet-loop-1' : 'prebuilt-isharet-loop-2';
+    const mission = first ? firstTrafficLoopMission(id) : pedestrianTrafficFallback(id);
+    const repetition = first ? 1 : 2;
+    await db.generatedMission.upsert({
+      where: { id },
+      update: {
+        templateId: template.id,
+        sceneId: mission.sceneId,
+        params: { prebuilt: true, repetition, lessonId },
+        content: mission as unknown as object,
+        scaffoldPlan: {},
+        validated: true,
+        manifestVersion: '1.0.0',
+      },
+      create: {
+        id,
+        templateId: template.id,
+        sceneId: mission.sceneId,
+        params: { prebuilt: true, repetition, lessonId },
+        content: mission as unknown as object,
+        scaffoldPlan: {},
+        validated: true,
+        manifestVersion: '1.0.0',
+      },
+    });
+    return id;
+  }
+
   /**
    * Helper to ensure a MissionTemplate exists for a given track and concept
    * when persisting AI-generated missions.
@@ -288,7 +358,7 @@ export class MissionService {
    *
    * **This is the path a student takes now.** The AI service is asked first, with the
    * world slug and the lesson, and it decides what to serve: the prepared mission for
-   * that stop, or — when `LIVE_MISSION_GENERATION` is on over there — one Gemini composes
+   * that stop, or — when generation is enabled for its world — one Gemini composes
    * on the request. Either way it comes back validated, and `delivery`/`live` say which
    * happened, so nothing here has to guess.
    *
@@ -310,8 +380,29 @@ export class MissionService {
     lessonId: string;
     token: string;
     forceRegenerate?: boolean;
+    requireLive?: boolean;
   }): Promise<string | null> {
-    const { userId, worldSlug, lessonSlug, lessonId, token, forceRegenerate } = params;
+    const { userId, worldSlug, lessonSlug, lessonId, token, forceRegenerate, requireLive } = params;
+
+    if (worldSlug === 'isharet-cairo') {
+      // Ask the service first, on every entry. An earlier fallback upsert or a claimed
+      // mission must never prevent a fresh live traffic mission from being requested.
+      if (token) {
+        try {
+          const served = await aiClient.getMissionForLesson(token, {
+            worldSlug, lessonSlug, forceRegenerate: forceRegenerate ?? false,
+          });
+          if (requireLive && served.delivery !== 'generated') return null;
+          if (served.delivery !== 'prebuilt') await this.claim(served.id, userId, lessonId);
+          return served.id;
+        } catch (err) {
+          if (requireLive) throw err;
+          console.warn('traffic mission generation unavailable; serving reviewed fallback:',
+            err instanceof Error ? err.message : err);
+        }
+      }
+      return requireLive ? null : this.ensureTrafficFallback(lessonId, lessonSlug);
+    }
 
     // Authored bakery lessons are deterministic. Resolve their pinned mission locally
     // before asking the AI service, otherwise a live service can return a different

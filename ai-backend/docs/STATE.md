@@ -24,17 +24,19 @@ request and response for each — captured against the live database, not hand-w
 | `POST /v1/submissions/analyze` | open tag vocabulary, read and written per call |
 | `POST /v1/tico/messages` | SSE, no envelope |
 | `POST /v1/missions/next` | 20–30s, Gemini + validator |
-| `POST /v1/missions/by-lesson` | ~1s by default; 20–30s when `LIVE_MISSION_GENERATION` is on |
+| `POST /v1/missions/by-lesson` | Traffic: live when `TRAFFIC_LIVE_MISSION_GENERATION` is on; other worlds use `LIVE_MISSION_GENERATION` |
 | `GET /v1/missions/{id}` | read-only, no model call |
 | `POST /v1/missions/generate` | 20–30s, exercise-shaped and lossy |
 | `POST /v1/challenges/next` | 20–30s, 409 when too few concepts mastered |
 | `POST /v1/students/{id}/refresh` | rule proposes, model reviews conflicts only |
 | `POST /v1/students/{id}/plan` | every skip model-reviewed; reviewer may only refuse |
 
-## Generation is off unless someone turns it on
+## Generation gates
 
-`LIVE_MISSION_GENERATION` defaults to false and is a hard gate: with it unset, **no
-mission endpoint calls Gemini**. `/v1/missions/next`, `/v1/missions/by-lesson`,
+`LIVE_MISSION_GENERATION` defaults to false for other worlds.
+`TRAFFIC_LIVE_MISSION_GENERATION` defaults to true and enables live missions only for
+`isharet_cairo`. With both flags off, no mission endpoint calls Gemini.
+`/v1/missions/next`, `/v1/missions/by-lesson`,
 `/v1/missions/generate` and `/v1/challenges/next` serve from the prepared set and the
 validated pool, or answer 503. `forceRegenerate` does not lift it — a gate a client can
 talk its way past is not a gate.
@@ -44,14 +46,40 @@ The check is `services/missions.require_generation`, sitting in front of both
 the routers are not the only way in: `scripts/pregenerate_missions.py` sets the flag on
 itself, which is the one job that is meant to spend model calls.
 
-It defaults off because the failure is silent and expensive: an unset variable is the
-normal state of a fresh deploy, `validate_production_keys` guarantees a usable key is
-sitting next to it, and the cost of the other default is a 25-second wait and a Gemini
-bill on somebody's first click.
+The global gate stays off because an unset variable should not trigger model calls in
+unreviewed worlds. The traffic gate is deliberately on for the two reviewed loop stops.
 
 **Mission generation only.** Hints, TICO chat, the debrief and error classification still
 call the model — short, cached, inside the student's loop. `DAILY_MODEL_CALL_CAP` bounds
 those.
+
+### The v6 beginner traffic path
+
+`mission_gen/v6-traffic-pedestrian-loop` restores the intended dependency
+direction: mastery/repetition selects an authored mechanic, Python composes its exact
+solution and derives its tests. For the first traffic loop, a reviewed six-phase scene
+template fixes every interaction and code consequence; Gemini writes only short story
+fields. The model cannot rename the algorithm or change its difficulty. The generated
+pedestrian loop uses top-level Python, asks the learner to complete `for` in the first
+guided step, and grows the group from two to four people in the remix. The first traffic
+map stop is cars; the second is pedestrians. Live generation uses the corresponding
+reviewed narrative and interaction shell at each stop.
+Functions stay in their later lesson.
+
+New generated drafts are rejected unless real clickable targets have real consequences,
+the encounter follows the manifest's target order, exploration has at least two rounds,
+guided coding grows from one blank to at least two, each code run changes the scene, and
+the AST contains the claimed concept. In the pedestrian mission, the first guided step
+asks for `for person in people`, and `pedestrians_crossed` binds to the learner's actual
+`crossed_count`; the read-only Understand demonstration uses the derived expectation.
+
+Offline tests exercise a review-only Isharet Cairo loops mission shape; a live sample
+that passed both legality and gameplay gates is saved as the client fallback at
+`client/src/lib/traffic/missions/generated-loop-preview.json`. The client offers a separate
+live-generation preview in the traffic world. The two reviewed
+missions are also seeded as fallbacks. A generated traffic mission is attempted when a
+student opens either stop; on model failure, the matching reviewed mission is served.
+The global generation flag remains false for other worlds.
 
 ## How to run the tests
 
@@ -114,8 +142,8 @@ because the first two cannot see it.
    three of the four code surfaces. See `phase_guards._check_arithmetic` and "Recently
    closed" below.
 
-`el_forn` is the only world with a `simulation` block, because it is the only one with a
-running interactive scene. The other two must keep loading without one.
+`simulation` is optional. A world may have an interactive renderer and a closed visual
+contract without owning a numeric simulation block; the traffic world does exactly that.
 
 ## Recently closed
 

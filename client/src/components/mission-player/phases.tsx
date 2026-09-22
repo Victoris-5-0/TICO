@@ -63,7 +63,7 @@ export function EncounterPhase({ phase, locale, onContinue, awaiting = null, spo
       {!spokenInScene && <Speech portrait={portrait} name={phase.speakerNameAr} line={phase.lineAr} />}
       {awaiting ? (
         <p className={styles.awaiting} dir={ar ? "rtl" : "ltr"}>
-          {awaiting === "scene" ? (ar ? "شوف اللي حصل في الفرن…" : "Watch what happens in the bakery…")
+          {awaiting === "scene" ? (ar ? "شوف اللي بيحصل في المشهد…" : "Watch what happens in the scene…")
             : ar ? "اضغط على العنصر المضيء في المشهد." : "Press the highlighted object in the scene."}
         </p>
       ) : (
@@ -438,7 +438,7 @@ export function GuidedPhase({
   runCode: RunCode;
   requestHint: RequestHint;
   runnerBusy: boolean;
-  onSolved: (code: string, change?: WorldChange | null) => void;
+  onSolved: (code: string, change: WorldChange | null | undefined, stepIndex: number) => void;
   onEnter: (change?: WorldChange | null) => void;
   onContinue: () => void;
 }) {
@@ -460,7 +460,7 @@ export function GuidedPhase({
       runCode={runCode}
       requestHint={requestHint}
       runnerBusy={runnerBusy}
-      onSolved={(code) => onSolved(code, step.onRun)}
+      onSolved={(code) => onSolved(code, step.onRun, index)}
       onNext={() => {
         if (index === phase.steps.length - 1) onContinue();
         else { onEnter(phase.steps[index + 1]?.onEnter); setIndex((n) => n + 1); }

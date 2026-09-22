@@ -19,6 +19,8 @@ Two kinds of background:
   a JPG on white                  near-white is dropped, which is lossy at the edges and
                                   the reason `--white-bg` has to be asked for rather than
                                   guessed
+  a JPG on a flat colour          the edge colour is sampled and removed with `--matte-bg`;
+                                  a short alpha ramp keeps the painted edges soft
 
 ## Why not just slice a grid
 
@@ -38,9 +40,24 @@ from PIL import Image
 from scipy import ndimage
 
 
-def build_mask(im: Image.Image, white_bg: bool, alpha_floor: int, white_cut: int) -> np.ndarray:
+def matte_distance(im: Image.Image) -> np.ndarray:
+    """Return each pixel's colour distance from a flat matte sampled at the edges."""
+    rgb = np.array(im)[:, :, :3].astype(np.int16)
+    border = np.concatenate((
+        rgb[:20].reshape(-1, 3), rgb[-20:].reshape(-1, 3),
+        rgb[:, :20].reshape(-1, 3), rgb[:, -20:].reshape(-1, 3),
+    ))
+    matte = np.median(border, axis=0)
+    return np.max(np.abs(rgb - matte), axis=2)
+
+
+def build_mask(im: Image.Image, white_bg: bool, matte_bg: bool, alpha_floor: int,
+               white_cut: int, matte_cut: int) -> np.ndarray:
     """True where there is artwork."""
     arr = np.array(im)
+
+    if matte_bg:
+        return matte_distance(im) > matte_cut
 
     if not white_bg:
         return arr[:, :, 3] > alpha_floor
@@ -83,13 +100,21 @@ def components(mask: np.ndarray, join: int, min_area: int) -> list[tuple[slice, 
 
 
 def cut(path: pathlib.Path, out: pathlib.Path, prefix: str, *, white_bg: bool,
-        join: int, min_area: int, pad: int, alpha_floor: int, white_cut: int,
+        matte_bg: bool, join: int, min_area: int, pad: int, alpha_floor: int,
+        white_cut: int, matte_cut: int,
         names: list[str] | None, fmt: str, quality: int) -> list[tuple[str, tuple[int, int]]]:
     im = Image.open(path).convert("RGBA")
     arr = np.array(im)
-    mask = build_mask(im, white_bg, alpha_floor, white_cut)
+    mask = build_mask(im, white_bg, matte_bg, alpha_floor, white_cut, matte_cut)
 
-    if white_bg:
+    if matte_bg:
+        # Flat coloured JPEG mattes need a soft alpha edge. JPEG ringing and the painted
+        # contact shadows sit close to the matte colour, so a hard binary cut leaves a
+        # visible rectangle around every vehicle.
+        distance = matte_distance(im)
+        alpha = np.clip((distance - max(0, matte_cut - 8)) * (255 / 18), 0, 255)
+        arr[:, :, 3] = alpha.astype(np.uint8)
+    elif white_bg:
         # Everything the mask rejected becomes transparent, not white — a white halo on a
         # sprite is visible against the bakery's cream background.
         arr[:, :, 3] = np.where(mask, 255, 0)
@@ -135,11 +160,13 @@ def main() -> int:
     ap.add_argument("--out", required=True)
     ap.add_argument("--prefix", required=True)
     ap.add_argument("--white-bg", action="store_true", help="JPEG on white rather than real alpha")
+    ap.add_argument("--matte-bg", action="store_true", help="JPEG on a flat coloured matte sampled from its edges")
     ap.add_argument("--join", type=int, default=6, help="how far apart parts of one object may sit")
     ap.add_argument("--min-area", type=int, default=900, help="ignore specks smaller than this")
     ap.add_argument("--pad", type=int, default=2)
     ap.add_argument("--alpha-floor", type=int, default=12)
     ap.add_argument("--white-cut", type=int, default=238)
+    ap.add_argument("--matte-cut", type=int, default=12, help="minimum RGB distance from a flat matte")
     ap.add_argument("--names", nargs="*", help="names in reading order; extras fall back to prefix-NN")
     ap.add_argument("--format", dest="fmt", choices=("webp", "png"), default="webp")
     ap.add_argument("--quality", type=int, default=90, help="webp only")
@@ -152,8 +179,9 @@ def main() -> int:
 
     written = cut(
         sheet, pathlib.Path(args.out), args.prefix,
-        white_bg=args.white_bg, join=args.join, min_area=args.min_area,
+        white_bg=args.white_bg, matte_bg=args.matte_bg, join=args.join, min_area=args.min_area,
         pad=args.pad, alpha_floor=args.alpha_floor, white_cut=args.white_cut,
+        matte_cut=args.matte_cut,
         names=args.names, fmt=args.fmt, quality=args.quality,
     )
 

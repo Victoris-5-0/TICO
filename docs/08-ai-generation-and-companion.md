@@ -28,8 +28,9 @@ Every call returns a Pydantic v2 model where structured output is expected and l
 ```mermaid
 flowchart TD
     A[Fixed lesson + learner plan] --> B[Load versioned world manifest]
-    B --> C[Rules select legal option set]
-    C --> D[Model produces Pydantic mission draft]
+    B --> C[Rules select authored mechanic by stop and mastery]
+    C --> C2[Python composes exact solution, tests, scaffold and difficulty]
+    C2 --> D[Model writes bounded scenario, narration and legal scene dressing]
     D --> E{Schema valid?}
     E -->|no| R[Retry once with validation errors]
     E -->|yes| F{Manifest refs and concept scope valid?}
@@ -43,6 +44,33 @@ flowchart TD
 ```
 
 Mission generation is selection from a closed manifest, not open-ended world building. Unknown IDs, reads, verbs, concepts, or mechanics are fatal validation errors. No generated mission is directly published.
+
+The model does not invent the phase-4/5 algorithm. The selected manifest mechanic fixes
+the signature, reference solution, derived tests and difficulty band. A mechanic may also
+fix the remix algorithm when the physical meaning must not drift; the model then narrates
+that authored change. Mastery affects which stop the learner is on and how carried
+concepts are scaffolded, while the target concept is never scaffolded away.
+
+New drafts also pass a gameplay-quality fence. A renderer may expose a smaller set of
+`interactive_targets` than the sprites it can draw. Every requested click must use one of
+those real hit targets, play narrated visual beats, and continue the same scene state.
+Generated lessons require two reasoning rounds, two coding steps that grow from one blank
+to at least two, a visible consequence after every code run, and an AST check proving the
+code actually contains the target construct (`if`, loop, assignment or function).
+The first traffic-loop generator narrows the model further: reviewed gameplay owns the
+clicks, car movement, pedestrian crossing, top-level Python, tests, and remix. The model
+sees an authored El Forn mission as a narration reference and writes only short
+Egyptian-Arabic story fields. The first Isharet Cairo map stop generates a car-loop
+mission; the second generates a pedestrian-loop mission. The learner completes `for`
+to count safe crossings, then extends the same loop from two people to four. The returning
+group appears on the pavement immediately; later code runs do not reintroduce cars that
+already left. Both stops have reviewed six-phase missions as fallbacks. Traffic live
+generation uses `TRAFFIC_LIVE_MISSION_GENERATION`, independently of the global flag.
+The Isharet Cairo world labels itself as beta. Its experimental button requests a fresh
+server-generated pedestrian mission; it never opens the saved review sample or silently
+substitutes a prepared mission. The ordinary map stops still use the reviewed missions
+when generation is unavailable, and completing a stop returns to that world's map.
+Functions are reserved for their own lesson.
 
 ## Four-rung hint ladder
 

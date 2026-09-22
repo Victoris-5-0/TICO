@@ -3,7 +3,6 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import { MissionPlayer } from "@/components/mission-player/mission-player";
-import narrationManifest from "@/lib/mission/narration-manifest.json";
 import { getAuthToken } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { isLocale } from "@/i18n/config";
@@ -11,7 +10,7 @@ import { missionService } from "@/services/mission.service";
 import { worlds } from "@/content/worlds";
 
 type Params = Promise<{ locale: string; worldSlug: string; missionId: string }>;
-type Search = Promise<{ lesson?: string }>;
+type Search = Promise<{ lesson?: string; preview?: string }>;
 
 /**
  * `generateMetadata` and the page both need the mission, and Next.js runs them as part
@@ -33,17 +32,6 @@ const loadMission = cache(async (missionId: string) => {
   return missionService.getPhasedMission(missionId, token);
 });
 
-/**
- * Which lines of this mission have a recording.
- *
- * Imported rather than read from disk: `public/` is not part of the server bundle on most
- * deploys, so a `readFileSync` there works locally and quietly returns nothing in
- * production — every mission silent, with no error to notice. A mission absent from the
- * manifest simply has no audio, which is correct for anything outside the pinned set.
- */
-const narrationKeys = (missionId: string): string[] =>
-  (narrationManifest as { missions?: Record<string, string[]> }).missions?.[missionId] ?? [];
-
 export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
   const { locale, missionId } = await params;
   if (!isLocale(locale)) return {};
@@ -64,7 +52,7 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
  */
 export default async function Page({ params, searchParams }: { params: Params; searchParams: Search }) {
   const { locale, worldSlug, missionId } = await params;
-  const { lesson: lessonSlug } = await searchParams;
+  const { lesson: lessonSlug, preview } = await searchParams;
   if (!isLocale(locale)) notFound();
 
   const stored = await loadMission(missionId);
@@ -86,20 +74,21 @@ export default async function Page({ params, searchParams }: { params: Params; s
     ? await db.lesson.findUnique({ where: { id: stored.lessonId }, select: { id: true, slug: true, order: true } })
     : null);
   const authoredWorld = worlds.find((world) => world.slug === worldSlug);
-  // `order` counts from 1 and the authored list from 0; `missions[order]` showed every
-  // mission under the name of the lesson after it.
+  // Lesson order is one-based; authored mission names are zero-based.
   const missionName = authoredWorld?.missions[(lessonRecord?.order ?? 0) - 1]?.[locale] ?? null;
+  const mission = stored.mission;
 
   return (
     <MissionPlayer
       locale={locale}
-      mission={stored.mission}
+      mission={mission}
       worldSlug={stored.trackSlug}
       worldTitle={stored.trackTitle}
       lessonId={lessonRecord?.id ?? stored.lessonId}
       lessonSlug={lessonRecord?.slug ?? lessonSlug ?? null}
-      missionName={missionName}
-      narrationKeys={narrationKeys(missionId)}
+      missionName={worldSlug === "isharet-cairo" ? mission.titleAr : missionName}
+      narrationKeys={[]}
+      preview={worldSlug === "isharet-cairo" && preview === "1"}
     />
   );
 }

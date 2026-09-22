@@ -1,0 +1,42 @@
+.stage { position: relative; display: grid; place-items: center; inline-size: 100%; block-size: 100%; overflow: hidden; background: #39373d; }
+.plate { position: relative; inline-size: min(100%, calc(100vh * 2.234375)); aspect-ratio: 4004 / 1792; max-block-size: 100%; overflow: hidden; }
+.backdrop { object-fit: contain; }
+.walkPreload { position: absolute; inline-size: 1px; block-size: 1px; overflow: hidden; opacity: 0; pointer-events: none; }
+.walkPreload > span { display: block; inline-size: 1px; block-size: 1px; background-size: 300% 200%; }
+.layer { position: absolute; z-index: 2; block-size: auto; object-fit: contain; filter: drop-shadow(0 3px 3px rgb(13 17 20 / 22%)); pointer-events: none; }
+.walker { position: absolute; z-index: 4; pointer-events: none; will-change: left, top; }
+.walkerSprite { display: block; inline-size: 100%; block-size: 100%; background-repeat: no-repeat; background-size: 300% 200%; }
+.vehicle { position: absolute; z-index: 3; aspect-ratio: 3 / 2; pointer-events: none; will-change: transform; }
+.vehicleSprite { object-fit: contain; object-position: center bottom; }
+.minibus { aspect-ratio: 1.25 / 1; }
+.tuktuk { aspect-ratio: 1 / 1; }
+
+/* Pavement groups are intentionally small: people are street scale, not portraits. */
+.aliNorth { left: 37.6%; top: 5%; inline-size: 2.4%; }
+.nadiaNorth { left: 40.5%; top: 3.5%; inline-size: 2.3%; }
+.naserNorth { left: 43%; top: 1.5%; inline-size: 2.4%; }
+.naserWest { left: 4.4%; top: 47%; inline-size: 2.5%; }
+.nadiaWest { left: 7.7%; top: 45%; inline-size: 2.4%; }
+.signal { position: absolute; z-index: 2; inline-size: 2.6%; aspect-ratio: 540 / 1557; pointer-events: none; }
+.signalWest { left: 13.2%; top: 34%; }
+.signalEast { left: 59.8%; top: 34%; }
+.signalSprite { object-fit: contain; object-position: center bottom; filter: drop-shadow(0 3px 3px rgb(13 17 20 / 22%)); }
+.officer { position: absolute; left: 37.7%; top: 57.3%; z-index: 3; inline-size: 5.2%; aspect-ratio: 519 / 862; pointer-events: none; }
+.officerSprite { object-fit: contain; object-position: center bottom; filter: drop-shadow(0 3px 3px rgb(13 17 20 / 22%)); }
+
+.pick, .highlight { position: absolute; z-index: 6; border-radius: 20px; }
+.pick { border: 0; background: transparent; cursor: pointer; touch-action: manipulation; }
+.pick::after, .highlight::after { content: ""; position: absolute; inset: -5px; border: 3px solid #f4bd3c; border-radius: inherit; box-shadow: 0 0 0 6px rgb(244 189 60 / 24%), 0 0 24px rgb(244 189 60 / 88%); animation: traffic-pulse 1.15s ease-in-out infinite; }
+.signalTarget { left: 58.8%; top: 31%; inline-size: 4.8%; block-size: 29%; }
+.officerTarget { left: 35.8%; top: 54.5%; inline-size: 9%; block-size: 32%; }
+
+.hud { position: absolute; z-index: 7; left: 3%; top: 5%; display: grid; gap: 8px; }
+.counter { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 3px 14px; min-inline-size: 155px; padding: 10px 14px; border: 1px solid rgb(255 255 255 / 35%); border-radius: 14px; background: rgb(13 17 20 / 78%); color: white; backdrop-filter: blur(10px); }
+.counter span { color: #f4bd3c; font-size: .72rem; font-weight: 850; }
+.counter strong { font-size: 1.1rem; }
+.timer { display: grid; grid-template-columns: 1fr auto; align-items: baseline; gap: 2px 8px; padding: 9px 12px; border: 2px solid #f4bd3c; border-radius: 14px; background: rgb(13 17 20 / 88%); color: white; }
+.timer span { grid-column: 1 / -1; color: #f4bd3c; font-size: .72rem; font-weight: 850; }
+.timer strong { font-size: 1.55rem; line-height: 1; }
+.timer small { font-size: .72rem; }
+@keyframes traffic-pulse { 50% { transform: scale(1.045); opacity: .76; } }
+@media (prefers-reduced-motion: reduce) { .pick::after, .highlight::after { animation: none; } }
