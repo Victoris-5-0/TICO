@@ -1,0 +1,744 @@
+{
+  "meta": {
+    "promptVersion": "mission_gen/v6-traffic-pedestrian-loop",
+    "attempts": 1,
+    "latencyMs": 20812,
+    "model": "gemini-3.5-flash",
+    "reviewOnly": true
+  },
+  "data": {
+    "id": "",
+    "worldId": "isharet_cairo",
+    "sceneId": "traffic_establishing",
+    "targetConceptId": "loops",
+    "carriedConceptIds": [
+      "variables"
+    ],
+    "titleAr": "إشارة المرور والعبور الآمن",
+    "source": "model",
+    "validated": true,
+    "phases": {
+      "encounter": {
+        "speaker": "officer",
+        "speakerNameAr": "الضابط كريم",
+        "lineAr": "صباح الخير! أنا كريم. العربيات سريعة هنا، بس أنا وقفتهم لما الإشارة بقت حمرا. دلوقتي علي ونادية عاوزين يعدوا الشارع بأمان، يلا نساعدهم!",
+        "ctaAr": "نساعد المشاة",
+        "world": {
+          "props": {
+            "signal": "off",
+            "waiting_cars": 0,
+            "cars_visible": 0,
+            "cars_passed": 0,
+            "waiting_pedestrians": 2,
+            "pedestrians_crossed": 0,
+            "timer_seconds": 0
+          },
+          "interactions": [
+            {
+              "target": "signal",
+              "promptAr": "اضغط على الإشارة عشان توقف العربيات قبل ممر المشاة.",
+              "onPress": {
+                "animate": null,
+                "actions": [],
+                "props": {
+                  "signal": "red",
+                  "waiting_cars": 0,
+                  "cars_visible": 0,
+                  "cars_passed": 0,
+                  "waiting_pedestrians": 2,
+                  "pedestrians_crossed": 0,
+                  "timer_seconds": 0
+                },
+                "captionAr": "الإشارة حمراء. دلوقتي هنستقبل العربيات عند خط الوقوف.",
+                "steps": [
+                  {
+                    "animate": "signal_countdown",
+                    "props": {
+                      "signal": "off",
+                      "waiting_cars": 0,
+                      "cars_visible": 0,
+                      "cars_passed": 0,
+                      "waiting_pedestrians": 2,
+                      "pedestrians_crossed": 0,
+                      "timer_seconds": 5,
+                      "timer_for": "signal"
+                    },
+                    "speakerNameAr": "الضابط كريم",
+                    "lineAr": "بصّوا على العداد: الإشارة بتاخد ٥ ثواني كاملة عشان تغيّر حالتها."
+                  },
+                  {
+                    "animate": "signal_switch",
+                    "props": {
+                      "signal": "red",
+                      "waiting_cars": 0,
+                      "cars_visible": 0,
+                      "cars_passed": 0,
+                      "waiting_pedestrians": 2,
+                      "pedestrians_crossed": 0,
+                      "timer_seconds": 0
+                    },
+                    "speakerNameAr": "الضابط كريم",
+                    "lineAr": "بقت حمراء. العربيات هتقف قبل الخط والمشاة يفضلوا على الرصيف."
+                  }
+                ]
+              }
+            },
+            {
+              "target": "officer",
+              "promptAr": "اضغط على كريم وشوف العربيات تقف في حارتين قبل ما الناس تعدّي.",
+              "onPress": {
+                "animate": null,
+                "actions": [],
+                "props": {
+                  "signal": "red",
+                  "waiting_cars": 3,
+                  "cars_visible": 3,
+                  "cars_passed": 0,
+                  "waiting_pedestrians": 2,
+                  "pedestrians_crossed": 0,
+                  "timer_seconds": 0
+                },
+                "captionAr": "العربيات وقفت، وعلي ونادية لسه على الرصيف.",
+                "steps": [
+                  {
+                    "animate": "car_arrive",
+                    "props": {
+                      "signal": "red",
+                      "waiting_cars": 1,
+                      "cars_visible": 1,
+                      "waiting_pedestrians": 2,
+                      "pedestrians_crossed": 0
+                    },
+                    "speakerNameAr": "الضابط كريم",
+                    "lineAr": "أول عربية: التاكسي يدخل بهدوء ويقف قبل الخط."
+                  },
+                  {
+                    "animate": "car_arrive",
+                    "props": {
+                      "signal": "red",
+                      "waiting_cars": 2,
+                      "cars_visible": 2,
+                      "waiting_pedestrians": 2,
+                      "pedestrians_crossed": 0
+                    },
+                    "speakerNameAr": "الضابط كريم",
+                    "lineAr": "الميني باص يدخل الحارة التانية ويقف جنب التاكسي قبل الخط."
+                  },
+                  {
+                    "animate": "car_arrive",
+                    "props": {
+                      "signal": "red",
+                      "waiting_cars": 3,
+                      "cars_visible": 3,
+                      "waiting_pedestrians": 2,
+                      "pedestrians_crossed": 0
+                    },
+                    "speakerNameAr": "الضابط كريم",
+                    "lineAr": "التوكتوك وصل آخر واحد ووقف ورا الميني باص من غير ما يقفل نص الطريق."
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "explore": {
+        "ticoIntroAr": "بص كده على الإشارة والناس اللي واقفة مستنية تعدي الشارع.",
+        "rounds": [
+          {
+            "questionAr": "علي ونادية محتاجين نفس خطوة العبور. نعمل متغير لكل شخص ولا نكرر نفس الخطوة لكل واحد؟",
+            "optionsAr": [
+              "نكرر الخطوة لكل شخص",
+              "نعمل متغير مختلف لكل شخص",
+              "نعدّيهم كلهم مرة واحدة"
+            ],
+            "correctIndex": 0,
+            "nudgeAr": "لو وصل ناس أكتر، هل هنكتب اسم متغير جديد لكل واحد؟",
+            "highlight": [
+              "waiting_pedestrians"
+            ]
+          },
+          {
+            "questionAr": "لما كريم يوقف العربيات، كام مرة نعدّ شخص من علي ونادية؟",
+            "optionsAr": [
+              "مرتين، واحدة لكل شخص",
+              "مرة واحدة للاتنين",
+              "أربع مرات"
+            ],
+            "correctIndex": 0,
+            "nudgeAr": "عدّ الناس اللي واقفين على الرصيف: علي ونادية.",
+            "highlight": [
+              "waiting_pedestrians",
+              "officer"
+            ]
+          }
+        ]
+      },
+      "discover": {
+        "conceptSlug": "loops",
+        "conceptNameAr": "حلقة التكرار for",
+        "explanationAr": "لما يكون عندنا كذا حد عاوز يعدي، بنجمع أساميهم في قائمة واحدة بنسميها List في البرمجة. دي بتخلينا ننظم الأسامي ونعديهم واحد ورا التاني بسهولة.",
+        "ticoLineAr": "بدل ما نكتب أمر لكل شخص، حلقة واحدة تعدّي عليهم بالترتيب."
+      },
+      "understand": {
+        "introAr": "الجزء المهم هنا هو for: بتاخد شخص من people في كل لفة، وبعد السطر اللي تحته ترجع للشخص اللي بعده. crossed_count يبدأ بصفر ويزيد واحد في كل لفة. شغّل وشوف الناس تعبر واحد واحد.",
+        "code": "people = [\"ali\", \"nadia\"]\ncrossed_count = 0\nfor person in people:\n    crossed_count = crossed_count + 1",
+        "annotations": [
+          {
+            "line": 1,
+            "textAr": "people قائمة أسماء الناس اللي على الرصيف.",
+            "pointsAt": "waiting_pedestrians"
+          },
+          {
+            "line": 2,
+            "textAr": "العداد يبدأ من صفر قبل أي شخص يعدّي.",
+            "pointsAt": "pedestrians_crossed"
+          },
+          {
+            "line": 3,
+            "textAr": "for تختار شخص واحد من القائمة في كل لفة.",
+            "pointsAt": "waiting_pedestrians"
+          },
+          {
+            "line": 4,
+            "textAr": "كل لفة تزود العدد واحد؛ هتشوفه في المشهد.",
+            "pointsAt": "pedestrians_crossed"
+          }
+        ],
+        "runLabelAr": "شغّل وشوف العربيات",
+        "onRun": {
+          "animate": "pedestrians_cross",
+          "actions": [],
+          "props": {
+            "signal": "red",
+            "waiting_cars": 0,
+            "cars_visible": 3,
+            "cars_passed": 3,
+            "waiting_pedestrians": 0,
+            "pedestrians_crossed": 2,
+            "timer_seconds": 0
+          },
+          "captionAr": "الناس عدّت واحد واحد، والعدد اللي على الشاشة جاي من كودك.",
+          "steps": [
+            {
+              "animate": "signal_countdown",
+              "props": {
+                "signal": "red",
+                "waiting_cars": 3,
+                "cars_visible": 3,
+                "cars_passed": 0,
+                "waiting_pedestrians": 2,
+                "pedestrians_crossed": 0,
+                "timer_seconds": 5,
+                "timer_for": "cars"
+              },
+              "speakerNameAr": "الضابط كريم",
+              "lineAr": "العربيات تستنى خمس ثواني قبل ما الإشارة تفتح."
+            },
+            {
+              "animate": "signal_switch",
+              "props": {
+                "signal": "green",
+                "waiting_cars": 3,
+                "cars_visible": 3,
+                "cars_passed": 0,
+                "waiting_pedestrians": 2,
+                "pedestrians_crossed": 0,
+                "timer_seconds": 0
+              },
+              "speakerNameAr": "الضابط كريم",
+              "lineAr": "الإشارة فتحت للعربيات، والمشاة لسه على الرصيف."
+            },
+            {
+              "animate": "cars_move",
+              "props": {
+                "signal": "green",
+                "waiting_cars": 0,
+                "cars_visible": 3,
+                "cars_passed": 3,
+                "waiting_pedestrians": 2,
+                "pedestrians_crossed": 0,
+                "timer_seconds": 0,
+                "car_move_from": 0
+              },
+              "speakerNameAr": "الضابط كريم",
+              "lineAr": "العربيات عدّت واحدة واحدة وفضي الطريق."
+            },
+            {
+              "animate": "signal_switch",
+              "props": {
+                "signal": "red",
+                "waiting_cars": 0,
+                "cars_visible": 3,
+                "cars_passed": 3,
+                "waiting_pedestrians": 2,
+                "pedestrians_crossed": 0,
+                "timer_seconds": 0
+              },
+              "speakerNameAr": "الضابط كريم",
+              "lineAr": "كريم وقف العربيات تاني. دلوقتي دور الناس."
+            },
+            {
+              "animate": "signal_countdown",
+              "props": {
+                "signal": "red",
+                "waiting_cars": 0,
+                "cars_visible": 3,
+                "cars_passed": 3,
+                "waiting_pedestrians": 2,
+                "pedestrians_crossed": 0,
+                "timer_seconds": 5,
+                "timer_for": "pedestrians"
+              },
+              "speakerNameAr": "الضابط كريم",
+              "lineAr": "الناس تستنى خمس ثواني لحد ما يبقى العبور آمن."
+            },
+            {
+              "animate": "pedestrians_cross",
+              "props": {
+                "signal": "red",
+                "waiting_cars": 0,
+                "cars_visible": 3,
+                "cars_passed": 3,
+                "waiting_pedestrians": 2,
+                "pedestrians_crossed": 0,
+                "timer_seconds": 0
+              },
+              "speakerNameAr": "الضابط كريم",
+              "lineAr": "كل شخص في القائمة بيعبر بدوره على ممر المشاة."
+            },
+            {
+              "animate": "celebrate",
+              "props": {
+                "signal": "red",
+                "waiting_cars": 0,
+                "cars_visible": 3,
+                "cars_passed": 3,
+                "waiting_pedestrians": 0,
+                "pedestrians_crossed": 2,
+                "timer_seconds": 0
+              },
+              "speakerNameAr": "الضابط كريم",
+              "lineAr": "بصّ على العداد: عدد اللي عدّوا هو نتيجة الحلقة اللي شغّلتها."
+            }
+          ]
+        }
+      },
+      "guided": {
+        "steps": [
+          {
+            "code": "people = [\"ali\", \"nadia\"]\ncrossed_count = 0\nfor person in ___:\n    crossed_count = crossed_count + 1",
+            "blanks": [
+              "people"
+            ],
+            "promptAr": "القائمة جاهزة. كمّل حلقة for: بعد in اكتب people عشان الحلقة تمسك كل شخص مرة، وبعدها شغّل وشوفهم يعدّوا واحد واحد.",
+            "hintAr": "بعد in بنكتب اسم القائمة اللي الحلقة هتلف عليها: people.",
+            "tests": [
+              {
+                "call": "crossed_count",
+                "expected": "2",
+                "name": null,
+                "hidden": false
+              }
+            ],
+            "onEnter": {
+              "animate": "officer_point",
+              "actions": [],
+              "props": {
+                "signal": "red",
+                "waiting_cars": 0,
+                "cars_visible": 3,
+                "cars_passed": 3,
+                "waiting_pedestrians": 2,
+                "pedestrians_crossed": 0,
+                "timer_seconds": 0
+              },
+              "captionAr": "علي ونادية مستنيين على الرصيف. حلقة for هي اللي هتعدّيهم.",
+              "steps": []
+            },
+            "onRun": {
+              "animate": null,
+              "actions": [],
+              "props": {
+                "signal": "red",
+                "waiting_cars": 0,
+                "cars_visible": 3,
+                "cars_passed": 3,
+                "waiting_pedestrians": 0,
+                "pedestrians_crossed": "= crossed_count",
+                "timer_seconds": 0
+              },
+              "captionAr": "الناس عدّت واحد واحد، والعدد اللي على الشاشة جاي من كودك.",
+              "steps": [
+                {
+                  "animate": "officer_point",
+                  "props": {
+                    "signal": "red",
+                    "waiting_cars": 0,
+                    "cars_visible": 3,
+                    "cars_passed": 3,
+                    "waiting_pedestrians": 2,
+                    "pedestrians_crossed": 0,
+                    "timer_seconds": 0
+                  },
+                  "speakerNameAr": "الضابط كريم",
+                  "lineAr": "الطريق فاضي؛ كريم بيشاور على الناس اللي مستنية دورها."
+                },
+                {
+                  "animate": "signal_countdown",
+                  "props": {
+                    "signal": "red",
+                    "waiting_cars": 0,
+                    "cars_visible": 3,
+                    "cars_passed": 3,
+                    "waiting_pedestrians": 2,
+                    "pedestrians_crossed": 0,
+                    "timer_seconds": 5,
+                    "timer_for": "pedestrians"
+                  },
+                  "speakerNameAr": "الضابط كريم",
+                  "lineAr": "الناس تستنى خمس ثواني لحد ما يبقى العبور آمن."
+                },
+                {
+                  "animate": "pedestrians_cross",
+                  "props": {
+                    "signal": "red",
+                    "waiting_cars": 0,
+                    "cars_visible": 3,
+                    "cars_passed": 3,
+                    "waiting_pedestrians": 2,
+                    "pedestrians_crossed": 0,
+                    "timer_seconds": 0
+                  },
+                  "speakerNameAr": "الضابط كريم",
+                  "lineAr": "كل شخص في القائمة بيعبر بدوره على ممر المشاة."
+                },
+                {
+                  "animate": "celebrate",
+                  "props": {
+                    "signal": "red",
+                    "waiting_cars": 0,
+                    "cars_visible": 3,
+                    "cars_passed": 3,
+                    "waiting_pedestrians": 0,
+                    "pedestrians_crossed": "= crossed_count",
+                    "timer_seconds": 0
+                  },
+                  "speakerNameAr": "الضابط كريم",
+                  "lineAr": "بصّ على العداد: عدد اللي عدّوا هو نتيجة الحلقة اللي شغّلتها."
+                }
+              ]
+            }
+          },
+          {
+            "code": "people = [\"ali\", \"nadia\"]\ncrossed_count = 0\nfor ___ in ___:\n    crossed_count = crossed_count + ___",
+            "blanks": [
+              "person",
+              "people",
+              "1"
+            ],
+            "promptAr": "الجولة دي كمّل الحلقة بنفسك: اكتب person للشخص الحالي، people للقائمة بعد in، و1 عشان العداد يزيد في كل لفة.",
+            "hintAr": "شكل الحلقة: for الشخص الحالي in القائمة. السطر اللي تحتها بيتكرر مرة لكل شخص.",
+            "tests": [
+              {
+                "call": "crossed_count",
+                "expected": "2",
+                "name": null,
+                "hidden": false
+              }
+            ],
+            "onEnter": {
+              "animate": "officer_point",
+              "actions": [],
+              "props": {
+                "signal": "red",
+                "waiting_cars": 0,
+                "cars_visible": 3,
+                "cars_passed": 3,
+                "waiting_pedestrians": 2,
+                "pedestrians_crossed": 0,
+                "timer_seconds": 0
+              },
+              "captionAr": "علي ونادية مستنيين جولة تانية. اكتب حلقة for عشان تعدّيهم.",
+              "steps": []
+            },
+            "onRun": {
+              "animate": null,
+              "actions": [],
+              "props": {
+                "signal": "red",
+                "waiting_cars": 0,
+                "cars_visible": 3,
+                "cars_passed": 3,
+                "waiting_pedestrians": 0,
+                "pedestrians_crossed": "= crossed_count",
+                "timer_seconds": 0
+              },
+              "captionAr": "الناس عدّت واحد واحد، والعدد اللي على الشاشة جاي من كودك.",
+              "steps": [
+                {
+                  "animate": "officer_point",
+                  "props": {
+                    "signal": "red",
+                    "waiting_cars": 0,
+                    "cars_visible": 3,
+                    "cars_passed": 3,
+                    "waiting_pedestrians": 2,
+                    "pedestrians_crossed": 0,
+                    "timer_seconds": 0
+                  },
+                  "speakerNameAr": "الضابط كريم",
+                  "lineAr": "الطريق فاضي؛ كريم بيشاور على الناس اللي مستنية دورها."
+                },
+                {
+                  "animate": "signal_countdown",
+                  "props": {
+                    "signal": "red",
+                    "waiting_cars": 0,
+                    "cars_visible": 3,
+                    "cars_passed": 3,
+                    "waiting_pedestrians": 2,
+                    "pedestrians_crossed": 0,
+                    "timer_seconds": 5,
+                    "timer_for": "pedestrians"
+                  },
+                  "speakerNameAr": "الضابط كريم",
+                  "lineAr": "الناس تستنى خمس ثواني لحد ما يبقى العبور آمن."
+                },
+                {
+                  "animate": "pedestrians_cross",
+                  "props": {
+                    "signal": "red",
+                    "waiting_cars": 0,
+                    "cars_visible": 3,
+                    "cars_passed": 3,
+                    "waiting_pedestrians": 2,
+                    "pedestrians_crossed": 0,
+                    "timer_seconds": 0
+                  },
+                  "speakerNameAr": "الضابط كريم",
+                  "lineAr": "كل شخص في القائمة بيعبر بدوره على ممر المشاة."
+                },
+                {
+                  "animate": "celebrate",
+                  "props": {
+                    "signal": "red",
+                    "waiting_cars": 0,
+                    "cars_visible": 3,
+                    "cars_passed": 3,
+                    "waiting_pedestrians": 0,
+                    "pedestrians_crossed": "= crossed_count",
+                    "timer_seconds": 0
+                  },
+                  "speakerNameAr": "الضابط كريم",
+                  "lineAr": "بصّ على العداد: عدد اللي عدّوا هو نتيجة الحلقة اللي شغّلتها."
+                }
+              ]
+            }
+          }
+        ],
+        "solutionCode": "people = [\"ali\", \"nadia\"]\ncrossed_count = 0\nfor person in people:\n    crossed_count = crossed_count + 1",
+        "tests": [
+          {
+            "call": "len(people)",
+            "expected": "2",
+            "name": null,
+            "hidden": false
+          },
+          {
+            "call": "crossed_count",
+            "expected": "2",
+            "name": null,
+            "hidden": false
+          }
+        ],
+        "onRun": {
+          "animate": null,
+          "actions": [],
+          "props": {
+            "signal": "red",
+            "waiting_cars": 0,
+            "cars_visible": 3,
+            "cars_passed": 3,
+            "waiting_pedestrians": 0,
+            "pedestrians_crossed": "= crossed_count",
+            "timer_seconds": 0
+          },
+          "captionAr": "الناس عدّت واحد واحد، والعدد اللي على الشاشة جاي من كودك.",
+          "steps": [
+            {
+              "animate": "officer_point",
+              "props": {
+                "signal": "red",
+                "waiting_cars": 0,
+                "cars_visible": 3,
+                "cars_passed": 3,
+                "waiting_pedestrians": 2,
+                "pedestrians_crossed": 0,
+                "timer_seconds": 0
+              },
+              "speakerNameAr": "الضابط كريم",
+              "lineAr": "الطريق فاضي؛ كريم بيشاور على الناس اللي مستنية دورها."
+            },
+            {
+              "animate": "signal_countdown",
+              "props": {
+                "signal": "red",
+                "waiting_cars": 0,
+                "cars_visible": 3,
+                "cars_passed": 3,
+                "waiting_pedestrians": 2,
+                "pedestrians_crossed": 0,
+                "timer_seconds": 5,
+                "timer_for": "pedestrians"
+              },
+              "speakerNameAr": "الضابط كريم",
+              "lineAr": "الناس تستنى خمس ثواني لحد ما يبقى العبور آمن."
+            },
+            {
+              "animate": "pedestrians_cross",
+              "props": {
+                "signal": "red",
+                "waiting_cars": 0,
+                "cars_visible": 3,
+                "cars_passed": 3,
+                "waiting_pedestrians": 2,
+                "pedestrians_crossed": 0,
+                "timer_seconds": 0
+              },
+              "speakerNameAr": "الضابط كريم",
+              "lineAr": "كل شخص في القائمة بيعبر بدوره على ممر المشاة."
+            },
+            {
+              "animate": "celebrate",
+              "props": {
+                "signal": "red",
+                "waiting_cars": 0,
+                "cars_visible": 3,
+                "cars_passed": 3,
+                "waiting_pedestrians": 0,
+                "pedestrians_crossed": "= crossed_count",
+                "timer_seconds": 0
+              },
+              "speakerNameAr": "الضابط كريم",
+              "lineAr": "بصّ على العداد: عدد اللي عدّوا هو نتيجة الحلقة اللي شغّلتها."
+            }
+          ]
+        }
+      },
+      "remix": {
+        "twistAr": "منى وناصر وصلوا كمان وعاوزين يعدوا! عدّل القائمة عشان تضم الأربعة مع بعض: علي، ونادية، ومنى، وناصر.",
+        "newRequirementAr": "غيّر قائمة people لأربع أسماء؛ سيب حلقة for زي ما هي، وخلي العداد يوصل لأربعة.",
+        "worldChange": {
+          "animate": "officer_point",
+          "actions": [],
+          "props": {
+            "signal": "red",
+            "waiting_cars": 0,
+            "cars_visible": 3,
+            "cars_passed": 3,
+            "waiting_pedestrians": 4,
+            "pedestrians_crossed": 0,
+            "timer_seconds": 0
+          },
+          "captionAr": "منى وناصر ظهروا جنب علي ونادية على الرصيف.",
+          "steps": []
+        },
+        "startingCode": "people = [\"ali\", \"nadia\"]\ncrossed_count = 0\nfor person in people:\n    crossed_count = crossed_count + 1",
+        "solutionCode": "people = [\"ali\", \"nadia\", \"mona\", \"naser\"]\ncrossed_count = 0\nfor person in people:\n    crossed_count = crossed_count + 1",
+        "tests": [
+          {
+            "call": "len(people)",
+            "expected": "4",
+            "name": null,
+            "hidden": false
+          },
+          {
+            "call": "crossed_count",
+            "expected": "4",
+            "name": null,
+            "hidden": false
+          }
+        ],
+        "onRun": {
+          "animate": null,
+          "actions": [],
+          "props": {
+            "signal": "red",
+            "waiting_cars": 0,
+            "cars_visible": 3,
+            "cars_passed": 3,
+            "waiting_pedestrians": 0,
+            "pedestrians_crossed": "= crossed_count",
+            "timer_seconds": 0
+          },
+          "captionAr": "الناس عدّت واحد واحد، والعدد اللي على الشاشة جاي من كودك.",
+          "steps": [
+            {
+              "animate": "officer_point",
+              "props": {
+                "signal": "red",
+                "waiting_cars": 0,
+                "cars_visible": 3,
+                "cars_passed": 3,
+                "waiting_pedestrians": 4,
+                "pedestrians_crossed": 0,
+                "timer_seconds": 0
+              },
+              "speakerNameAr": "الضابط كريم",
+              "lineAr": "الطريق فاضي؛ كريم بيشاور على الناس اللي مستنية دورها."
+            },
+            {
+              "animate": "signal_countdown",
+              "props": {
+                "signal": "red",
+                "waiting_cars": 0,
+                "cars_visible": 3,
+                "cars_passed": 3,
+                "waiting_pedestrians": 4,
+                "pedestrians_crossed": 0,
+                "timer_seconds": 5,
+                "timer_for": "pedestrians"
+              },
+              "speakerNameAr": "الضابط كريم",
+              "lineAr": "الناس تستنى خمس ثواني لحد ما يبقى العبور آمن."
+            },
+            {
+              "animate": "pedestrians_cross",
+              "props": {
+                "signal": "red",
+                "waiting_cars": 0,
+                "cars_visible": 3,
+                "cars_passed": 3,
+                "waiting_pedestrians": 4,
+                "pedestrians_crossed": 0,
+                "timer_seconds": 0
+              },
+              "speakerNameAr": "الضابط كريم",
+              "lineAr": "كل شخص في القائمة بيعبر بدوره على ممر المشاة."
+            },
+            {
+              "animate": "celebrate",
+              "props": {
+                "signal": "red",
+                "waiting_cars": 0,
+                "cars_visible": 3,
+                "cars_passed": 3,
+                "waiting_pedestrians": 0,
+                "pedestrians_crossed": "= crossed_count",
+                "timer_seconds": 0
+              },
+              "speakerNameAr": "الضابط كريم",
+              "lineAr": "بصّ على العداد: عدد اللي عدّوا هو نتيجة الحلقة اللي شغّلتها."
+            }
+          ]
+        }
+      }
+    },
+    "scaffold": {
+      "conditionals": "FULL",
+      "variables": "PARTIAL"
+    },
+    "difficultyBand": 3
+  }
+}

@@ -27,6 +27,7 @@ const PORTRAITS: Record<string, { src: string; width: number; height: number }> 
   hassan: { src: "/assets/characters/bakery/hassan-v1.webp", width: 685, height: 1330 },
   mariam: { src: "/assets/characters/bakery/mariam-v1.webp", width: 547, height: 1285 },
   salma: { src: "/assets/characters/bakery/salma-v1.webp", width: 516, height: 1336 },
+  officer: { src: "/assets/traffic-v2/frames/officer-idle.webp", width: 313, height: 859 },
 };
 
 export function CharacterBust({ speaker, alt }: { speaker: string; alt: string }) {

@@ -51,11 +51,13 @@ class ComposedMission:
     signature: str
     starter_code: str
     solution_code: str
+    remix_solution_code: str = ""
     #: Egyptian Arabic, from the prose layer. Empty when the model was unavailable —
     #: the mission is still complete and solvable without it.
     brief_ar: str = ""
     #: [(call expression, expected repr)] — derived by running `solution_code`.
     tests: list[tuple[str, str]] = field(default_factory=list)
+    remix_tests: list[tuple[str, str]] = field(default_factory=list)
     params: dict = field(default_factory=dict)
     scaffold: dict[str, str] = field(default_factory=dict)
     difficulty_band: int = 5
@@ -204,6 +206,7 @@ def compose(
     }
 
     solution_code = _substitute(mechanic.solution_template, values).strip()
+    remix_solution_code = _substitute(mechanic.remix_solution_template or "", values).strip()
     starter_code = _substitute(mechanic.starter_template, values).strip()
 
     # With no brief, the template leaves a bare `#` behind. A dangling empty comment in
@@ -216,6 +219,8 @@ def compose(
     # Derive the expected outputs by running the solution.
     call_exprs = [_substitute(t.input, values) for t in mechanic.tests]
     run = sandbox.run(solution_code, call_exprs)
+    remix_call_exprs = [_substitute(t.input, values) for t in mechanic.remix_tests]
+    remix_run = sandbox.run(remix_solution_code, remix_call_exprs) if remix_solution_code else None
 
     mission = ComposedMission(
         world_id=world.id,
@@ -227,6 +232,7 @@ def compose(
         signature=signature,
         starter_code=starter_code,
         solution_code=solution_code,
+        remix_solution_code=remix_solution_code,
         params=params,
         scaffold=dict(scaffold),
         difficulty_band=mechanic.difficulty_band,
@@ -241,5 +247,15 @@ def compose(
             mission.problems.append(f"{call.expression} raised {call.error}")
             continue
         mission.tests.append((call.expression, call.value or "None"))
+
+    if remix_run is not None:
+        if not remix_run.ok:
+            mission.problems.append(f"the remix reference solution did not run: {remix_run.error}")
+        else:
+            for call in remix_run.results:
+                if not call.ok:
+                    mission.problems.append(f"remix {call.expression} raised {call.error}")
+                    continue
+                mission.remix_tests.append((call.expression, call.value or "None"))
 
     return mission

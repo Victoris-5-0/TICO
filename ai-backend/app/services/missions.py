@@ -72,7 +72,13 @@ class GenerationDisabled(NoMissionAvailable):
     """
 
 
-def require_generation(*, because: str) -> None:
+def generation_enabled(world_id: str | None = None) -> bool:
+    return bool(settings.live_mission_generation or (
+        world_id == "isharet_cairo" and settings.traffic_live_mission_generation
+    ))
+
+
+def require_generation(*, because: str, world_id: str | None = None) -> None:
     """Refuse unless generation has been deliberately switched on.
 
     Called immediately before every `mission_gen.generate` in this module — there are two,
@@ -84,7 +90,7 @@ def require_generation(*, because: str) -> None:
     directly, and a guard at the edge would have let both past while the endpoints looked
     protected.
     """
-    if settings.live_mission_generation:
+    if generation_enabled(world_id):
         return
     log.info("refusing to generate (%s): LIVE_MISSION_GENERATION is off", because)
     raise GenerationDisabled(
@@ -411,7 +417,7 @@ def next_mission(
     # `force_regenerate` skips that, but only where generating is actually permitted.
     # Honouring it with the gate shut would turn a request that had a perfectly good
     # mission waiting for it into a 503, which is the opposite of what the flag is for.
-    if not (force_regenerate and settings.live_mission_generation):
+    if not (force_regenerate and generation_enabled(world.id)):
         existing = find_reusable(
             db, user_id=user_id, world_id=world.id,
             concept_id=concept.id, repetition=repetition,
@@ -422,7 +428,7 @@ def next_mission(
 
     # Nothing below this line is free. Checked before the scene is picked so a refusal
     # costs one branch rather than a half-built request.
-    require_generation(because=f"/missions/next for {concept.slug}")
+    require_generation(because=f"/missions/next for {concept.slug}", world_id=world.id)
 
     # The scene the mission is set in. Any scene the world has; generation dresses it.
     scene_id = world.scenes[0].id
@@ -588,11 +594,12 @@ def find_prebuilt(
 
     Returns None when the set has nothing for this stop, and the caller generates.
     """
-    rows = db.execute(
-        select(GeneratedMission)
-        .where(GeneratedMission.validated.is_(True))
-        .order_by(GeneratedMission.created_at)
-    ).scalars()
+    query = select(GeneratedMission).where(GeneratedMission.validated.is_(True))
+    if world_id == "isharet_cairo" and stop in (1, 2):
+        # These two reviewed rows are the explicit safety net for live traffic lessons.
+        # An older experiment in the same world must not silently replace them.
+        query = query.where(GeneratedMission.id == f"prebuilt-isharet-loop-{stop}")
+    rows = db.execute(query.order_by(GeneratedMission.created_at)).scalars()
 
     for row in rows:
         params = row.params or {}
@@ -636,12 +643,11 @@ def for_lesson(
 
     Three sources, and which one runs depends on one setting:
 
-      * `LIVE_MISSION_GENERATION` off (the default) — the prepared mission for this stop,
-        one query and no model call. This is the demo path: the same scenario every time,
-        so the recorded narration still matches the screen.
+      * Generation off for this world — the prepared mission for this stop, with no model
+        call. The global gate defaults off; traffic has its own enabled gate.
       * nothing prepared for this stop — an unplayed row from the pool, then generation,
         both via `next_mission`, so an unprepared world still plays.
-      * `LIVE_MISSION_GENERATION` on, or `forceRegenerate` — straight to generation.
+      * Generation enabled for this world — straight to generation.
         Gemini writes a scenario, the validator runs its code, and the student plays
         something that did not exist when they clicked.
 
@@ -663,7 +669,7 @@ def for_lesson(
     # `force_regenerate` asks to skip reuse; it does not grant permission to call a model.
     # It used to be OR'd into this, which meant any client could spend a Gemini call on a
     # service configured not to make them — the gate was a suggestion.
-    live = bool(settings.live_mission_generation)
+    live = generation_enabled(world.id)
     if force_regenerate and not live:
         log.info(
             "ignoring forceRegenerate for %s/%s: LIVE_MISSION_GENERATION is off",
@@ -695,6 +701,10 @@ def for_lesson(
     # would mean guessing from the row, and a guess is exactly what `delivery` is for
     # replacing.
     repetition, already_taught = _repetition_context(db, user_id, concept.id)
+    if world.id == "isharet_cairo":
+        # The map's two reviewed loop stops use different mechanics. Mastery may still
+        # be unchanged when the learner opens stop two, so the stop is authoritative.
+        repetition = stop
 
     if not live:
         spare = find_reusable(
@@ -708,17 +718,25 @@ def for_lesson(
             return described(*spare, "reused")
 
     scaffold = scaffold_plan(db, user_id, world, concept.slug, lesson_id=lesson.id)
-    row, mission = _compose(
-        db,
-        user_id=user_id,
-        world=world,
-        concept=concept,
-        carried=sorted(scaffold),
-        scaffold=scaffold,
-        repetition=repetition,
-        already_taught=already_taught,
-    )
-    return described(row, mission, "generated")
+    try:
+        row, mission = _compose(
+            db,
+            user_id=user_id,
+            world=world,
+            concept=concept,
+            carried=sorted(scaffold),
+            scaffold=scaffold,
+            repetition=repetition,
+            already_taught=already_taught,
+        )
+        return described(row, mission, "generated")
+    except NoMissionAvailable:
+        if world.id == "isharet_cairo":
+            prepared = find_prebuilt(db, world_id=world.id, concept_id=concept.id, stop=stop)
+            if prepared is not None:
+                log.warning("live traffic generation failed at stop %d; serving reviewed fallback", stop)
+                return described(*prepared, "prebuilt")
+        raise
 
 
 class MissionNotFound(LookupError):
@@ -1007,7 +1025,7 @@ def _compose(
     """Generate, log, persist. The half of `next_mission` after the decision is made."""
     # The shared door. `for_lesson`, `generate_explicit` and `next_challenge` all arrive
     # here, so one check covers three endpoints.
-    require_generation(because=f"composing {concept.slug} in {world.id}")
+    require_generation(because=f"composing {concept.slug} in {world.id}", world_id=world.id)
 
     scene_id = world.scenes[0].id
     for mech in world.mechanics_for(concept.slug):

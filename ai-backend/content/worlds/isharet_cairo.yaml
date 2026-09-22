@@ -18,7 +18,7 @@ world:
   mentor_persona: traffic_controller
 
   premise_ar: >
-    غرفة تحكم إشارات المرور في القاهرة. عربيات، مشاة، وعربية إسعاف مستعجلة.
+    غرفة تحكم إشارات المرور في القاهرة. عربيات، مشاة، وطوابير بتكبر وتصغر.
     كل إشارة قرار: تفتح ولا تقفل، وعلى أي أساس.
 
 scenes:
@@ -26,9 +26,17 @@ scenes:
     asset: worlds/traffic/establishing-v1.webp
     description_en: A Cairo junction from above, signals and queued traffic
     description_ar: تقاطع في القاهرة من فوق، الإشارات والزحمة
-    supports_vocabulary: [waiting_cars, pedestrians, signal_state, junction, hour, is_emergency]
+    supports_vocabulary: [cars, taxi, minibus, tuktuk, waiting_cars, release_limit, pedestrians, people, ali, nadia, naser, mona, crossed_count, signal_state, junction, hour, is_emergency]
 
 characters:
+  - id: officer
+    role: traffic_officer
+    name_ar: الضابط كريم
+    description: ظابط المرور اللي بينظم دور العربيات والمشاة ويشرح قواعد التقاطع
+    voice: friendly, calm, practical Egyptian Arabic
+    language: Egyptian Arabic for dialogue, English for code identifiers
+    beats: [greeting, explain, nudge, success, celebrate]
+
   - id: tico
     role: mentor
     asset: characters/tico/tico-neutral.webp
@@ -37,11 +45,75 @@ characters:
     beats: [greeting, nudge, success, failure, celebrate]
 
 vocabulary:
+  people:
+    en: the people waiting for a safe crossing
+    ar: قائمة المشاة المستنيين
+    type: list
+
+  ali:
+    en: Ali, a pedestrian
+    ar: علي
+    type: str
+    options: [ali]
+
+  nadia:
+    en: Nadia, a pedestrian
+    ar: نادية
+    type: str
+    options: [nadia]
+
+  naser:
+    en: Naser, a pedestrian
+    ar: ناصر
+    type: str
+    options: [naser]
+
+  mona:
+    en: Mona, a pedestrian
+    ar: منى
+    type: str
+    options: [mona]
+
+  crossed_count:
+    en: number of people who crossed safely
+    ar: عدد الناس اللي عدّوا
+    type: int
+    plausible_range: [0, 4]
+
+  cars:
+    en: the ordered list of vehicles waiting at the line
+    ar: قائمة العربيات بالترتيب
+    type: list
+
+  taxi:
+    en: the taxi vehicle name used inside a queue
+    ar: التاكسي
+    type: str
+    options: [taxi]
+
+  minibus:
+    en: the minibus vehicle name used inside a queue
+    ar: الميني باص
+    type: str
+    options: [minibus]
+
+  tuktuk:
+    en: the tuktuk vehicle name used inside a queue
+    ar: التوكتوك
+    type: str
+    options: [tuktuk]
+
   waiting_cars:
     en: cars queued at the junction
     ar: العربيات المستنية
     type: int
     plausible_range: [0, 120]
+
+  release_limit:
+    en: maximum number of vehicles allowed through this cycle
+    ar: أقصى عدد عربيات يعدي في الدورة
+    type: int
+    plausible_range: [1, 10]
 
   pedestrians:
     en: people waiting to cross
@@ -90,20 +162,140 @@ visual:
 
   sprites:
     signal:     { overlay: true, states: [red, amber, green] }
+    officer:    { overlay: true }
     car:        { overlay: true, countable: true, max_shown: 10 }
     pedestrian: { overlay: true, countable: true, max_shown: 8 }
-    ambulance:  { overlay: true }
+    waiting_cars:        { overlay: true, countable: true, max_shown: 10 }
+    cars_visible:        { overlay: true, countable: true, max_shown: 5 }
+    cars_passed:         { overlay: true, countable: true, max_shown: 10 }
+    car_move_from:       { overlay: true, countable: true, max_shown: 5 }
+    waiting_pedestrians: { overlay: true, countable: true, max_shown: 4 }
+    pedestrians_crossed: { overlay: true, countable: true, max_shown: 4 }
+    timer_seconds:       { overlay: true }
+    timer_for:           { overlay: true }
 
   states:
     signal: [red, amber, green]
 
   animations:
+    - car_arrive          # one vehicle approaches and stops before the line
+    - cars_arrive         # a larger queue forms for the remix
+    - signal_countdown    # the five-second timer counts down
     - signal_switch       # the light changes colour
-    - cars_move           # queued cars pull away
-    - ambulance_arrives   # the ambulance enters the junction
-    - count_up
+    - cars_move           # queued cars pull away one by one
+    - pedestrians_cross   # the waiting group crosses after cars stop
+    - pedestrians_arrive  # legacy state change; the next group now appears on the pavement instantly
+    - officer_point       # Karim directs attention to the active side
+    - celebrate           # Karim acknowledges a safe completed cycle
+
+  # These are the two scene elements wired as buttons by TrafficScene.
+  interactive_targets: [signal, officer]
 
 mechanics:
+  - id: cross_each_pedestrian
+    target_concept: loops
+    carried_concepts: [conditionals, variables]
+    scenes: [traffic_establishing]
+    difficulty_band: 3
+    signature: "people and crossed_count (top-level Python, no function)"
+    goal_shape: >
+      Count the two people who can cross after traffic stops, one at a time.
+    vocabulary_used: [people, ali, nadia, naser, mona, crossed_count]
+    starter_template: |
+      people = ["ali", "nadia"]
+      crossed_count = 0
+      for person in people:
+          pass
+    solution_template: |
+      people = ["ali", "nadia"]
+      crossed_count = 0
+      for person in people:
+          crossed_count = crossed_count + 1
+    tests:
+      - input: 'len(people)'
+        expected: "2"
+      - input: "crossed_count"
+        expected: "2"
+    remix_goal: >
+      Two more people join the pavement. Change the people list to four entries;
+      the same loop counts each safe crossing.
+    remix_solution_template: |
+      people = ["ali", "nadia", "mona", "naser"]
+      crossed_count = 0
+      for person in people:
+          crossed_count = crossed_count + 1
+    remix_tests:
+      - input: 'len(people)'
+        expected: "4"
+      - input: "crossed_count"
+        expected: "4"
+
+  - id: release_each_car
+    target_concept: loops
+    carried_concepts: [conditionals, variables]
+    scenes: [traffic_establishing]
+    difficulty_band: 3
+    signature: "cars and released_count (top-level Python, no function)"
+    goal_shape: >
+      Walk through a short queue one car at a time and return how many cars were released.
+    vocabulary_used: [waiting_cars]
+    starter_template: |
+      cars = ["taxi", "minibus", "tuktuk"]
+      released_count = 0
+      for car in cars:
+          pass
+    solution_template: |
+      cars = ["taxi", "minibus", "tuktuk"]
+      released_count = 0
+      for car in cars:
+          released_count = released_count + 1
+    tests:
+      - input: 'len(cars)'
+        expected: "3"
+      - input: "released_count"
+        expected: "3"
+    remix_goal: >
+      Two more cars join the queue. Change only the cars list to five entries; the same
+      loop releases them one by one without a new function or condition.
+    remix_solution_template: |
+      cars = ["taxi", "minibus", "tuktuk", "taxi", "minibus"]
+      released_count = 0
+      for car in cars:
+          released_count = released_count + 1
+    remix_tests:
+      - input: 'len(cars)'
+        expected: "5"
+      - input: 'released_count'
+        expected: "5"
+
+  - id: release_regular_cars
+    target_concept: loops
+    carried_concepts: [conditionals, variables]
+    scenes: [traffic_establishing]
+    difficulty_band: 5
+    signature: "cars, release_limit, released_count (top-level Python)"
+    goal_shape: >
+      Walk through a queue but release no more than a fixed safe limit.
+    vocabulary_used: [waiting_cars, release_limit]
+    starter_template: |
+      cars = ["taxi", "minibus", "tuktuk"]
+      release_limit = 2
+      released_count = 0
+      for car in cars:
+          pass
+    solution_template: |
+      cars = ["taxi", "minibus", "tuktuk"]
+      release_limit = 2
+      released_count = 0
+      for car in cars:
+          if released_count < release_limit:
+              released_count = released_count + 1
+    tests:
+      - input: 'released_count'
+        expected: "2"
+      - input: 'len(cars)'
+        expected: "3"
+
   - id: two_way_rule
     target_concept: conditionals
     carried_concepts: [variables]
@@ -205,31 +397,58 @@ mechanics:
     carried_concepts: [conditionals, variables]
     scenes: [traffic_establishing]
     difficulty_band: 7
-    signature: "<<fn_name>>(<<a_name>>: list, <<b_name>>: int) -> int"
+    signature: "counts, threshold, busy (top-level Python)"
     goal_shape: >
       Walk a list of junctions and count how many need attention.
     vocabulary_used: [junction, waiting_cars]
-    param_schema:
-      fn_name:   { type: enum, options: [busy_junctions, needs_attention, count_congested] }
-      a_name:    { type: const, value: counts }
-      b_name:    { type: const, value: threshold }
     starter_template: |
-      def <<fn_name>>(<<a_name>>: list, <<b_name>>: int) -> int:
+      counts = [2, 5, 1]
+      threshold = 3
+      busy = 0
+      for count in counts:
+          pass
+    solution_template: |
+      counts = [2, 5, 1]
+      threshold = 3
+      busy = 0
+      for count in counts:
+          if count > threshold:
+              busy = busy + 1
+    tests:
+      - input: 'busy'
+        expected: "1"
+      - input: 'len(counts)'
+        expected: "3"
+
+  - id: reusable_signal_check
+    target_concept: functions
+    carried_concepts: [conditionals, variables]
+    scenes: [traffic_establishing]
+    difficulty_band: 7
+    signature: "<<fn_name>>(waiting_cars: int, is_emergency: bool) -> str"
+    goal_shape: >
+      Package the traffic priority rule inside a named function that can be called again
+      for any queue.
+    vocabulary_used: [waiting_cars, is_emergency, signal_state]
+    param_schema:
+      fn_name: { type: enum, options: [choose_signal, traffic_decision] }
+    starter_template: |
+      def <<fn_name>>(waiting_cars: int, is_emergency: bool) -> str:
           # <<brief_ar>>
           <<carried_scaffold>>
           pass
     solution_template: |
-      def <<fn_name>>(<<a_name>>: list, <<b_name>>: int) -> int:
-          busy = 0
-          for count in <<a_name>>:
-              if count > <<b_name>>:
-                  busy = busy + 1
-          return busy
+      def <<fn_name>>(waiting_cars: int, is_emergency: bool) -> str:
+          if is_emergency or waiting_cars >= 3:
+              return "أخضر"
+          return "أحمر"
     tests:
-      - input: "<<fn_name>>([<<sample_numbers>>], <<threshold>>)"
-        expected: "<<busy_count>>"
-      - input: "<<fn_name>>([], <<threshold>>)"
-        expected: "0"
+      - input: "<<fn_name>>(0, True)"
+        expected: '"أخضر"'
+      - input: "<<fn_name>>(3, False)"
+        expected: '"أخضر"'
+      - input: "<<fn_name>>(1, False)"
+        expected: '"أحمر"'
 
 carried_scaffold:
   variables:

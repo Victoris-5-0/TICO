@@ -51,6 +51,9 @@ const READOUT_LABELS: Record<string, { ar: string; en: string; unitAr?: string; 
   delivery_order: { ar: "طلب التوصيل", en: "Delivery order" },
   delivery_left: { ar: "الباقي بعد التوصيل", en: "After delivery" },
   shelf_left: { ar: "الباقي للطابور", en: "Left for queue" },
+  waiting_cars: { ar: "العربيات المستنية", en: "Waiting cars" },
+  cars_passed: { ar: "العربيات اللي عدّت", en: "Cars released" },
+  signal: { ar: "حالة الإشارة", en: "Signal" },
 };
 
 const STEP_LABELS: Record<Locale, Record<PhaseKey, string>> = {
@@ -81,17 +84,20 @@ export type MissionPlayerProps = {
   missionName?: string | null;
   /** Line keys with a pre-recorded reading. Empty means this mission has no audio. */
   narrationKeys?: readonly string[];
+  /** Play a review sample without opening a tracked curriculum session. */
+  preview?: boolean;
 };
 
-export function MissionPlayer({ locale, mission, worldSlug, worldTitle, lessonId, lessonSlug, missionName, narrationKeys = [] }: MissionPlayerProps) {
+export function MissionPlayer({ locale, mission, worldSlug, worldTitle, lessonId, lessonSlug, missionName, narrationKeys = [], preview = false }: MissionPlayerProps) {
   const ar = locale === "ar-EG";
   const reduced = useReducedMotion();
   const router = useRouter();
   const worldHref = `/${locale}/worlds/${worldSlug}`;
   // Finishing sends them to the map rather than back to the world list: the point of the
   // moment is seeing what opened up, and `?done=` is what tells the map which one.
-  const mapHref = lessonSlug
-    ? `/${locale}/challenges?done=${encodeURIComponent(lessonSlug)}`
+  const mapHref = preview ? worldHref : worldSlug === "isharet-cairo"
+    ? `${worldHref}${lessonSlug ? `?done=${encodeURIComponent(lessonSlug)}` : ""}`
+    : lessonSlug ? `/${locale}/challenges?done=${encodeURIComponent(lessonSlug)}`
     : `/${locale}/challenges`;
   const bannerUrl = WORLD_BANNERS[worldSlug] || "/assets/challenge-map/bakery-banner.png";
 
@@ -105,6 +111,9 @@ export function MissionPlayer({ locale, mission, worldSlug, worldTitle, lessonId
   const [change, setChange] = useState<WorldChange | null>(null);
   const [world, setWorld] = useState<MissionProps>(mission.phases.encounter.world?.props ?? {});
   const [interactionIndex, setInteractionIndex] = useState(0);
+  // Every world opens with its guide speaking before the first clickable instruction.
+  // Traffic used to start at `true`, which replaced Karim's introduction immediately
+  // with "press the signal" and made the world introduction impossible to see.
   const [encounterStarted, setEncounterStarted] = useState(false);
   const [sceneBusy, setSceneBusy] = useState(false);
   const values = useRef<Record<string, string>>({});
@@ -132,11 +141,12 @@ export function MissionPlayer({ locale, mission, worldSlug, worldTitle, lessonId
   useEffect(() => {
     let cancelled = false;
     sessionId.current = null;
+    if (preview) return;
     telemetry.startSession({ generatedMissionId: mission.id, lessonId }).then((id) => {
       if (!cancelled) sessionId.current = id;
     });
     return () => { cancelled = true; };
-  }, [mission.id, lessonId]);
+  }, [mission.id, lessonId, preview]);
 
   useEffect(() => {
     telemetry.reportPhase(sessionId.current, step);
@@ -178,11 +188,16 @@ export function MissionPlayer({ locale, mission, worldSlug, worldTitle, lessonId
 
   const play = useCallback((next: WorldChange | null | undefined, key: string) => {
     setWorld((current) => settledProps(change, current));
-    setChange(next ? resolveChange(next, values.current) : null);
-    setSceneBusy(Boolean(next?.steps?.length));
+    // A second press of Run reports the same code result without resetting traffic
+    // and reintroducing cars that already left this round.
+    const replay = worldSlug === "isharet-cairo" && Boolean(ran[key]) &&
+      (key === "understand" || /^guided-\d+$/.test(key) || key === "remix");
+    const playback = replay && next ? { ...next, animate: "officer_point", steps: [] } : next;
+    setChange(playback ? resolveChange(playback, values.current) : null);
+    setSceneBusy(Boolean(playback?.steps?.length));
     setPlayToken((n) => n + 1);
     setRan((seen) => ({ ...seen, [key]: true }));
-  }, [change]);
+  }, [change, ran, worldSlug]);
 
   /** Run the student's code, and record the attempt. */
   const runCode = useCallback(
@@ -276,10 +291,12 @@ export function MissionPlayer({ locale, mission, worldSlug, worldTitle, lessonId
    * drifts off the person saying the words.
    */
   const ext = narrow ? 0 : 700;
-  const speechAt = {
-    left: `${((bakeryScene.baker.x + ext) / (1600 + ext)) * 100}%`,
-    bottom: `${((900 - 424) / 900) * 100}%`,
-  };
+  const speechAt = worldSlug === "isharet-cairo"
+    ? { left: "40.3%", bottom: "42.7%" }
+    : {
+        left: `${((bakeryScene.baker.x + ext) / (1600 + ext)) * 100}%`,
+        bottom: `${((900 - 424) / 900) * 100}%`,
+      };
 
   /**
    * What is said out loud in the scene, as opposed to what the panel is for.
@@ -297,9 +314,13 @@ export function MissionPlayer({ locale, mission, worldSlug, worldTitle, lessonId
   // Stable across renders, or the scene rebuilds its frame callback on every one.
   const beats = useMemo(() => beatsOf(change), [change]);
 
-  const sceneLabel = ar
-    ? "فرن الحارة: حسن بيخبز والزباين مستنيين في الطابور."
-    : "Forn El Hara: Hassan at the oven and neighbours waiting in the queue.";
+  const sceneLabel = worldSlug === "isharet-cairo"
+    ? ar
+      ? "تقاطع في القاهرة: ضابط المرور واقف عند الإشارة والعربيات مستنية دورها."
+      : "A Cairo junction: the traffic officer stands by the signal while cars wait their turn."
+    : ar
+      ? "فرن الحارة: حسن بيخبز والزباين مستنيين في الطابور."
+      : "Forn El Hara: Hassan at the oven and neighbours waiting in the queue.";
 
   const extras = undrawnProps(restProps)
     .filter(([key]) => key in READOUT_LABELS)
@@ -359,6 +380,7 @@ export function MissionPlayer({ locale, mission, worldSlug, worldTitle, lessonId
           <section className={styles.stage}>
             <MissionScene
               locale={locale}
+              worldSlug={worldSlug}
               props={restProps}
               animate={change?.animate}
               playToken={playToken}
@@ -369,7 +391,10 @@ export function MissionPlayer({ locale, mission, worldSlug, worldTitle, lessonId
               pickLabel={() => awaiting?.promptAr || (ar ? "اضغط على العنصر المضيء" : "Press the highlighted object")}
               onSettled={settleScene}
               beats={beats}
-              upset={missed ? { name: ar ? "الطلب مستني" : "Order waiting", line: ar ? "الطلب لسه متجهّزش. شوف نتيجة الكود وجرب تاني." : "The order is still waiting. Check your result and try again." } : null}
+              upset={missed ? worldSlug === "isharet-cairo"
+                ? { name: ar ? "الضابط كريم" : "Officer Karim", line: ar ? "العربيات لسه مستنية عند الخط. بص على نتيجة الكود وجرّب تاني." : "The cars are still waiting at the line. Check your code result and try again." }
+                : { name: ar ? "الطلب مستني" : "Order waiting", line: ar ? "الطلب لسه متجهّزش. شوف نتيجة الكود وجرب تاني." : "The order is still waiting. Check your result and try again." }
+                : null}
               speech={sceneLine ? { name: speakerName, line: sceneLine } : null}
               speechAt={speechAt}
               extendLeft={ext}
@@ -396,7 +421,7 @@ export function MissionPlayer({ locale, mission, worldSlug, worldTitle, lessonId
             layered against the glass independently. Out here the figure sits in front of
             the card, undimmed by the blur, with its top half clear of the frame.
           */}
-          <div className={`${styles.panelDock} ${CODING.has(phaseKey) ? styles.panelDockWide : ""}`}>
+          <div className={`${styles.panelDock} ${CODING.has(phaseKey) ? styles.panelDockWide : ""} ${worldSlug === "isharet-cairo" ? styles.panelDockTraffic : ""}`}>
             <CharacterBust speaker={speaker} alt={speakerName} />
 
             <section className={styles.panel}>
@@ -459,7 +484,7 @@ export function MissionPlayer({ locale, mission, worldSlug, worldTitle, lessonId
                       requestHint={requestHint}
                       runnerBusy={runnerBusy || sceneBusy}
                       onEnter={(outcome) => play(outcome, "guided-enter")}
-                      onSolved={(_code, outcome) => play(outcome ?? phases.guided.onRun, "guided")}
+                      onSolved={(_code, outcome, stepIndex) => play(outcome ?? phases.guided.onRun, `guided-${stepIndex}`)}
                       onContinue={advance}
                     />
                   )}
@@ -512,7 +537,7 @@ export function MissionPlayer({ locale, mission, worldSlug, worldTitle, lessonId
             conceptNameAr={phases.discover.conceptNameAr}
             worldLine={phases.remix.onRun?.captionAr || phases.guided.onRun?.captionAr || (ar ? "الفرن اشتغل بالكود اللي كتبته." : "The bakery ran on the code you wrote.")}
             debrief={debrief}
-            onReplay={() => { setDone(false); setStep(0); setChange(null); setRan({}); setWorld(phases.encounter.world?.props ?? {}); setInteractionIndex(0); setEncounterStarted(false); setMissed(false); setSceneBusy(false); setPlayToken((n) => n + 1); }}
+            onReplay={() => { setDone(false); setStep(0); setChange(null); setRan({}); setWorld(phases.encounter.world?.props ?? {}); setInteractionIndex(0); setEncounterStarted(worldSlug === "isharet-cairo"); setMissed(false); setSceneBusy(false); setPlayToken((n) => n + 1); }}
             onNext={() => router.push(mapHref)}
           />
         </MissionDialog>

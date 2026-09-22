@@ -24,11 +24,12 @@ import logging
 import time
 from dataclasses import dataclass, field
 
-from app.ai import phase_guards, sandbox
+from app.ai import phase_guards, sandbox, traffic_beginner
 from app.ai.prompts import mission_gen as prompt
 from app.ai.router import AICapability, get_model
 from app.config import settings
 from app.manifests.models import World
+from app.rules import mission_builder
 from app.schemas import phases as P
 
 log = logging.getLogger(__name__)
@@ -48,6 +49,17 @@ class GenerationOutcome:
 
 class GenerationFailed(RuntimeError):
     """Every attempt produced something that would not work for a student."""
+
+
+def mechanic_for_stop(world: World, concept: str, repetition: int):
+    mechanics = world.mechanics_for(concept)
+    if not mechanics:
+        raise GenerationFailed(f"{world.id} has no authored mechanic for {concept}")
+    index = min(max(repetition, 1) - 1, len(mechanics) - 1)
+    if world.id == "isharet_cairo" and concept == "loops" and repetition in (1, 2):
+        # The first map stop teaches cars; the second teaches pedestrians.
+        index = 2 - repetition
+    return mechanics[index]
 
 
 # --------------------------------------------------------------------------- helpers
@@ -77,24 +89,50 @@ def _derive_tests(solution_code: str, inputs: list[str]) -> tuple[list[P.Mission
 
 
 def _to_mission(raw: dict, world: World, *, concept: str, carried: list[str],
-                scene_id: str, scaffold: dict[str, str]) -> tuple[P.PhasedMissionOut, list[str]]:
+                scene_id: str, scaffold: dict[str, str],
+                blueprint: mission_builder.ComposedMission) -> tuple[P.PhasedMissionOut, list[str]]:
     """Turn the model's JSON into the typed contract, deriving what must be derived."""
+    if world.id == "isharet_cairo" and blueprint.mechanic_id == "cross_each_pedestrian":
+        from app.ai import traffic_pedestrians
+        try:
+            return traffic_pedestrians.build(raw, blueprint, scaffold=scaffold), []
+        except Exception as exc:
+            return None, [f"pedestrian story could not be composed: {exc}"]
+    if world.id == "isharet_cairo" and blueprint.mechanic_id == "release_each_car":
+        try:
+            return traffic_beginner.build(raw, blueprint, scaffold=scaffold), []
+        except Exception as exc:  # A bad draft must never become a playable mission.
+            return None, [f"traffic story could not be composed: {exc}"]
     problems: list[str] = []
 
     guided_raw = raw.get("guided") or {}
     remix_raw = raw.get("remix") or {}
 
-    guided_solution = (guided_raw.get("solution_code") or "").strip()
-    remix_solution = (remix_raw.get("solution_code") or "").strip()
+    # Code is selected from an authored mechanic and rendered by Python. The model may
+    # remove pieces for guided practice and extend it for the remix; it may not invent
+    # the function the lesson is built around.
+    guided_solution = blueprint.solution_code
+    remix_solution = (
+        blueprint.remix_solution_code
+        or (remix_raw.get("solution_code") or "").strip()
+    )
 
-    guided_tests, p1 = _derive_tests(guided_solution, guided_raw.get("test_inputs") or [])
-    remix_tests, p2 = _derive_tests(remix_solution, remix_raw.get("test_inputs") or [])
+    guided_tests = [P.MissionTest(call=call, expected=expected) for call, expected in blueprint.tests]
+    p1: list[str] = []
+    if blueprint.remix_tests:
+        remix_tests = [
+            P.MissionTest(call=call, expected=expected)
+            for call, expected in blueprint.remix_tests
+        ]
+        p2: list[str] = []
+    else:
+        remix_tests, p2 = _derive_tests(remix_solution, remix_raw.get("test_inputs") or [])
     problems += [f"guided: {x}" for x in p1]
     problems += [f"remix: {x}" for x in p2]
 
     # Phase 6 starts from phase 5's finished code — that is what makes the world feel
     # like it moved rather than a new exercise arriving.
-    starting_code = (remix_raw.get("starting_code") or guided_solution).strip()
+    starting_code = guided_solution
 
     try:
         mission = P.PhasedMissionOut(
@@ -107,7 +145,7 @@ def _to_mission(raw: dict, world: World, *, concept: str, carried: list[str],
             source="model",
             validated=False,  # guards decides
             scaffold=dict(scaffold),
-            difficulty_band=5,
+            difficulty_band=blueprint.difficulty_band,
             phases=P.MissionPhases(
                 encounter=P.PhaseEncounter(**(raw.get("encounter") or {})),
                 explore=P.PhaseExplore(**(raw.get("explore") or {})),
@@ -160,6 +198,18 @@ def generate(
     if not settings.google_api_key:
         raise GenerationFailed("no GOOGLE_API_KEY — the model cannot be called")
 
+    mechanic = mechanic_for_stop(world, target_concept, repetition)
+    blueprint = mission_builder.compose(
+        world,
+        mechanic,
+        scaffold=scaffold,
+        # Repetition is stable for a learner stop, which makes a rejected generation
+        # reproducible while still moving to the next authored difficulty over time.
+        seed=repetition,
+    )
+    if blueprint.problems:
+        raise GenerationFailed("authored mechanic failed composition: " + "; ".join(blueprint.problems))
+
     system, task = prompt.build(
         world,
         target_concept=target_concept,
@@ -169,6 +219,8 @@ def generate(
         repetition=repetition,
         already_taught=already_taught,
         speaker=speaker,
+        mechanic=mechanic,
+        blueprint=blueprint,
     )
     outcome.model_name = settings.model_generate
 
@@ -176,7 +228,7 @@ def generate(
         AICapability.GENERATE,
         # High enough that two students get different scenarios; low enough that it
         # keeps following a nine-key JSON shape.
-        temperature=0.8,
+        temperature=0.4 if world.id == "isharet_cairo" else 0.8,
         max_output_tokens=settings.max_tokens_generate,
         timeout=90.0,
     )
@@ -196,7 +248,7 @@ def generate(
 
         mission, problems = _to_mission(
             raw, world, concept=target_concept, carried=carried_concepts,
-            scene_id=scene_id, scaffold=scaffold,
+            scene_id=scene_id, scaffold=scaffold, blueprint=blueprint,
         )
 
         if mission is None:
@@ -205,7 +257,10 @@ def generate(
             continue
 
         report = phase_guards.validate_phases(mission, world)
-        failures = problems + report.failures
+        quality = phase_guards.validate_generation_quality(
+            mission, world, blueprint=blueprint
+        )
+        failures = problems + report.failures + quality.failures
 
         if not failures:
             mission.validated = True

@@ -4,6 +4,7 @@ import { useAnimationFrame, useReducedMotion } from "motion/react";
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 
 import { BakeryScene } from "@/components/bakery/scene";
+import { TrafficScene, trafficSceneDuration } from "@/components/traffic/traffic-scene";
 import { flourSacks, missionSceneDuration, missionSceneState, queueLength, shopOpen, type MissionProps, type WorldBeat } from "@/lib/bakery/mission-scene";
 import { bakeryScene, frame, propAssetUrls, sceneAssetUrls, worldPropNames } from "@/lib/bakery/scene-manifest";
 import { CUSTOMER_IDS } from "@/lib/bakery/simulation";
@@ -18,6 +19,7 @@ const STILL_BEAT_MS = 2200;
 
 export type MissionSceneProps = {
   locale: Locale;
+  worldSlug: string;
   props?: MissionProps;
   /** Name of the animation to play. Changing this restarts playback. */
   animate?: string | null;
@@ -69,20 +71,25 @@ export type MissionSceneProps = {
  * when the phase arrives or Run is pressed, then holds on its last frame. The scene
  * never autoplays on page load, which `docs/design.md` section 11 requires.
  */
-export function MissionScene({ locale, props, animate, playToken = 0, caption, highlight, extendLeft = 0, beats, speech = null, speechAt, upset = null, pickable, onPick, pickLabel, label, onSettled }: MissionSceneProps) {
+export function MissionScene({ locale, worldSlug, props, animate, playToken = 0, caption, highlight, extendLeft = 0, beats, speech = null, speechAt, upset = null, pickable, onPick, pickLabel, label, onSettled }: MissionSceneProps) {
   const ar = locale === "ar-EG";
   const motionPreference = useReducedMotion();
   // Match the server markup first, then apply the browser preference before playback.
   const hydrated = useSyncExternalStore(subscribeToHydration, () => true, () => false);
   const reduced = hydrated && Boolean(motionPreference);
 
-  const [assets, setAssets] = useState<"loading" | "ready" | "error">("loading");
+  const [assets, setAssets] = useState<"loading" | "ready" | "error">(
+    worldSlug === "isharet-cairo" ? "ready" : "loading",
+  );
   const [progress, setProgress] = useState(1);
   // The run currently playing. Kept in a ref and compared inside the frame callback, so
   // starting a new animation never needs a state write during render or in an effect.
   const run = useRef({ id: "", beat: 0, elapsed: 0, finished: false, lastFrame: null as number | null });
 
   useEffect(() => {
+    if (worldSlug === "isharet-cairo") {
+      return;
+    }
     let cancelled = false;
     Promise.all(
       [...sceneAssetUrls(), ...propAssetUrls(worldPropNames), frame("delivery-load"), ...CUSTOMER_IDS.map((c) => frame(`angry-${c}`))].map(
@@ -99,7 +106,7 @@ export function MissionScene({ locale, props, animate, playToken = 0, caption, h
       () => { if (!cancelled) setAssets("error"); },
     );
     return () => { cancelled = true; };
-  }, []);
+  }, [worldSlug]);
 
   // A sequence of beats, or the single animation a phase has always been able to name.
   // Memoised so the frame callback is not rebuilt every render, which would restart the
@@ -138,7 +145,9 @@ export function MissionScene({ locale, props, animate, playToken = 0, caption, h
       if (document.hidden) { state.lastFrame = null; return; }
 
       const step = timeline[Math.min(state.beat, timeline.length - 1)];
-      const span = missionSceneDuration(step.animate);
+      const span = worldSlug === "isharet-cairo"
+        ? trafficSceneDuration(step.animate)
+        : missionSceneDuration(step.animate);
       const previous = state.lastFrame;
       state.lastFrame = time;
       if (previous === null) return;
@@ -160,7 +169,7 @@ export function MissionScene({ locale, props, animate, playToken = 0, caption, h
       state.elapsed = Math.min(hold, state.elapsed + Math.min(time - previous, 1000));
       setProgress(span ? state.elapsed / span : 1);
     },
-    [timeline, playToken, reduced, assets, onSettled],
+    [timeline, playToken, reduced, assets, onSettled, worldSlug],
   );
 
   useAnimationFrame(advance);
@@ -169,7 +178,9 @@ export function MissionScene({ locale, props, animate, playToken = 0, caption, h
   const state = missionSceneState({ props: shown, animate: current.animate, progress });
   const open = shopOpen(shown);
   // Only when she is actually standing there. Nobody is impatient in an empty shop.
-  const waiting = Boolean(upset) && queueLength(shown) > 0;
+  const waiting = Boolean(upset) && (worldSlug === "isharet-cairo"
+    ? Number(shown.waiting_cars ?? 0) > 0
+    : queueLength(shown) > 0);
   const atWorld = (x: number, y: number) => ({
     left: `${((x + extendLeft) / (1600 + extendLeft)) * 100}%`,
     bottom: `${((900 - y) / 900) * 100}%`,
@@ -182,33 +193,49 @@ export function MissionScene({ locale, props, animate, playToken = 0, caption, h
         {/* `loose` furnishes the shop the way the opening tour does — the till, the scale,
             the bags, the order sheet. A mission drawn without them is the same bare counter
             every time, which is what made every scene look identical. */}
-        <BakeryScene
-          state={state}
-          reducedMotion={reduced}
-          counterView={false}
-          label={label}
-          highlight={highlight}
-          extendLeft={extendLeft}
-          loose={worldPropNames}
-          sacks={flourSacks(shown)}
-          delivery={shown.delivery === "loaded" || shown.delivery === "sent" || shown.delivery === "parked" ? shown.delivery : undefined}
-          sign={open === undefined ? undefined : { open, label: open ? (ar ? "مفتوح" : "OPEN") : (ar ? "مقفول" : "CLOSED") }}
-          upset={waiting}
-          pickable={pickable}
-          onPick={onPick}
-          pickLabel={pickLabel}
-        />
+        {worldSlug === "isharet-cairo" ? (
+          <TrafficScene
+            props={shown}
+            animate={current.animate}
+            progress={progress}
+            highlight={highlight}
+            pickable={pickable}
+            onPick={onPick}
+            pickLabel={pickLabel}
+          />
+        ) : (
+          <BakeryScene
+            state={state}
+            reducedMotion={reduced}
+            counterView={false}
+            label={label}
+            highlight={highlight}
+            extendLeft={extendLeft}
+            loose={worldPropNames}
+            sacks={flourSacks(shown)}
+            delivery={shown.delivery === "loaded" || shown.delivery === "sent" || shown.delivery === "parked" ? shown.delivery : undefined}
+            sign={open === undefined ? undefined : { open, label: open ? (ar ? "مفتوح" : "OPEN") : (ar ? "مقفول" : "CLOSED") }}
+            upset={waiting}
+            pickable={pickable}
+            onPick={onPick}
+            pickLabel={pickLabel}
+          />
+        )}
         {waiting && upset ? (
           <div
             className={`${styles.sceneSpeech} ${styles.sceneSpeechUrgent}`}
-            style={atWorld(bakeryScene.queue.first.x, 548)}
+            style={worldSlug === "isharet-cairo" ? { left: "46%", bottom: "42%" } : atWorld(bakeryScene.queue.first.x, 548)}
             dir={ar ? "rtl" : "ltr"}
           >
             <span>{upset.name}</span>
             <p aria-live="assertive">{upset.line}</p>
           </div>
         ) : saying?.line ? (
-          <div className={styles.sceneSpeech} style={speechAt} dir={ar ? "rtl" : "ltr"}>
+          <div
+            className={`${styles.sceneSpeech} ${worldSlug === "isharet-cairo" ? styles.sceneSpeechTraffic : ""}`}
+            style={speechAt}
+            dir={ar ? "rtl" : "ltr"}
+          >
             {saying.name && <span>{saying.name}</span>}
             <p aria-live="polite">{saying.line}</p>
           </div>
@@ -216,7 +243,7 @@ export function MissionScene({ locale, props, animate, playToken = 0, caption, h
         {assets !== "ready" && (
           <div className={styles.sceneLoading}>
             {assets === "loading"
-              ? ar ? "بنجهّز الفرن…" : "Getting the bakery ready…"
+              ? ar ? "بنجهّز العالم…" : "Getting the world ready…"
               : ar ? "بعض الصور متحمّلتش." : "Some scene assets could not load."}
           </div>
         )}

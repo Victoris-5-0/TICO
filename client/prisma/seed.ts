@@ -1,4 +1,5 @@
 import { PrismaClient, Role, Difficulty, ItemType, LessonRequirement, DecidedBy, SkillBand } from '@prisma/client';
+import { seedTrafficWorldContent } from '../scripts/traffic-world-content';
 
 const prisma = new PrismaClient();
 
@@ -145,7 +146,7 @@ async function main() {
     where: { slug: 'isharet-cairo' },
     update: {
       title: 'Isharet Cairo: Traffic Control',
-      description: 'Read intersection sensors, coordinate signal countdowns, and diagnose city traffic controllers with modular functions.',
+      description: 'Guide cars and pedestrians safely through the junction with Python for loops.',
       icon: 'car',
       language: 'python',
       published: true,
@@ -154,7 +155,7 @@ async function main() {
     create: {
       slug: 'isharet-cairo',
       title: 'Isharet Cairo: Traffic Control',
-      description: 'Read intersection sensors, coordinate signal countdowns, and diagnose city traffic controllers with modular functions.',
+      description: 'Guide cars and pedestrians safely through the junction with Python for loops.',
       icon: 'car',
       language: 'python',
       published: true,
@@ -562,95 +563,9 @@ async function main() {
     create: { exerciseId: mahattaExercise1.id, conceptId: conceptConditionals.id, isPrimary: false, weight: 0.3 },
   });
 
-  // World 3 - Lesson 1: Signal Rules
-  const trafficLesson1 = await prisma.lesson.upsert({
-    where: { trackId_slug: { trackId: isharetCairo.id, slug: 'signal-rules' } },
-    update: {
-      title: 'قواعد الإشارة (Signal Rules)',
-      description: 'التحكم في إشارات المرور وتوقيتات فتح المسارات باستخدام الدوال الشرطية.',
-      order: 1,
-    },
-    create: {
-      trackId: isharetCairo.id,
-      slug: 'signal-rules',
-      title: 'قواعد الإشارة (Signal Rules)',
-      description: 'التحكم في إشارات المرور وتوقيتات فتح المسارات باستخدام الدوال الشرطية.',
-      content: 'في مركز تحكم مرور القاهرة مع المهندسة فرح، سنبرمج دورة الإشارة الضوئية.',
-      order: 1,
-    },
-  });
-
-  const trafficExercise1 = await prisma.exercise.upsert({
-    where: { id: 'exercise-traffic-01' },
-    update: {
-      title: 'تحديد حالة الإشارة (Determine Signal State)',
-      lessonId: trafficLesson1.id,
-      instructions: 'اكتب دالة `next_signal_state(current_state: str, seconds_elapsed: int) -> str` لتحديد الحالة التالية للإشارة.',
-      starterCode: `def next_signal_state(current_state: str, seconds_elapsed: int) -> str:
-    # حدد الحالة التالية للإشارة
-    pass
-`,
-      solutionCode: `def next_signal_state(current_state: str, seconds_elapsed: int) -> str:
-    if current_state == "RED" and seconds_elapsed >= 45:
-        return "GREEN"
-    elif current_state == "GREEN" and seconds_elapsed >= 30:
-        return "YELLOW"
-    elif current_state == "YELLOW" and seconds_elapsed >= 5:
-        return "RED"
-    return current_state
-`,
-      testCases: [
-        { input: 'next_signal_state("RED", 50)', expectedOutput: '"GREEN"', isHidden: false },
-        { input: 'next_signal_state("GREEN", 35)', expectedOutput: '"YELLOW"', isHidden: false },
-        { input: 'next_signal_state("YELLOW", 6)', expectedOutput: '"RED"', isHidden: false },
-      ],
-      hints: [
-        'استخدم جمل `if / elif / else` لفحص الحالة الحالية والوقت المنقضي.',
-      ],
-      difficulty: Difficulty.ADVANCED,
-      order: 1,
-    },
-    create: {
-      id: 'exercise-traffic-01',
-      lessonId: trafficLesson1.id,
-      title: 'تحديد حالة الإشارة (Determine Signal State)',
-      instructions: 'اكتب دالة `next_signal_state(current_state: str, seconds_elapsed: int) -> str` لتحديد الحالة التالية للإشارة.',
-      starterCode: `def next_signal_state(current_state: str, seconds_elapsed: int) -> str:
-    # حدد الحالة التالية للإشارة
-    pass
-`,
-      solutionCode: `def next_signal_state(current_state: str, seconds_elapsed: int) -> str:
-    if current_state == "RED" and seconds_elapsed >= 45:
-        return "GREEN"
-    elif current_state == "GREEN" and seconds_elapsed >= 30:
-        return "YELLOW"
-    elif current_state == "YELLOW" and seconds_elapsed >= 5:
-        return "RED"
-    return current_state
-`,
-      testCases: [
-        { input: 'next_signal_state("RED", 50)', expectedOutput: '"GREEN"', isHidden: false },
-        { input: 'next_signal_state("GREEN", 35)', expectedOutput: '"YELLOW"', isHidden: false },
-        { input: 'next_signal_state("YELLOW", 6)', expectedOutput: '"RED"', isHidden: false },
-      ],
-      hints: [
-        'استخدم جمل `if / elif / else` لفحص الحالة الحالية والوقت المنقضي.',
-      ],
-      difficulty: Difficulty.ADVANCED,
-      order: 1,
-    },
-  });
-
-  await prisma.exerciseConcept.upsert({
-    where: { exerciseId_conceptId: { exerciseId: trafficExercise1.id, conceptId: conceptFunctions.id } },
-    update: { isPrimary: true, weight: 1.0 },
-    create: { exerciseId: trafficExercise1.id, conceptId: conceptFunctions.id, isPrimary: true, weight: 1.0 },
-  });
-
-  await prisma.exerciseConcept.upsert({
-    where: { exerciseId_conceptId: { exerciseId: trafficExercise1.id, conceptId: conceptConditionals.id } },
-    update: { isPrimary: false, weight: 0.4 },
-    create: { exerciseId: trafficExercise1.id, conceptId: conceptConditionals.id, isPrimary: false, weight: 0.4 },
+  await seedTrafficWorldContent(prisma, {
+    track: isharetCairo.id, loops: conceptLoops.id, variables: conceptVariables.id,
+    functions: conceptFunctions.id, conditionals: conceptConditionals.id,
   });
 
   console.log('📚 Lessons, Exercises, and ExerciseConcept weights seeded.');

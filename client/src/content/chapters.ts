@@ -27,7 +27,7 @@ export const chapters: readonly Chapter[] = [
     title: { en: "Programming Basics", "ar-EG": "أساسيات البرمجة" },
     kicker: { en: "Egyptian Streets Worlds", "ar-EG": "عوالم الشوارع المصرية" },
     island: { src: "/assets/chapters-map/island-programming-basics.webp", width: 1024, height: 782 },
-    worlds: ["el-forn", "el-mahatta", "isharet-cairo"],
+    worlds: ["el-forn", "isharet-cairo", "el-mahatta"],
   },
   {
     slug: "oop",

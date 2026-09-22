@@ -19,6 +19,12 @@ const bakeryCast = [
   { id: "mariam", name: { "ar-EG": "مريم", en: "Mariam" }, role: { "ar-EG": "زبونة الفرن", en: "Bakery customer" }, size: [547, 1285] },
 ] as const;
 
+const trafficCast = [
+  { id: "officer", name: { "ar-EG": "الضابط كريم", en: "Officer Karim" }, role: { "ar-EG": "منظّم التقاطع", en: "Intersection officer" }, src: "/assets/traffic-v2/frames/officer-idle.webp" },
+  { id: "naser", name: { "ar-EG": "ناصر", en: "Naser" }, role: { "ar-EG": "سائق التاكسي", en: "Taxi driver" }, src: "/assets/traffic-v2/characters/naser.png" },
+  { id: "nadia", name: { "ar-EG": "مدام نادية", en: "Ms Nadia" }, role: { "ar-EG": "من أهل الشارع", en: "Neighborhood resident" }, src: "/assets/traffic-v2/characters/nadia.png" },
+] as const;
+
 export type WorldLesson = {
   id: string;
   slug: string;
@@ -34,6 +40,7 @@ export function WorldOverview({
   unlocked,
   error,
   initialLoadingLesson,
+  initialLivePreview = false,
 }: {
   locale: Locale;
   world: World;
@@ -42,16 +49,20 @@ export function WorldOverview({
   unlocked?: { nodeId: string; label: string } | null;
   error?: string;
   initialLoadingLesson?: WorldLesson | null;
+  initialLivePreview?: boolean;
 }) {
   const router = useRouter();
   const [loadingLesson, setLoadingLesson] = useState<WorldLesson | null>(
     initialLoadingLesson ?? null,
   );
+  const [livePreview, setLivePreview] = useState(initialLivePreview);
   const isArabic = locale === "ar-EG";
   const isBakery = world.slug === "el-forn";
+  const isTraffic = world.slug === "isharet-cairo";
   const reduced = useReducedMotion();
 
   const nextLesson = lessons.find((lesson) => !lesson.completed) ?? lessons[0];
+  const pedestrianLesson = lessons.find((lesson) => lesson.slug === "pedestrian-crossing");
   const nextLessonIndex = nextLesson ? lessons.findIndex((lesson) => lesson.id === nextLesson.id) : -1;
   const nextMissionName = nextLesson && nextLessonIndex >= 0
     ? world.missions[nextLessonIndex]?.[locale] ?? nextLesson.title
@@ -117,6 +128,7 @@ export function WorldOverview({
                   href={`/${locale}/worlds/${world.slug}/play/${nextLesson.slug}`}
                   onClick={(e) => {
                     e.preventDefault();
+                    setLivePreview(false);
                     setLoadingLesson(nextLesson);
                   }}
                 >
@@ -137,6 +149,19 @@ export function WorldOverview({
                 <button className={`${styles.primaryBtn} ${styles.disabledBtn}`} type="button" disabled>
                   {isArabic ? "قريبًا" : "Coming soon"}
                 </button>
+              )}
+              {isTraffic && pedestrianLesson && (
+                <Link
+                  className={styles.previewBtn}
+                  href={`/${locale}/worlds/isharet-cairo/play/${pedestrianLesson.slug}?live=1`}
+                  onClick={(event) => {
+                    event.preventDefault();
+                    setLivePreview(true);
+                    setLoadingLesson(pedestrianLesson);
+                  }}
+                >
+                  {isArabic ? "جرّب مهمة مباشرة (تجريبية)" : "Generate a live beta mission"}
+                </Link>
               )}
             </div>
           </div>
@@ -159,8 +184,12 @@ export function WorldOverview({
                 priority
               />
             </motion.div>
-            <div className={styles.ticoSpeech}>
-              {allCompleted
+            <div className={`${styles.ticoSpeech} ${isTraffic ? styles.ticoSpeechBeta : ""}`}>
+              {isTraffic
+                ? isArabic
+                  ? "أنا تيكو! عالم إشارة القاهرة لسه نسخة تجريبية وبنكمل تطويره. جرّب المهمات وقولنا رأيك."
+                  : "I'm TICO! Isharet Cairo is still in beta and under development. Try the missions and tell us what you think."
+                : allCompleted
                 ? isArabic
                   ? "أحسنت يا بطل! أتممت كل المهمات! 🎉"
                   : "Great job! All missions completed! 🎉"
@@ -169,8 +198,8 @@ export function WorldOverview({
                     ? "يلا نكمل التحدي مع بعض! 🚀"
                     : "Let's continue the challenge! 🚀"
                   : isArabic
-                    ? "جاهز لرحلة بايثون في الفرن؟ 🥐"
-                    : "Ready for your Python mission? 🥐"}
+                    ? isTraffic ? "جاهز تنظّم التقاطع بالكود؟ 🚦" : "جاهز لرحلة بايثون في الفرن؟ 🥐"
+                    : isTraffic ? "Ready to control the intersection with code? 🚦" : "Ready for your Python mission? 🥐"}
             </div>
           </div>
         </section>
@@ -185,12 +214,9 @@ export function WorldOverview({
                 unlocked={unlocked}
                 bannerTitle={isArabic ? "خريطة التحديات" : "Challenge Map"}
                 onSelectLesson={(slug) => {
-                  const lesson = lessons.find((l) => l.slug === slug) ?? {
-                    id: slug,
-                    slug,
-                    title: slug,
-                    completed: false,
-                  };
+                  const lesson = lessons.find((l) => l.slug === slug);
+                  if (!lesson) return;
+                  setLivePreview(false);
                   setLoadingLesson(lesson);
                 }}
               />
@@ -198,23 +224,25 @@ export function WorldOverview({
           </section>
         )}
 
-        {/* Cast Section (for El Forn / Bakery) */}
-        {isBakery && (
+        {(isBakery || isTraffic) && (
           <section className={styles.castSection} id="cast">
             <div className={styles.castHeader}>
               <p className={styles.chapterPill}>
-                {isArabic ? "شخصيات الفرن" : "MEET THE CHARACTERS"}
+                {isArabic ? (isTraffic ? "شخصيات التقاطع" : "شخصيات الفرن") : "MEET THE CHARACTERS"}
               </p>
               <h2 className={styles.castTitle}>
-                {isArabic ? "أهل الفرن اللي هتقابلهم" : "Characters You'll Meet"}
+                {isArabic ? (isTraffic ? "أهل الشارع اللي هتقابلهم" : "أهل الفرن اللي هتقابلهم") : "Characters You'll Meet"}
               </h2>
             </div>
             <div className={styles.castGrid}>
-              {bakeryCast.map((character) => (
+              {(isTraffic ? trafficCast : bakeryCast.map((character) => ({
+                ...character,
+                src: `/assets/characters/bakery/${character.id}-v1.webp`,
+              }))).map((character) => (
                 <div className={styles.castCard} key={character.id}>
                   <div className={styles.castAvatar}>
                     <Image
-                      src={`/assets/characters/bakery/${character.id}-v1.webp`}
+                      src={character.src}
                       alt={character.name[locale]}
                       fill
                       sizes="90px"
@@ -239,12 +267,18 @@ export function WorldOverview({
             </h2>
             <p className={styles.noteBody}>
               {isArabic
-                ? "كل سطر كود بتكتبه بيأثر مباشرة في عالم الفرن: تنظيم الطوابير، حساب الخبز، وتوزيع الطلبات. جرب بحرية تامة وبدون أي قلق من الخطأ."
-                : "Every line of Python you write directly affects the bakery: managing queues, counting bread trays, and serving orders fairly. Experiment freely without penalty."}
+                ? isTraffic
+                  ? "كل سطر كود بتكتبه بيغيّر التقاطع قدامك: الإشارة تفتح، والعربيات تتحرك واحدة واحدة، والطابور يكبر من غير ما نكرر الكود. جرّب وعدّل وشوف النتيجة بأمان."
+                  : "كل سطر كود بتكتبه بيأثر مباشرة في عالم الفرن: تنظيم الطوابير، حساب الخبز، وتوزيع الطلبات. جرب بحرية تامة وبدون أي قلق من الخطأ."
+                : isTraffic
+                  ? "Every line of code changes the intersection in front of you: the signal turns green, cars move one at a time, and the queue can grow without duplicating code."
+                  : "Every line of Python you write directly affects the bakery: managing queues, counting bread trays, and serving orders fairly. Experiment freely without penalty."}
             </p>
           </div>
           <div className={styles.noteCode} dir="ltr">
-            {`# Bakery Queue Helper\norders = [3, 5, 2, 4]\ntotal_bread = sum(orders)\nprint(f"Total needed: {total_bread}")`}
+            {isTraffic
+              ? `# Give every car its turn\ncars = ["taxi", "bus", "tuktuk"]\nfor car in cars:\n    print("Go:", car)`
+              : `# Bakery Queue Helper\norders = [3, 5, 2, 4]\ntotal_bread = sum(orders)\nprint(f"Total needed: {total_bread}")`}
           </div>
         </aside>
       </main>
@@ -256,8 +290,10 @@ export function WorldOverview({
           worldTitle={world.title[locale]}
           lessonSlug={loadingLesson.slug}
           lessonTitle={loadingLesson.title}
+          livePreview={livePreview}
           onCancel={() => {
             setLoadingLesson(null);
+            setLivePreview(false);
             if (typeof window !== "undefined" && window.location.pathname.includes("/play/")) {
               router.push(`/${locale}/worlds/${world.slug}`);
             }

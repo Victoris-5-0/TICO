@@ -10,7 +10,7 @@ import { missionService } from "@/services/mission.service";
 import { worlds } from "@/content/worlds";
 
 type Params = Promise<{ locale: string; worldSlug: string; missionId: string }>;
-type Search = Promise<{ lesson?: string }>;
+type Search = Promise<{ lesson?: string; preview?: string }>;
 
 /**
  * `generateMetadata` and the page both need the mission, and Next.js runs them as part
@@ -60,7 +60,7 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
  */
 export default async function Page({ params, searchParams }: { params: Params; searchParams: Search }) {
   const { locale, worldSlug, missionId } = await params;
-  const { lesson: lessonSlug } = await searchParams;
+  const { lesson: lessonSlug, preview } = await searchParams;
   if (!isLocale(locale)) notFound();
 
   const stored = await loadMission(missionId);
@@ -82,18 +82,20 @@ export default async function Page({ params, searchParams }: { params: Params; s
     ? await db.lesson.findUnique({ where: { id: stored.lessonId }, select: { id: true, slug: true, order: true } })
     : null);
   const authoredWorld = worlds.find((world) => world.slug === worldSlug);
-  const missionName = authoredWorld?.missions[lessonRecord?.order ?? -1]?.[locale] ?? null;
+  const missionName = authoredWorld?.missions[(lessonRecord?.order ?? 0) - 1]?.[locale] ?? null;
+  const mission = stored.mission;
 
   return (
     <MissionPlayer
       locale={locale}
-      mission={stored.mission}
+      mission={mission}
       worldSlug={stored.trackSlug}
       worldTitle={stored.trackTitle}
       lessonId={lessonRecord?.id ?? stored.lessonId}
       lessonSlug={lessonRecord?.slug ?? lessonSlug ?? null}
-      missionName={missionName}
+      missionName={worldSlug === "isharet-cairo" ? mission.titleAr : missionName}
       narrationKeys={[]}
+      preview={worldSlug === "isharet-cairo" && preview === "1"}
     />
   );
 }

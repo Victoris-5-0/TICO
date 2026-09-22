@@ -28,6 +28,7 @@ export type LessonLoadingOverlayProps = {
   lessonSlug: string;
   lessonTitle: string;
   worldTitle?: string;
+  livePreview?: boolean;
   durationMs?: number; // 5000ms - 8000ms (default: 6000ms)
   onCancel?: () => void;
   onComplete?: (missionId: string) => void;
@@ -39,6 +40,7 @@ export function LessonLoadingOverlay({
   lessonSlug,
   lessonTitle,
   worldTitle,
+  livePreview = false,
   durationMs = 6000,
   onCancel,
   onComplete,
@@ -76,12 +78,25 @@ export function LessonLoadingOverlay({
 
     async function fetchMission() {
       try {
-        const result = await startLessonMissionAction({ worldSlug, lessonSlug });
+        const result = await startLessonMissionAction({
+          worldSlug, lessonSlug,
+          forceRegenerate: livePreview,
+          requireLive: livePreview,
+        });
         if (!active) return;
         if (result.success && result.missionId) {
           setResolvedMissionId(result.missionId);
         } else if (result.error === "unauthenticated") {
-          setAuthRedirect(`/${locale}/login?redirect=/${locale}/worlds/${worldSlug}/play/${lessonSlug}`);
+          const returnPath = `/${locale}/worlds/${worldSlug}/play/${lessonSlug}${livePreview ? "?live=1" : ""}`;
+          setAuthRedirect(`/${locale}/login?redirect=${encodeURIComponent(returnPath)}`);
+        } else if (result.error === "live-not-ready") {
+          setErrorMessage(isArabic
+            ? "المهمة المباشرة لسه مش متاحة على السيرفر. تقدر تلعب المهمات الجاهزة دلوقتي."
+            : "Live missions are not available on the server yet. You can play the ready missions now.");
+        } else if (result.error === "live-unavailable") {
+          setErrorMessage(isArabic
+            ? "التوليد المباشر مش متاح دلوقتي. جرّب تاني بعد شوية."
+            : "Live generation is unavailable right now. Please try again shortly.");
         } else if (result.error === "no-mission") {
           setErrorMessage(
             isArabic
@@ -90,11 +105,19 @@ export function LessonLoadingOverlay({
           );
         } else {
           // Graceful fallback to lesson slug so student can continue
-          setResolvedMissionId(lessonSlug);
+          if (livePreview) {
+            setErrorMessage(isArabic ? "تعذّر توليد المهمة المباشرة." : "Could not generate a live mission.");
+          } else {
+            setResolvedMissionId(lessonSlug);
+          }
         }
       } catch {
         if (!active) return;
-        setResolvedMissionId(lessonSlug);
+        if (livePreview) {
+          setErrorMessage(isArabic ? "تعذّر توليد المهمة المباشرة." : "Could not generate a live mission.");
+        } else {
+          setResolvedMissionId(lessonSlug);
+        }
       }
     }
 
@@ -102,7 +125,7 @@ export function LessonLoadingOverlay({
     return () => {
       active = false;
     };
-  }, [worldSlug, lessonSlug, locale, isArabic]);
+  }, [worldSlug, lessonSlug, locale, isArabic, livePreview]);
 
   const handleFinish = useCallback(
     (missionId: string) => {
@@ -116,10 +139,10 @@ export function LessonLoadingOverlay({
         return;
       }
 
-      const target = `/${locale}/worlds/${worldSlug}/missions/${missionId}?lesson=${lessonSlug}`;
+      const target = `/${locale}/worlds/${worldSlug}/missions/${missionId}?lesson=${lessonSlug}${livePreview ? "&preview=1" : ""}`;
       router.push(target);
     },
-    [locale, worldSlug, lessonSlug, onComplete, router],
+    [locale, worldSlug, lessonSlug, livePreview, onComplete, router],
   );
 
   const handleCancel = useCallback(() => {
