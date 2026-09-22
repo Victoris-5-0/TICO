@@ -163,6 +163,15 @@ export function WorldOverview({
                   {isArabic ? "جرّب مهمة مباشرة (تجريبية)" : "Generate a live beta mission"}
                 </Link>
               )}
+              {/* The authored opening — Am Hassan walks the child round the shop. No code,
+                  no session, always available: a child who wants to see the bakery again
+                  before a mission should not have to replay a mission to do it. */}
+              {isBakery && (
+                <Link className={styles.secondaryBtn} href={`/${locale}/worlds/${world.slug}/missions/opening-message`}>
+                  <span aria-hidden="true">🥖</span>
+                  {isArabic ? "جولة في الفرن" : "Tour the bakery"}
+                </Link>
+              )}
             </div>
           </div>
 

@@ -32,14 +32,6 @@ const loadMission = cache(async (missionId: string) => {
   return missionService.getPhasedMission(missionId, token);
 });
 
-/**
- * Which lines of this mission have a recording.
- *
- * Imported rather than read from disk: `public/` is not part of the server bundle on most
- * deploys, so a `readFileSync` there works locally and quietly returns nothing in
- * production — every mission silent, with no error to notice. A mission absent from the
- * manifest simply has no audio, which is correct for anything outside the pinned set.
- */
 export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
   const { locale, missionId } = await params;
   if (!isLocale(locale)) return {};
@@ -82,6 +74,7 @@ export default async function Page({ params, searchParams }: { params: Params; s
     ? await db.lesson.findUnique({ where: { id: stored.lessonId }, select: { id: true, slug: true, order: true } })
     : null);
   const authoredWorld = worlds.find((world) => world.slug === worldSlug);
+  // Lesson order is one-based; authored mission names are zero-based.
   const missionName = authoredWorld?.missions[(lessonRecord?.order ?? 0) - 1]?.[locale] ?? null;
   const mission = stored.mission;
 

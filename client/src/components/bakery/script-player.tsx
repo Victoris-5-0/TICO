@@ -39,6 +39,7 @@ import { AnimatePresence, motion, useAnimationFrame, useReducedMotion } from "mo
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState, useSyncExternalStore } from "react";
 
 import { CodeEditor } from "@/components/mission-player/code-editor";
+import { NarrationControls, NarrationProvider } from "@/components/mission-player/narration";
 import type { Locale } from "@/i18n/config";
 import { bakeryScene, frame, propAssetUrls, sceneAssetUrls, worldPropNames } from "@/lib/bakery/scene-manifest";
 import { boundValue, worldAt, type Script } from "@/lib/bakery/script";
@@ -115,17 +116,26 @@ const COPY = {
 
 const subscribeToHydration = () => () => {};
 
+/** A script with no recordings. A module constant, so the provider sees one identity. */
+const NO_RECORDINGS: readonly string[] = [];
+
 /**
  * The six rungs, in the order the learning flow fixes them, for reporting progress.
  * A script with no `phase` on its stops — the tour — simply reports nothing.
  */
 const RUNGS = ["encounter", "explore", "discover", "understand", "guided", "remix"] as const;
 
-export function ScriptPlayer({ locale, script, finishHref, finishLabel, session }: {
+export function ScriptPlayer({ locale, script, finishHref, finishLabel, session, narration }: {
   locale: Locale;
   script: Script;
   finishHref: string;
   finishLabel: { ar: string; en: string };
+  /**
+   * Pre-recorded readings of the script's lines, keyed by stop id: the folder they live
+   * in and which stops have one. Omitted, the script is read silently — nothing plays and
+   * no controls appear.
+   */
+  narration?: { dir: string; keys: readonly string[] };
   /**
    * The mission row this play belongs to. Given, the script reports phases and finishes
    * the session exactly as the old player did, so progress and lesson credit are
@@ -159,6 +169,8 @@ export function ScriptPlayer({ locale, script, finishHref, finishLabel, session 
 
   const stop = script[step];
   const finished = step >= script.length - 1;
+  // One line per stop, so the reading is exactly what is on screen.
+  const spoken = useMemo(() => [stop.id], [stop.id]);
   const busy = isBusy(state);
   const shop = useMemo(() => worldAt(script, step), [script, step]);
 
@@ -376,6 +388,7 @@ export function ScriptPlayer({ locale, script, finishHref, finishLabel, session 
   );
 
   return (
+    <NarrationProvider dir={narration?.dir ?? ""} keys={narration?.keys ?? NO_RECORDINGS} sequence={spoken}>
     <section className={styles.tour} aria-label={ar ? "فرن عم حسن" : "Am Hassan's bakery"} data-ready={assets} data-speaker={speaker} data-phase={stop.phase} dir={ar ? "rtl" : "ltr"}>
       <div className={styles.rail}>
         <div className={styles.railBubble}>{speaker === "tico" && !docked ? bubble : null}</div>
@@ -439,11 +452,14 @@ export function ScriptPlayer({ locale, script, finishHref, finishLabel, session 
           </div>
         )}
 
-        {!finished && (
-          <button type="button" className={styles.skip} onClick={() => { moved.current = true; setStep(script.length - 1); }}>
-            {t.skip}
-          </button>
-        )}
+        <div className={styles.corner}>
+          <NarrationControls locale={locale} className={styles.narration} />
+          {!finished && (
+            <button type="button" className={styles.skip} onClick={() => { moved.current = true; setStep(script.length - 1); }}>
+              {t.skip}
+            </button>
+          )}
+        </div>
 
         <span className={styles.progress} role="img" aria-label={`${step + 1} / ${script.length}`}>
           <span style={{ inlineSize: `${((step + 1) / script.length) * 100}%` }} />
@@ -459,5 +475,6 @@ export function ScriptPlayer({ locale, script, finishHref, finishLabel, session 
         )}
       </div>
     </section>
+    </NarrationProvider>
   );
 }

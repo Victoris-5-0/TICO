@@ -3,34 +3,13 @@
   "model": "eleven_multilingual_v2",
   "missions": {
     "cmtwko9x1qt6m01z0ccv78mlk": [
-      "explore.intro"
+      "encounter",
+      "explore.intro",
+      "discover.explanation",
+      "discover.tico",
+      "remix.twist"
     ],
     "cmtwkp4a4qt7801z0a156a0j4": [
-      "discover.explanation",
-      "discover.tico"
-    ],
-    "cmtwkpwceqt7v01z07n0cyg9o": [
-      "encounter",
-      "explore.intro",
-      "discover.explanation",
-      "discover.tico",
-      "remix.twist"
-    ],
-    "cmtwkqr4aqt8i01z0d8hat2ld": [
-      "encounter",
-      "explore.intro",
-      "discover.explanation",
-      "discover.tico",
-      "remix.twist"
-    ],
-    "cmtwkrkw4qt9501z0c4dpjb9i": [
-      "encounter",
-      "explore.intro",
-      "discover.explanation",
-      "discover.tico",
-      "remix.twist"
-    ],
-    "cmtwksk09qt9s01z0djriqcnc": [
       "encounter",
       "explore.intro",
       "discover.explanation",
@@ -38,16 +17,13 @@
       "remix.twist"
     ],
     "cmtwklihyqt4p01z00z8ue6zx": [
+      "encounter",
       "explore.intro",
       "discover.explanation",
-      "discover.tico"
+      "discover.tico",
+      "remix.twist"
     ],
     "cmtwkm8raqt5d01z04ksf3jl8": [
-      "explore.intro",
-      "discover.explanation",
-      "discover.tico"
-    ],
-    "cmtwkn1wrqt6001z0d2qdr83w": [
       "encounter",
       "explore.intro",
       "discover.explanation",
