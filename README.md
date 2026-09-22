@@ -1,6 +1,6 @@
 <p align="center"><img src="client/public/assets/landing/logo.svg" alt="TICO" width="220" /></p>
 
-<h1 align="center">TICO — Learn Python by helping Egypt</h1>
+<h1 align="center">TICO: Learn Python by helping Egypt</h1>
 
 <p align="center"><strong>Built by Team SONIC</strong></p>
 
