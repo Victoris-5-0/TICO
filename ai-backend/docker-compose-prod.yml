@@ -17,7 +17,9 @@ services:
       - .env
     environment:
       ENVIRONMENT: production
-      WEB_CONCURRENCY: 4
+      # The production EC2 instance is a t3.micro with 1 GiB RAM. Two workers keep
+      # enough headroom for Nginx, Docker and model clients without OOM restarts.
+      WEB_CONCURRENCY: 2
     restart: always
     logging:
       # Without this, container logs grow until the disk fills. On a t3.micro that is
